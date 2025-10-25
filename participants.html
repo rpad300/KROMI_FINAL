@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Gestão de Participantes</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="participants.css">
+</head>
+<body>
+    <div class="participants-app">
+        <header class="app-header">
+            <h1>👥 Gestão de Participantes</h1>
+            <nav>
+                <a href="/events" class="btn secondary">Eventos</a>
+                <a href="/detection" class="btn secondary">Detecção</a>
+                <a href="/classifications" class="btn secondary">Classificações</a>
+                <a href="/image-processor" class="btn secondary">Processador</a>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Seletor de Evento -->
+            <div class="event-selector-container">
+                <label for="eventSelect">Selecionar Evento:</label>
+                <select id="eventSelect" class="config-input"></select>
+            </div>
+
+            <!-- Configuração do Evento -->
+            <div class="event-config-section" id="eventConfigSection" style="display: none;">
+                <h2>⚙️ Configuração do Evento</h2>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label for="eventType">Tipo de Evento:</label>
+                        <select id="eventType" class="config-input">
+                            <option value="running">🏃 Corrida</option>
+                            <option value="cycling">🚴 Ciclismo</option>
+                            <option value="btt">🚵 BTT</option>
+                            <option value="triathlon">🏊 Triatlo</option>
+                            <option value="walking">🚶 Caminhada</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label for="distanceKm">Distância (km):</label>
+                        <input type="number" id="distanceKm" class="config-input" step="0.1" min="0.1" max="1000">
+                    </div>
+                    <div class="config-item">
+                        <label for="hasCategories">Categorias:</label>
+                        <input type="checkbox" id="hasCategories" checked>
+                    </div>
+                    <div class="config-item">
+                        <button id="saveEventConfig" class="btn primary">💾 Salvar Configuração</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload de Participantes -->
+            <div class="upload-section">
+                <h2>📤 Carregar Participantes</h2>
+                <div class="upload-container">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📁</div>
+                        <p>Arraste um arquivo CSV aqui ou clique para selecionar</p>
+                        <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                    </div>
+                    <div class="upload-info">
+                        <h3>📋 Formato do CSV:</h3>
+                        <p>O arquivo deve ter as seguintes colunas:</p>
+                        <ul>
+                            <li><strong>dorsal_number</strong> - Número do dorsal</li>
+                            <li><strong>full_name</strong> - Nome completo</li>
+                            <li><strong>birth_date</strong> - Data de nascimento (YYYY-MM-DD)</li>
+                            <li><strong>gender</strong> - Gênero (M ou F)</li>
+                            <li><strong>team_name</strong> - Nome da equipa (opcional)</li>
+                        </ul>
+                        <button id="downloadTemplate" class="btn secondary">📥 Baixar Template</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Participantes -->
+            <div class="participants-section">
+                <h2>👥 Participantes do Evento</h2>
+                <div class="participants-controls">
+                    <button id="addParticipant" class="btn primary">➕ Adicionar Participante</button>
+                    <button id="exportParticipants" class="btn secondary">📊 Exportar CSV</button>
+                    <button id="clearParticipants" class="btn danger">🗑️ Limpar Todos</button>
+                </div>
+                <div class="participants-table-container">
+                    <div class="table-responsive">
+                        <table class="participants-table">
+                            <thead>
+                                <tr>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Data Nasc.</th>
+                                    <th>Gênero</th>
+                                    <th>Equipa</th>
+                                    <th>Categoria</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantsBody">
+                                <!-- Participantes serão carregados aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para Adicionar/Editar Participante -->
+            <div id="participantModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle">Adicionar Participante</h3>
+                        <button class="modal-close" id="closeModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="participantForm">
+                            <div class="form-group">
+                                <label for="modalDorsal">Dorsal:</label>
+                                <input type="number" id="modalDorsal" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalName">Nome Completo:</label>
+                                <input type="text" id="modalName" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalBirthDate">Data de Nascimento:</label>
+                                <input type="date" id="modalBirthDate" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalGender">Gênero:</label>
+                                <select id="modalGender" class="form-input" required>
+                                    <option value="">Selecionar...</option>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Feminino</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalTeam">Equipa:</label>
+                                <input type="text" id="modalTeam" class="form-input">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="saveParticipant" class="btn primary">💾 Salvar</button>
+                        <button id="cancelParticipant" class="btn secondary">❌ Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="supabase.js"></script>
+    <script src="participants.js"></script>
+</body>
+</html>

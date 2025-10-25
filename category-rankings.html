@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Ranking por Categoria</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="category-rankings.css">
+</head>
+<body>
+    <div class="category-rankings-app">
+        <header class="app-header">
+            <h1>🏆 Ranking por Categoria</h1>
+            <nav>
+                <a href="/events" class="btn secondary">Eventos</a>
+                <a href="/detection" class="btn secondary">Detecção</a>
+                <a href="/classifications" class="btn secondary">Classificações</a>
+                <a href="/participants" class="btn secondary">Participantes</a>
+                <a href="/image-processor" class="btn secondary">Processador</a>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Seletor de Evento -->
+            <div class="event-selector-container">
+                <label for="eventSelect">Selecionar Evento:</label>
+                <select id="eventSelect" class="config-input"></select>
+            </div>
+
+            <!-- Informações do Evento -->
+            <div class="event-info" id="eventInfo" style="display: none;">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Evento:</label>
+                        <span id="eventName">--</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Tipo:</label>
+                        <span id="eventType">--</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Distância:</label>
+                        <span id="eventDistance">--</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Total Atletas:</label>
+                        <span id="totalAthletes">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles -->
+            <div class="controls">
+                <button id="refreshBtn" class="btn primary">🔄 Atualizar</button>
+                <button id="exportBtn" class="btn secondary">📊 Exportar</button>
+                <button id="toggleViewBtn" class="btn secondary">🔄 Alternar Vista</button>
+            </div>
+
+            <!-- Seletor de Categoria -->
+            <div class="category-selector" id="categorySelector" style="display: none;">
+                <label for="categorySelect">Filtrar por Categoria:</label>
+                <select id="categorySelect" class="config-input">
+                    <option value="">Todas as Categorias</option>
+                </select>
+            </div>
+
+            <!-- Ranking Geral -->
+            <div class="rankings-section" id="generalRanking">
+                <h2>🏆 Ranking Geral</h2>
+                <div class="rankings-table-container">
+                    <div class="table-responsive">
+                        <table class="rankings-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Equipa</th>
+                                    <th>Categoria</th>
+                                    <th>Tempo Total</th>
+                                    <th>Gap</th>
+                                    <th>Ritmo</th>
+                                    <th>Vel.</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="generalRankingBody">
+                                <!-- Ranking geral será carregado aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rankings por Categoria -->
+            <div class="category-rankings-section" id="categoryRankings" style="display: none;">
+                <h2>🏅 Rankings por Categoria</h2>
+                <div id="categoryRankingsContainer">
+                    <!-- Rankings por categoria serão carregados aqui -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="supabase.js"></script>
+    <script src="category-rankings.js"></script>
+</body>
+</html>

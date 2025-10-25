@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Classificações</title>
+    <link rel="stylesheet" href="classifications.css">
+</head>
+<body>
+    <div class="classifications-container">
+        <div class="classifications-header">
+            <h1>🏆 Classificações</h1>
+            <p>Ranking em tempo real dos atletas</p>
+        </div>
+        
+        <!-- Seletor de Evento -->
+        <div class="event-selector">
+            <select id="eventSelector">
+                <option value="">-- Selecionar Evento --</option>
+            </select>
+        </div>
+        
+        <!-- Informações do Evento -->
+        <div class="event-info" id="eventInfo" style="display: none;">
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Evento:</label>
+                    <span id="eventName">--</span>
+                </div>
+                <div class="info-item">
+                    <label>Status:</label>
+                    <span id="eventStatus">--</span>
+                </div>
+                <div class="info-item">
+                    <label>Início:</label>
+                    <span id="eventStartTime">--:--</span>
+                </div>
+                <div class="info-item">
+                    <label>Duração:</label>
+                    <span id="eventDuration">00:00:00</span>
+                </div>
+                <div class="info-item">
+                    <label>Atletas:</label>
+                    <span id="totalAthletes">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Controles -->
+        <div class="controls">
+            <button id="refreshBtn" class="btn primary">🔄 Atualizar</button>
+            <button id="exportBtn" class="btn secondary">📊 Exportar</button>
+            <button id="clearBtn" class="btn danger">🗑️ Limpar</button>
+        </div>
+        
+        <!-- Tabela de Classificações -->
+        <div class="classifications-table">
+            <div class="table-header">
+                <h2>Ranking Geral</h2>
+            </div>
+            <div class="table-content">
+                <div class="table-headers">
+                    <div class="header-pos">Pos</div>
+                    <div class="header-dorsal">Dorsal</div>
+                    <div class="header-name">Nome</div>
+                    <div class="header-team">Equipa</div>
+                    <div class="header-category">Cat.</div>
+                    <div class="header-time">Tempo Total</div>
+                    <div class="header-gap">Gap</div>
+                    <div class="header-pace">Ritmo</div>
+                    <div class="header-speed">Vel.</div>
+                    <div class="header-splits">Splits</div>
+                    <div class="header-status">Status</div>
+                    <div class="header-actions">Ações</div>
+                </div>
+                <div id="classificationsList">
+                    <div class="loading-message">
+                        <div class="spinner"></div>
+                        <p>Carregando classificações...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estatísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🏃</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalAthletes">0</div>
+                    <div class="stat-label">Atletas</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="completedAthletes">0</div>
+                    <div class="stat-label">Completaram</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="bestTime">--:--</div>
+                    <div class="stat-label">Melhor Tempo</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="avgTime">--:--</div>
+                    <div class="stat-label">Tempo Médio</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="supabase.js"></script>
+    <script src="classifications.js"></script>
+</body>
+</html>

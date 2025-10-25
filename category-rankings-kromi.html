@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classificação por Escalão - VisionKrono</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VisionKrono">
+    <meta name="description" content="Sistema de detecção de dorsais VisionKrono">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+        <link rel="stylesheet" href="kromi-layout-fixes.css">
+        <script src="kromi-sidebar-toggle.js"></script>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Rankings page specific styles */
+        .rankings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--spacing-5);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .ranking-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+            transition: transform var(--transition-base), box-shadow var(--transition-base);
+        }
+        
+        .ranking-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .ranking-card h3 {
+            margin: 0 0 var(--spacing-4) 0;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-3);
+        }
+        
+        .ranking-table th {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: var(--spacing-3);
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            font-size: var(--font-size-sm);
+        }
+        
+        .ranking-table td {
+            padding: var(--spacing-3);
+            border-bottom: 1px solid var(--border-color);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+        
+        .ranking-table tr:hover {
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .position-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-size: var(--font-size-xs);
+        }
+        
+        .position-1 { 
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+        }
+        .position-2 { 
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #000;
+            box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
+        }
+        .position-3 { 
+            background: linear-gradient(135deg, #cd7f32, #e09956);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
+        }
+        .position-other { 
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .time-display {
+            font-family: var(--font-family-mono);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .gap-display {
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-base);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+        
+        .status-finished { 
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        .status-running { 
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        .status-dnf { 
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        
+        .controls-section {
+            display: flex;
+            gap: var(--spacing-3);
+            margin-bottom: var(--spacing-5);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .event-info-display {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-5);
+            border: 1px solid var(--border-color);
+        }
+        
+        .event-info-display h3 {
+            margin: 0 0 var(--spacing-3) 0;
+            color: var(--primary);
+            font-size: var(--font-size-lg);
+        }
+        
+        .event-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-3);
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+        
+        .info-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .category-selector-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-5);
+            border: 1px solid var(--border-color);
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: var(--spacing-12);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .empty-state p {
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .rankings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-section {
+                flex-direction: column;
+            }
+            
+            .event-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .ranking-table {
+                font-size: var(--font-size-xs);
+            }
+            
+            .ranking-table th,
+            .ranking-table td {
+                padding: var(--spacing-2);
+            }
+            
+            .position-badge {
+                width: 24px;
+                height: 24px;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    🏆 Classificação por Escalão
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    🏆 Classificação por Escalão
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-primary" id="refreshRankings">
+                    <i>🔄</i> Atualizar
+                </button>
+                <button class="btn btn-sm btn-secondary" id="exportRankings">
+                    <i>📊</i> Exportar
+                </button>
+                <button class="btn btn-sm btn-secondary" id="toggleView">
+                    <i>🔄</i> Alternar Vista
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Event Selector -->
+                <div class="event-selector-container">
+                    <div class="category-selector-section">
+                        <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">
+                            📋 Selecionar Evento
+                        </h3>
+                        <div class="form-group">
+                            <label class="form-label" for="eventSelect">Evento:</label>
+                            <select id="eventSelect" class="form-select">
+                                <option value="">-- Selecionar Evento --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Info Display -->
+                <div class="event-info-display event-info-container" id="eventInfoDisplay" style="display: none;">
+                    <h3>ℹ️ Informações do Evento</h3>
+                    <div class="event-info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Nome</div>
+                            <div class="info-value" id="displayEventName">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Tipo</div>
+                            <div class="info-value" id="displayEventType">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Distância</div>
+                            <div class="info-value" id="displayEventDistance">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Total Atletas</div>
+                            <div class="info-value" id="displayTotalAthletes">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="controls-section" id="controlsSection" style="display: none;">
+                    <button class="btn btn-primary" id="refreshBtn">
+                        <i>🔄</i> Atualizar Rankings
+                    </button>
+                    <button class="btn btn-secondary" id="exportBtn">
+                        <i>📊</i> Exportar CSV
+                    </button>
+                    <button class="btn btn-secondary" id="toggleViewBtn">
+                        <i>🔄</i> Alternar Vista
+                    </button>
+                </div>
+                
+                <!-- Category Selector -->
+                <div class="category-selector-section" id="categorySelector" style="display: none;">
+                    <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">
+                        🏅 Filtrar por Categoria
+                    </h3>
+                    <div class="form-group">
+                        <label class="form-label" for="categorySelect">Categoria:</label>
+                        <select id="categorySelect" class="form-select">
+                            <option value="">Todas as Categorias</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- General Ranking -->
+                <div class="ranking-card" id="generalRanking" style="display: none;">
+                    <h3>🏆 Ranking Geral</h3>
+                    <div class="table-responsive">
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Categoria</th>
+                                    <th>Tempo Total</th>
+                                    <th>Gap</th>
+                                    <th>Ritmo</th>
+                                    <th>Vel.</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="generalRankingBody">
+                                <!-- Ranking geral será carregado aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Category Rankings -->
+                <div class="rankings-grid" id="categoryRankings" style="display: none;">
+                    <!-- Rankings por categoria serão carregados aqui -->
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-state-icon">🏆</div>
+                    <h3>Selecione um evento para ver as classificações</h3>
+                    <p>Escolha um evento na lista acima para visualizar os rankings por escalão.</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav" id="bottomNav">
+            <!-- Será preenchido por navigation.js -->
+        </nav>
+    </div> <!-- Fim .layout-with-sidebar -->
+    
+    <!-- Scripts -->
+    <script src="navigation.js"></script>
+    <script src="supabase.js"></script>
+    
+    <!-- Category Rankings Logic -->
+    <script>
+        // Global variables
+        let currentEvent = null;
+        let events = [];
+        let participants = [];
+        let detections = [];
+        let currentView = 'general'; // 'general' or 'category'
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Inicializando página category-rankings...');
+            
+            // Check if elements exist
+            const eventSelect = document.getElementById('eventSelect');
+            const emptyState = document.getElementById('emptyState');
+            console.log('🔍 Elementos encontrados:', {
+                eventSelect: !!eventSelect,
+                emptyState: !!emptyState
+            });
+            
+            // Initialize Supabase first
+            if (window.supabaseClient) {
+                console.log('🔑 Inicializando Supabase...');
+                await window.supabaseClient.init();
+                console.log('✅ Supabase inicializado:', window.supabaseClient.isConnected);
+            } else {
+                console.error('❌ window.supabaseClient não encontrado');
+            }
+            
+            // Initialize navigation
+            if (window.Navigation) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                const eventName = urlParams.get('eventName');
+                
+                console.log('📍 Evento da URL:', eventId, eventName);
+                
+                window.Navigation.init('category-rankings', eventId);
+                
+                if (eventId) {
+                    console.log('🎯 Carregando evento automaticamente...');
+                    // Se temos evento na URL, carregar automaticamente
+                    await loadEventInfo(eventId);
+                    
+                    // Esconder dropdown de seleção de evento
+                    const eventSelectorContainer = document.querySelector('.event-selector-container');
+                    if (eventSelectorContainer) {
+                        eventSelectorContainer.style.display = 'none';
+                        console.log('✅ Dropdown escondido');
+                    }
+                    
+                    // Mostrar info do evento selecionado
+                    const eventInfoContainer = document.querySelector('.event-info-container');
+                    if (eventInfoContainer) {
+                        eventInfoContainer.style.display = 'block';
+                        console.log('✅ Info do evento mostrada');
+                    }
+                }
+            } else {
+                console.error('❌ window.Navigation não encontrado');
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load events
+            console.log('📋 Carregando lista de eventos...');
+            await loadEvents();
+            console.log('✅ Página inicializada');
+        });
+        
+        function setupEventListeners() {
+            // Event selector
+            const eventSelect = document.getElementById('eventSelect');
+            if (eventSelect) {
+                eventSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        loadEventInfo(e.target.value);
+                    } else {
+                        hideEventInfo();
+                    }
+                });
+            }
+            
+            // Control buttons
+            const refreshBtn = document.getElementById('refreshBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const toggleViewBtn = document.getElementById('toggleViewBtn');
+            const refreshRankings = document.getElementById('refreshRankings');
+            const exportRankings = document.getElementById('exportRankings');
+            const toggleView = document.getElementById('toggleView');
+            
+            if (refreshBtn) refreshBtn.addEventListener('click', refreshRankingsData);
+            if (exportBtn) exportBtn.addEventListener('click', exportRankingsData);
+            if (toggleViewBtn) toggleViewBtn.addEventListener('click', toggleRankingView);
+            if (refreshRankings) refreshRankings.addEventListener('click', refreshRankingsData);
+            if (exportRankings) exportRankings.addEventListener('click', exportRankingsData);
+            if (toggleView) toggleView.addEventListener('click', toggleRankingView);
+            
+            // Category selector
+            const categorySelect = document.getElementById('categorySelect');
+            if (categorySelect) {
+                categorySelect.addEventListener('change', filterByCategory);
+            }
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-open');
+                });
+            }
+        }
+        
+        async function loadEvents() {
+            try {
+                console.log('📋 loadEvents: Iniciando...');
+                console.log('📋 window.supabaseClient:', !!window.supabaseClient);
+                console.log('📋 window.supabaseClient.supabase:', !!window.supabaseClient?.supabase);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('❌ Supabase não disponível');
+                    return;
+                }
+                
+                console.log('📋 Fazendo query para eventos...');
+                const { data: eventsData, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar eventos:', error);
+                    return;
+                }
+                
+                console.log('✅ Eventos carregados:', eventsData?.length || 0);
+                events = eventsData || [];
+                
+                // Update dropdown
+                const selector = document.getElementById('eventSelect');
+                if (selector) {
+                    selector.innerHTML = '<option value="">-- Selecionar Evento --</option>';
+                    events.forEach(event => {
+                        const option = document.createElement('option');
+                        option.value = event.id;
+                        option.textContent = event.name;
+                        selector.appendChild(option);
+                    });
+                    console.log('✅ Dropdown atualizado com', events.length, 'eventos');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos:', error);
+            }
+        }
+        
+        async function loadEventInfo(eventId) {
+            try {
+                console.log('🎯 loadEventInfo: Iniciando para evento:', eventId);
+                console.log('🎯 window.supabaseClient:', !!window.supabaseClient);
+                console.log('🎯 window.supabaseClient.supabase:', !!window.supabaseClient?.supabase);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('❌ Supabase não disponível');
+                    return;
+                }
+                
+                console.log('🎯 Fazendo query para evento...');
+                // Carregar dados do evento
+                const { data: event, error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (eventError) {
+                    console.error('❌ Erro ao carregar evento:', eventError);
+                    showError('Erro ao carregar evento');
+                    return;
+                }
+                
+                console.log('✅ Evento carregado:', event);
+                currentEvent = event;
+                
+                // Update display info
+                updateEventDisplay(event);
+                
+                // Show controls and rankings
+                showRankingSections();
+                
+                // Update sidebar
+                const eventInfoPanel = document.getElementById('eventInfoPanel');
+                const currentEventInfo = document.getElementById('currentEventInfo');
+                
+                if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                if (currentEventInfo) {
+                    currentEventInfo.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        Local: ${event.location || 'Não definido'}
+                    `;
+                }
+                
+                // Load rankings data
+                console.log('🎯 Carregando dados de ranking...');
+                await loadRankingsData();
+                console.log('✅ loadEventInfo concluído');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar evento:', error);
+                showError('Erro ao carregar evento');
+            }
+        }
+        
+        function updateEventDisplay(event) {
+            const displayEventName = document.getElementById('displayEventName');
+            const displayEventType = document.getElementById('displayEventType');
+            const displayEventDistance = document.getElementById('displayEventDistance');
+            const displayTotalAthletes = document.getElementById('displayTotalAthletes');
+            
+            if (displayEventName) displayEventName.textContent = event.name || '--';
+            if (displayEventType) displayEventType.textContent = event.event_type || '--';
+            if (displayEventDistance) displayEventDistance.textContent = event.distance_km ? `${event.distance_km} km` : '--';
+            if (displayTotalAthletes) displayTotalAthletes.textContent = '0'; // Will be updated when loading participants
+        }
+        
+        function showRankingSections() {
+            console.log('📊 showRankingSections: Iniciando...');
+            
+            const controlsSection = document.getElementById('controlsSection');
+            const categorySelector = document.getElementById('categorySelector');
+            const generalRanking = document.getElementById('generalRanking');
+            const categoryRankings = document.getElementById('categoryRankings');
+            const emptyState = document.getElementById('emptyState');
+            
+            console.log('📊 Elementos encontrados:', {
+                controlsSection: !!controlsSection,
+                categorySelector: !!categorySelector,
+                generalRanking: !!generalRanking,
+                categoryRankings: !!categoryRankings,
+                emptyState: !!emptyState
+            });
+            
+            if (controlsSection) {
+                controlsSection.style.display = 'flex';
+                console.log('✅ Controls section mostrada');
+            }
+            if (categorySelector) {
+                categorySelector.style.display = 'block';
+                console.log('✅ Category selector mostrado');
+            }
+            if (generalRanking) {
+                generalRanking.style.display = 'block';
+                console.log('✅ General ranking mostrado');
+            }
+            if (categoryRankings) {
+                categoryRankings.style.display = 'grid';
+                console.log('✅ Category rankings mostrado');
+            }
+            if (emptyState) {
+                emptyState.style.display = 'none';
+                console.log('✅ Empty state escondido');
+            }
+            
+            console.log('📊 showRankingSections concluído');
+        }
+        
+        function hideEventInfo() {
+            const controlsSection = document.getElementById('controlsSection');
+            const categorySelector = document.getElementById('categorySelector');
+            const generalRanking = document.getElementById('generalRanking');
+            const categoryRankings = document.getElementById('categoryRankings');
+            const emptyState = document.getElementById('emptyState');
+            const eventInfoDisplay = document.getElementById('eventInfoDisplay');
+            
+            if (controlsSection) controlsSection.style.display = 'none';
+            if (categorySelector) categorySelector.style.display = 'none';
+            if (generalRanking) generalRanking.style.display = 'none';
+            if (categoryRankings) categoryRankings.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+            if (eventInfoDisplay) eventInfoDisplay.style.display = 'none';
+            
+            currentEvent = null;
+        }
+        
+        async function loadRankingsData() {
+            if (!currentEvent) return;
+            
+            try {
+                console.log('📊 Carregando rankings por categoria...');
+                
+                // Carregar classificações reais da tabela
+                const { data: classData, error: classError } = await window.supabaseClient.supabase
+                    .from('classifications')
+                    .select('*')
+                    .eq('event_id', currentEvent.id)
+                    .order('total_time', { ascending: true });
+                
+                if (classError) {
+                    console.error('❌ Erro ao carregar classifications:', classError);
+                    return;
+                }
+                
+                console.log('✅ Classifications:', classData);
+                
+                // Carregar participantes para ter nomes e categorias
+                const { data: participantsData, error: participantsError } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .select('*')
+                    .eq('event_id', currentEvent.id);
+                
+                if (participantsError) {
+                    console.error('Erro ao carregar participantes:', participantsError);
+                    return;
+                }
+                
+                participants = participantsData || [];
+                
+                // Criar mapa de participantes
+                const participantMap = {};
+                participants.forEach(p => {
+                    participantMap[p.dorsal_number] = p;
+                });
+                
+                // Processar rankings
+                rankings = (classData || []).map((c, index) => {
+                    const participant = participantMap[c.dorsal_number] || {};
+                    
+                    return {
+                        position: index + 1,
+                        dorsal: c.dorsal_number,
+                        name: participant.full_name || `Dorsal ${c.dorsal_number}`,
+                        category: participant.category || 'Open',
+                        time: formatInterval(c.total_time),
+                        gap: index === 0 ? '--' : formatInterval(c.split_time),
+                        pace: '--:--',
+                        speed: '--',
+                        status: c.is_penalty ? 'Penalidade' : 'Finalizado'
+                    };
+                });
+                
+                console.log('✅ Rankings processados:', rankings.length);
+                
+                // Update total athletes count
+                const displayTotalAthletes = document.getElementById('displayTotalAthletes');
+                if (displayTotalAthletes) {
+                    displayTotalAthletes.textContent = rankings.length.toString();
+                }
+                
+                // Render rankings
+                renderGeneralRanking();
+                renderCategoryRankings();
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados de ranking:', error);
+                showError('Erro ao carregar dados de ranking');
+            }
+        }
+        
+        function renderGeneralRanking() {
+            const tbody = document.getElementById('generalRankingBody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (!rankings || rankings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: var(--spacing-8); color: var(--text-secondary);">Nenhuma classificação disponível</td></tr>';
+                return;
+            }
+            
+            // Usar rankings reais
+            rankings.forEach((ranking, index) => {
+                const row = document.createElement('tr');
+                
+                const positionClass = ranking.position <= 3 ? `position-${ranking.position}` : 'position-other';
+                
+                row.innerHTML = `
+                    <td>
+                        <span class="position-badge ${positionClass}">${ranking.position}</span>
+                    </td>
+                    <td><strong>${ranking.dorsal}</strong></td>
+                    <td>${ranking.name}</td>
+                    <td>${ranking.category}</td>
+                    <td class="time-display">${ranking.time}</td>
+                    <td class="gap-display">${ranking.gap}</td>
+                    <td class="time-display">${ranking.pace}</td>
+                    <td>${ranking.speed}</td>
+                    <td><span class="status-badge ${ranking.status === 'Finalizado' ? 'status-finished' : 'status-running'}">${ranking.status}</span></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function renderCategoryRankings() {
+            const container = document.getElementById('categoryRankings');
+            if (!container) return;
+            
+            if (!rankings || rankings.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: var(--spacing-12); color: var(--text-secondary);">Nenhuma classificação por categoria</div>';
+                return;
+            }
+            
+            // Agrupar rankings por categoria
+            const rankingsByCategory = {};
+            rankings.forEach(r => {
+                const cat = r.category || 'Open';
+                if (!rankingsByCategory[cat]) {
+                    rankingsByCategory[cat] = [];
+                }
+                rankingsByCategory[cat].push(r);
+            });
+            
+            // Renderizar cada categoria
+            container.innerHTML = Object.keys(rankingsByCategory).map(categoryName => {
+                const categoryRankings = rankingsByCategory[categoryName];
+                
+                return `
+                    <div class="ranking-card" style="margin-bottom: var(--spacing-4);">
+                        <h3>${categoryName}</h3>
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Tempo</th>
+                                    <th>Gap</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${categoryRankings.map((r, idx) => `
+                                    <tr>
+                                        <td><span class="position-badge position-${idx + 1 <= 3 ? idx + 1 : 'other'}">${idx + 1}</span></td>
+                                        <td><strong>${r.dorsal}</strong></td>
+                                        <td>${r.name}</td>
+                                        <td class="time-display">${r.time}</td>
+                                        <td class="gap-display">${idx === 0 ? '--' : r.gap}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function oldRenderCategoryRankings() {
+            // Função antiga - não usar
+            const container = document.getElementById('categoryRankings');
+            if (!container) return;
+            
+            // Group participants by age category
+            const ageCategories = [
+                { name: 'Sub-20', min: 0, max: 19, icon: '👶' },
+                { name: '20-29', min: 20, max: 29, icon: '🏃' },
+                { name: '30-39', min: 30, max: 39, icon: '🏃‍♂️' },
+                { name: '40-49', min: 40, max: 49, icon: '🏃‍♀️' },
+                { name: '50-59', min: 50, max: 59, icon: '🚶' },
+                { name: '60+', min: 60, max: 999, icon: '🚶‍♂️' }
+            ];
+            
+            const participantsByCategory = {};
+            ageCategories.forEach(category => {
+                participantsByCategory[category.name] = [];
+            });
+            
+            participants.forEach(participant => {
+                if (participant.birth_date) {
+                    const birthDate = new Date(participant.birth_date);
+                    const today = new Date();
+                    const age = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                    const finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+                    
+                    const category = ageCategories.find(cat => finalAge >= cat.min && finalAge <= cat.max);
+                    if (category) {
+                        participantsByCategory[category.name].push({
+                            ...participant,
+                            age: finalAge
+                        });
+                    }
+                }
+            });
+            
+            // Render category cards
+            let html = '';
+            ageCategories.forEach(category => {
+                const categoryParticipants = participantsByCategory[category.name];
+                if (categoryParticipants.length > 0) {
+                    html += `
+                        <div class="ranking-card">
+                            <h3>${category.icon} ${category.name} (${categoryParticipants.length})</h3>
+                            <div class="table-responsive">
+                                <table class="ranking-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Pos</th>
+                                            <th>Dorsal</th>
+                                            <th>Nome</th>
+                                            <th>Idade</th>
+                                            <th>Tempo</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    // Sort by dorsal
+                    categoryParticipants.sort((a, b) => (a.dorsal_number || 0) - (b.dorsal_number || 0));
+                    
+                    categoryParticipants.forEach((participant, index) => {
+                        html += `
+                            <tr>
+                                <td><span class="position-badge ${getPositionClass(index + 1)}">${index + 1}</span></td>
+                                <td><strong>${participant.dorsal_number || '--'}</strong></td>
+                                <td>${participant.full_name || '--'}</td>
+                                <td>${participant.age} anos</td>
+                                <td class="time-display">--:--:--</td>
+                                <td><span class="status-badge status-running">Em Andamento</span></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function getAgeCategory(age) {
+            if (age === '--') return '--';
+            if (age < 20) return 'Sub-20';
+            if (age < 30) return '20-29';
+            if (age < 40) return '30-39';
+            if (age < 50) return '40-49';
+            if (age < 60) return '50-59';
+            return '60+';
+        }
+        
+        function getPositionClass(position) {
+            if (position === 1) return 'position-1';
+            if (position === 2) return 'position-2';
+            if (position === 3) return 'position-3';
+            return 'position-other';
+        }
+        
+        function refreshRankingsData() {
+            if (currentEvent) {
+                loadRankingsData();
+                showSuccess('Rankings atualizados!');
+            }
+        }
+        
+        function exportRankingsData() {
+            if (!currentEvent) {
+                showError('Nenhum evento selecionado');
+                return;
+            }
+            
+            // Simple CSV export (you can enhance this)
+            let csv = 'Posição,Dorsal,Nome,Categoria,Tempo,Gap,Ritmo,Velocidade,Status\n';
+            
+            participants.forEach((participant, index) => {
+                const age = participant.birth_date ? 
+                    new Date().getFullYear() - new Date(participant.birth_date).getFullYear() : '--';
+                const category = getAgeCategory(age);
+                
+                csv += `${index + 1},${participant.dorsal_number || '--'},${participant.full_name || '--'},${category},--:--:--,--,--:--,-- km/h,Em Andamento\n`;
+            });
+            
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rankings_${currentEvent.name}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Rankings exportados com sucesso!');
+        }
+        
+        function toggleRankingView() {
+            currentView = currentView === 'general' ? 'category' : 'general';
+            
+            const generalRanking = document.getElementById('generalRanking');
+            const categoryRankings = document.getElementById('categoryRankings');
+            
+            if (currentView === 'general') {
+                if (generalRanking) generalRanking.style.display = 'block';
+                if (categoryRankings) categoryRankings.style.display = 'none';
+            } else {
+                if (generalRanking) generalRanking.style.display = 'none';
+                if (categoryRankings) categoryRankings.style.display = 'grid';
+            }
+            
+            showSuccess(`Vista alterada para: ${currentView === 'general' ? 'Geral' : 'Por Categoria'}`);
+        }
+        
+        async function filterByCategory() {
+            const categorySelect = document.getElementById('categorySelect');
+            const selectedCategory = categorySelect ? categorySelect.value : '';
+            
+            if (!currentEvent) {
+                showError('Nenhum evento selecionado');
+                return;
+            }
+            
+            try {
+                let query = window.supabaseClient.supabase
+                    .from('event_classifications')
+                    .select('*')
+                    .eq('event_id', currentEvent.id);
+                
+                // Filtrar por categoria se selecionada
+                if (selectedCategory && selectedCategory !== '') {
+                    query = query.eq('category', selectedCategory);
+                }
+                
+                const { data: classData, error } = await query.order('position', { ascending: true });
+                
+                if (error) throw error;
+                
+                // Renderizar classificações filtradas
+                renderCategoryRankings(classData || [], selectedCategory);
+                
+                showSuccess(selectedCategory ? `Filtrado por: ${selectedCategory}` : 'Mostrando todas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao filtrar:', error);
+                showError('Erro ao filtrar categorias');
+            }
+        }
+        
+        function formatInterval(interval) {
+            if (!interval) return '--:--:--';
+            
+            const str = interval.toString();
+            const match = str.match(/(\d+):(\d+):(\d+(?:\.\d+)?)/);
+            if (match) {
+                const [_, hours, minutes, seconds] = match;
+                const sec = Math.floor(parseFloat(seconds));
+                return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            }
+            
+            return str;
+        }
+        
+        function renderCategoryRankings(data, categoryName) {
+            const container = document.getElementById('rankingsContainer');
+            if (!container) return;
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: var(--spacing-12); color: var(--text-secondary);">
+                        <div style="font-size: 64px; margin-bottom: var(--spacing-4);">🏆</div>
+                        <h3>Nenhuma classificação encontrada</h3>
+                        <p>${categoryName ? `para a categoria ${categoryName}` : ''}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Agrupar por categoria
+            const byCategory = {};
+            data.forEach(item => {
+                const cat = item.category || 'Sem Categoria';
+                if (!byCategory[cat]) byCategory[cat] = [];
+                byCategory[cat].push(item);
+            });
+            
+            // Renderizar cada categoria
+            container.innerHTML = Object.keys(byCategory).map(category => {
+                const rankings = byCategory[category];
+                
+                return `
+                    <div class="ranking-card">
+                        <h3>${category}</h3>
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Dorsal</th>
+                                    <th>Tempo</th>
+                                    <th>Diferença</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rankings.map((r, idx) => `
+                                    <tr>
+                                        <td><span class="position-badge position-${idx + 1 <= 3 ? idx + 1 : 'other'}">${r.position || idx + 1}</span></td>
+                                        <td><strong>${r.dorsal_number}</strong></td>
+                                        <td class="time-display">${formatTime(r.total_time)}</td>
+                                        <td class="gap-display">${r.position > 1 ? `+${formatTime(r.gap_to_first)}` : '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatTime(interval) {
+            if (!interval) return '--:--:--';
+            
+            // Parse PostgreSQL interval
+            const match = interval.match(/(\d+):(\d+):(\d+)/);
+            if (!match) return interval;
+            
+            const [_, hours, minutes, seconds] = match;
+            return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
+        }
+        
+        function showError(message) {
+            alert(`❌ ${message}`);
+        }
+        
+        function showSuccess(message) {
+            alert(`✅ ${message}`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Plataforma Principal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-light: #ffffff;
+            --bg-dark: #000000;
+            --card-light: #f8fafc;
+            --card-dark: #1a1a1a;
+            --text-light: #1f2937;
+            --text-dark: #ffffff;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --muted: #6b7280;
+            --accent: #22d3ee;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --bg-secondary: var(--card-dark);
+            --text-primary: var(--text-dark);
+            --text-secondary: #a0a0a0;
+            --border-color: var(--border-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --bg-secondary: var(--card-light);
+            --text-primary: var(--text-light);
+            --text-secondary: #6b7280;
+            --border-color: var(--border-light);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            content: '🌙';
+            left: 26px;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background: var(--primary);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 60px;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar.active {
+            transform: translateX(280px);
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                left: 0;
+                transform: none;
+            }
+            .sidebar.active {
+                transform: none;
+            }
+            .main-content {
+                margin-left: 280px;
+            }
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 20px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+
+        .nav-category {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin: 20px 0 12px 0;
+            padding-left: 16px;
+        }
+
+        .nav-separator {
+            height: 1px;
+            background: var(--border-color);
+            margin: 16px 0;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-link i {
+            font-size: 16px;
+            width: 18px;
+            text-align: center;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .profile-tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .profile-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .profile-tab:hover {
+            color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .avatar-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .avatar-preview:hover {
+            transform: scale(1.05);
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .social-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .size-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .consent-section {
+            background: rgba(252, 107, 3, 0.05);
+            border: 1px solid rgba(252, 107, 3, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1023px) {
+            .hamburger {
+                display: block;
+            }
+            
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+            
+            .sidebar.active {
+                transform: translateX(100%);
+            }
+            
+            .main-content {
+                padding: 16px;
+                margin-left: 0;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .validation-message {
+            font-size: 12px;
+            margin-top: 4px;
+            color: var(--danger);
+        }
+
+        .success-message {
+            color: var(--success);
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-section">
+            <button class="hamburger" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">K</div>
+            <h1 style="font-size: 18px; font-weight: bold;">KROMI</h1>
+        </div>
+        
+        <div class="header-actions">
+            <div class="theme-toggle" id="themeToggle"></div>
+            <button class="btn btn-secondary" onclick="switchProfile()" style="padding: 8px 12px;">
+                <i class="fas fa-user-shield"></i>
+                <span id="currentRole">Utilizador</span>
+            </button>
+            <div class="user-info">
+                <div class="user-avatar" id="headerAvatar">JS</div>
+                <div style="display: flex; flex-direction: column; font-size: 12px;">
+                    <span id="headerUserName" style="font-weight: 500;">João Silva</span>
+                    <span id="headerUserRole" style="color: var(--text-secondary);">Utilizador</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar">
+        <div id="userMenu">
+            <div class="nav-category">Dashboard</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-section="dashboard">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Visão Geral</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Meu Perfil</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="profile">
+                        <i class="fas fa-user"></i>
+                        <span>Ver Perfil</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="edit-profile">
+                        <i class="fas fa-user-edit"></i>
+                        <span>Editar Perfil</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="profile-settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Eventos que Participo</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="my-events">
+                        <i class="fas fa-running"></i>
+                        <span>Eventos Ativos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="event-history">
+                        <i class="fas fa-history"></i>
+                        <span>Histórico</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="registrations">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Inscrições</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Eventos Organizados</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="organized-events">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Meus Eventos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="create-event">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Criar Evento</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="event-management">
+                        <i class="fas fa-tasks"></i>
+                        <span>Gestão de Eventos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="event-reports">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Relatórios</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div id="adminMenu" class="hidden">
+            <div class="nav-category">Dashboard Admin</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-section="admin-dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Visão Geral da Plataforma</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Meu Perfil</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="profile">
+                        <i class="fas fa-user"></i>
+                        <span>Ver Perfil</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="edit-profile">
+                        <i class="fas fa-user-edit"></i>
+                        <span>Editar Perfil</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="profile-settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Eventos da Plataforma</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="all-events">
+                        <i class="fas fa-globe"></i>
+                        <span>Todos os Eventos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="active-events">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Eventos Ativos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="pending-events">
+                        <i class="fas fa-clock"></i>
+                        <span>Eventos Pendentes</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="platform-reports">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Relatórios Globais</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Configurações da Plataforma</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="platform-config">
+                        <i class="fas fa-cogs"></i>
+                        <span>Configurações Gerais</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="integrations">
+                        <i class="fas fa-plug"></i>
+                        <span>Integrações</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="email-templates">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <span>Email Templates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="system">
+                        <i class="fas fa-server"></i>
+                        <span>Sistema</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="nav-separator"></div>
+            <div class="nav-category">Utilizadores da Plataforma</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="users-list">
+                        <i class="fas fa-users"></i>
+                        <span>Lista de Utilizadores</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="user-management">
+                        <i class="fas fa-user-cog"></i>
+                        <span>Gestão de Perfis</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="permissions">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Permissões</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="user-reports">
+                        <i class="fas fa-user-chart"></i>
+                        <span>Relatórios</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs" id="breadcrumbs">
+            <div class="breadcrumb-item">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Próximos Eventos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Eventos Organizados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">145</div>
+                    <div class="stat-label">Participações</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">32</div>
+                    <div class="stat-label">Troféus</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🏃‍♂️ Próximos Eventos</h3>
+                    </div>
+                    <div style="space-y: 12px;">
+                        <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px;">
+                            <h4 style="color: var(--text-primary); margin-bottom: 4px;">Maratona de Lisboa 2024</h4>
+                            <p style="color: var(--text-secondary); font-size: 14px;">15 de Setembro, 2024</p>
+                        </div>
+                        <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px;">
+                            <h4 style="color: var(--text-primary); margin-bottom: 4px;">Trail Running Porto</h4>
+                            <p style="color: var(--text-secondary); font-size: 14px;">22 de Setembro, 2024</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📊 Atividade Recente</h3>
+                    </div>
+                    <div style="space-y: 12px;">
+                        <div style="padding: 12px; border-left: 3px solid var(--success); background: rgba(16, 185, 129, 0.1); margin-bottom: 12px;">
+                            <p style="color: var(--text-primary); font-size: 14px;">Inscrição confirmada na Maratona de Lisboa</p>
+                            <p style="color: var(--text-secondary); font-size: 12px;">Há 2 horas</p>
+                        </div>
+                        <div style="padding: 12px; border-left: 3px solid var(--primary); background: rgba(252, 107, 3, 0.1); margin-bottom: 12px;">
+                            <p style="color: var(--text-primary); font-size: 14px;">Evento "Corrida de Verão" criado</p>
+                            <p style="color: var(--text-secondary); font-size: 12px;">Ontem</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard Section -->
+        <section id="admin-dashboard" class="section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">2,847</div>
+                    <div class="stat-label">Total Utilizadores</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">156</div>
+                    <div class="stat-label">Eventos Ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">89%</div>
+                    <div class="stat-label">Uptime Sistema</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1,234</div>
+                    <div class="stat-label">Utilizadores Online</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🌐 Visão Geral da Plataforma</h3>
+                </div>
+                <p>Dashboard administrativo com métricas globais da plataforma KROMI.</p>
+            </div>
+        </section>
+
+        <!-- Profile View Section -->
+        <section id="profile" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">👤 Meu Perfil</h3>
+                    <button class="btn btn-primary" onclick="navigateToSection('edit-profile')">
+                        <i class="fas fa-edit"></i>
+                        Editar Perfil
+                    </button>
+                </div>
+                
+                <div class="grid-2" style="align-items: start;">
+                    <div>
+                        <div class="avatar-upload">
+                            <div class="avatar-preview" id="profileAvatarView">
+                                JS
+                            </div>
+                            <div style="text-align: center;">
+                                <h3 style="margin: 0; color: var(--text-primary);">João Silva</h3>
+                                <p style="color: var(--text-secondary); margin: 4px 0;">Organizador de Eventos</p>
+                                <p style="color: var(--text-secondary); font-size: 12px;">Membro desde: Janeiro 2024</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: var(--text-primary); margin-bottom: 16px;">Informações Básicas</h4>
+                        <div style="space-y: 12px;">
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: var(--text-primary);">Email:</strong>
+                                <span style="color: var(--text-secondary);">joao.silva@email.com</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: var(--text-primary);">Telefone:</strong>
+                                <span style="color: var(--text-secondary);">+351 912 345 678</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: var(--text-primary);">Organização:</strong>
+                                <span style="color: var(--text-secondary);">Clube Atlético Lisboa</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: var(--text-primary);">Localização:</strong>
+                                <span style="color: var(--text-secondary);">Lisboa, Portugal</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edit Profile Section -->
+        <section id="edit-profile" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">✏️ Editar Perfil</h3>
+                </div>
+
+                <div class="profile-tabs">
+                    <button class="profile-tab active" data-tab="personal">
+                        <i class="fas fa-user"></i>
+                        Informações Pessoais
+                    </button>
+                    <button class="profile-tab" data-tab="contact">
+                        <i class="fas fa-phone"></i>
+                        Contactos
+                    </button>
+                    <button class="profile-tab" data-tab="address">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Morada
+                    </button>
+                    <button class="profile-tab" data-tab="social">
+                        <i class="fas fa-share-alt"></i>
+                        Redes Sociais
+                    </button>
+                    <button class="profile-tab" data-tab="preferences">
+                        <i class="fas fa-cog"></i>
+                        Preferências
+                    </button>
+                    <button class="profile-tab" data-tab="documents">
+                        <i class="fas fa-id-card"></i>
+                        Documentos
+                    </button>
+                    <button class="profile-tab" data-tab="consents">
+                        <i class="fas fa-check-circle"></i>
+                        Consentimentos
+                    </button>
+                </div>
+
+                <!-- Personal Information Tab -->
+                <div id="personal" class="tab-content active">
+                    <form id="personalForm">
+                        <div class="avatar-upload">
+                            <div class="avatar-preview" id="avatarPreview">
+                                JS
+                            </div>
+                            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()">
+                                <i class="fas fa-camera"></i>
+                                Alterar Foto
+                            </button>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="fullName">Nome Completo *</label>
+                                <input type="text" id="fullName" class="form-input" value="João Silva" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email *</label>
+                                <input type="email" id="email" class="form-input" value="joao.silva@email.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dateOfBirth">Data de Nascimento</label>
+                                <input type="date" id="dateOfBirth" class="form-input" value="1990-05-15">
+                            </div>
+                            <div class="form-group">
+                                <label for="gender">Género</label>
+                                <select id="gender" class="form-select">
+                                    <option value="">Selecionar...</option>
+                                    <option value="male" selected>Masculino</option>
+                                    <option value="female">Feminino</option>
+                                    <option value="other">Outro</option>
+                                    <option value="prefer_not_to_say">Prefiro não dizer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nationality">Nacionalidade</label>
+                                <select id="nationality" class="form-select">
+                                    <option value="PT" selected>Portuguesa</option>
+                                    <option value="BR">Brasileira</option>
+                                    <option value="ES">Espanhola</option>
+                                    <option value="FR">Francesa</option>
+                                    <option value="UK">Britânica</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="preferredLanguage">Idioma Preferido</label>
+                                <select id="preferredLanguage" class="form-select">
+                                    <option value="pt" selected>Português</option>
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bio">Bio/Descrição</label>
+                            <textarea id="bio" class="form-textarea" rows="3" placeholder="Fale um pouco sobre si...">Organizador de eventos desportivos com mais de 10 anos de experiência.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="organization">Organização/Clube</label>
+                            <input type="text" id="organization" class="form-input" value="Clube Atlético Lisboa">
+                        </div>
+
+                        <h4 style="margin: 24px 0 16px 0; color: var(--text-primary);">Tamanhos de Vestuário</h4>
+                        <div class="size-grid">
+                            <div class="form-group">
+                                <label for="clothingSizeTop">Tamanho Camisola</label>
+                                <select id="clothingSizeTop" class="form-select">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS</option>
+                                    <option value="S">S</option>
+                                    <option value="M" selected>M</option>
+                                    <option value="L">L</option>
+                                    <option value="XL">XL</option>
+                                    <option value="XXL">XXL</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="clothingSizeBottom">Tamanho Calças</label>
+                                <select id="clothingSizeBottom" class="form-select">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS</option>
+                                    <option value="S">S</option>
+                                    <option value="M" selected>M</option>
+                                    <option value="L">L</option>
+                                    <option value="XL">XL</option>
+                                    <option value="XXL">XXL</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="shoeSize">Tamanho Sapatos</label>
+                                <select id="shoeSize" class="form-select">
+                                    <option value="">Selecionar...</option>
+                                    <option value="38">38</option>
+                                    <option value="39">39</option>
+                                    <option value="40">40</option>
+                                    <option value="41">41</option>
+                                    <option value="42" selected>42</option>
+                                    <option value="43">43</option>
+                                    <option value="44">44</option>
+                                    <option value="45">45</option>
+                                    <option value="46">46</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Alterações
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="navigateToSection('profile')">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Contact Information Tab -->
+                <div id="contact" class="tab-content">
+                    <form id="contactForm">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="phone">Telefone</label>
+                                <input type="tel" id="phone" class="form-input" value="+351912345678">
+                            </div>
+                            <div class="form-group">
+                                <label for="phoneCountryCode">Código País Telefone</label>
+                                <select id="phoneCountryCode" class="form-select">
+                                    <option value="+351" selected>+351 (Portugal)</option>
+                                    <option value="+55">+55 (Brasil)</option>
+                                    <option value="+34">+34 (Espanha)</option>
+                                    <option value="+33">+33 (França)</option>
+                                    <option value="+44">+44 (Reino Unido)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsapp">WhatsApp</label>
+                                <input type="tel" id="whatsapp" class="form-input" value="+351912345678">
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsappCountryCode">Código País WhatsApp</label>
+                                <select id="whatsappCountryCode" class="form-select">
+                                    <option value="+351" selected>+351 (Portugal)</option>
+                                    <option value="+55">+55 (Brasil)</option>
+                                    <option value="+34">+34 (Espanha)</option>
+                                    <option value="+33">+33 (França)</option>
+                                    <option value="+44">+44 (Reino Unido)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Contactos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Address Tab -->
+                <div id="address" class="tab-content">
+                    <form id="addressForm">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="addressLine1">Morada Linha 1</label>
+                                <input type="text" id="addressLine1" class="form-input" value="Rua das Flores, 123">
+                            </div>
+                            <div class="form-group">
+                                <label for="addressLine2">Morada Linha 2</label>
+                                <input type="text" id="addressLine2" class="form-input" value="4º Andar">
+                            </div>
+                            <div class="form-group">
+                                <label for="city">Cidade</label>
+                                <input type="text" id="city" class="form-input" value="Lisboa">
+                            </div>
+                            <div class="form-group">
+                                <label for="postalCode">Código Postal</label>
+                                <input type="text" id="postalCode" class="form-input" value="1200-200">
+                            </div>
+                            <div class="form-group">
+                                <label for="country">País</label>
+                                <select id="country" class="form-select">
+                                    <option value="PT" selected>Portugal</option>
+                                    <option value="BR">Brasil</option>
+                                    <option value="ES">Espanha</option>
+                                    <option value="FR">França</option>
+                                    <option value="UK">Reino Unido</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addressFormatted">Morada Formatada (Auto-preenchida)</label>
+                            <input type="text" id="addressFormatted" class="form-input" value="Rua das Flores, 123, 4º Andar, 1200-200 Lisboa, Portugal" readonly>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="addressLat">Latitude</label>
+                                <input type="number" id="addressLat" class="form-input" value="38.7223" step="any" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="addressLng">Longitude</label>
+                                <input type="number" id="addressLng" class="form-input" value="-9.1393" step="any" readonly>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Morada
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="geocodeAddress()">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Obter Coordenadas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Social Networks Tab -->
+                <div id="social" class="tab-content">
+                    <form id="socialForm">
+                        <h4 style="margin-bottom: 16px; color: var(--text-primary);">Redes Sociais</h4>
+                        <div class="social-links">
+                            <div class="form-group">
+                                <label for="xHandle">
+                                    <i class="fab fa-twitter" style="color: #1DA1F2; margin-right: 8px;"></i>
+                                    X (Twitter)
+                                </label>
+                                <input type="text" id="xHandle" class="form-input" placeholder="@seuusuario" value="@joaosilva">
+                            </div>
+                            <div class="form-group">
+                                <label for="instagramHandle">
+                                    <i class="fab fa-instagram" style="color: #E1306C; margin-right: 8px;"></i>
+                                    Instagram
+                                </label>
+                                <input type="text" id="instagramHandle" class="form-input" placeholder="@seuusuario" value="@joaosilva_runner">
+                            </div>
+                            <div class="form-group">
+                                <label for="facebookUrl">
+                                    <i class="fab fa-facebook" style="color: #1877F2; margin-right: 8px;"></i>
+                                    Facebook
+                                </label>
+                                <input type="url" id="facebookUrl" class="form-input" placeholder="https://facebook.com/..." value="https://facebook.com/joaosilva">
+                            </div>
+                            <div class="form-group">
+                                <label for="linkedinUrl">
+                                    <i class="fab fa-linkedin" style="color: #0077B5; margin-right: 8px;"></i>
+                                    LinkedIn
+                                </label>
+                                <input type="url" id="linkedinUrl" class="form-input" placeholder="https://linkedin.com/in/..." value="https://linkedin.com/in/joaosilva">
+                            </div>
+                            <div class="form-group">
+                                <label for="tiktokHandle">
+                                    <i class="fab fa-tiktok" style="color: #000000; margin-right: 8px;"></i>
+                                    TikTok
+                                </label>
+                                <input type="text" id="tiktokHandle" class="form-input" placeholder="@seuusuario">
+                            </div>
+                            <div class="form-group">
+                                <label for="discordHandle">
+                                    <i class="fab fa-discord" style="color: #5865F2; margin-right: 8px;"></i>
+                                    Discord
+                                </label>
+                                <input type="text" id="discordHandle" class="form-input" placeholder="Usuario#1234">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Redes Sociais
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Preferences Tab -->
+                <div id="preferences" class="tab-content">
+                    <form id="preferencesForm">
+                        <h4 style="margin-bottom: 16px; color: var(--text-primary);">Preferências da Conta</h4>
+                        
+                        <div class="form-group">
+                            <label for="themePreference">Tema</label>
+                            <select id="themePreference" class="form-select">
+                                <option value="dark" selected>Escuro</option>
+                                <option value="light">Claro</option>
+                                <option value="auto">Automático (Sistema)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tags">Tags/Interesses</label>
+                            <input type="text" id="tags" class="form-input" placeholder="Ex: corrida, maratonas, trail" value="corrida, maratonas, trail, atletismo">
+                            <small style="color: var(--text-secondary);">Separe as tags por vírgulas</small>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="marketingOptIn" checked>
+                            <label for="marketingOptIn">Aceito receber comunicações de marketing</label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="accessPin">PIN de Acesso (4 dígitos)</label>
+                            <input type="password" id="accessPin" class="form-input" maxlength="4" placeholder="••••">
+                            <small style="color: var(--text-secondary);">PIN para acesso rápido em eventos</small>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Preferências
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Documents Tab -->
+                <div id="documents" class="tab-content">
+                    <form id="documentsForm">
+                        <h4 style="margin-bottom: 16px; color: var(--text-primary);">Documentos de Identificação</h4>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="nationalId">Número de Identificação Civil</label>
+                                <input type="text" id="nationalId" class="form-input" value="12345678">
+                            </div>
+                            <div class="form-group">
+                                <label for="passportNumber">Número do Passaporte</label>
+                                <input type="text" id="passportNumber" class="form-input" value="P123456789">
+                            </div>
+                            <div class="form-group">
+                                <label for="taxNumber">Número de Contribuinte</label>
+                                <input type="text" id="taxNumber" class="form-input" value="123456789">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Documentos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Consents Tab -->
+                <div id="consents" class="tab-content">
+                    <form id="consentsForm">
+                        <h4 style="margin-bottom: 16px; color: var(--text-primary);">Consentimentos</h4>
+                        
+                        <div class="consent-section">
+                            <h5 style="color: var(--primary); margin-bottom: 12px;">Comunicações</h5>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="consentEmailOptIn" checked>
+                                <label for="consentEmailOptIn">Aceito receber comunicações por email</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="consentSmsOptIn">
+                                <label for="consentSmsOptIn">Aceito receber comunicações por SMS</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="consentWhatsAppOptIn" checked>
+                                <label for="consentWhatsAppOptIn">Aceito receber comunicações por WhatsApp</label>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 12px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Consentimentos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Settings Section -->
+        <section id="profile-settings" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">⚙️ Configurações do Perfil</h3>
+                </div>
+                <p>Configurações avançadas de conta, privacidade e notificações.</p>
+            </div>
+        </section>
+
+        <!-- Other sections (placeholder for now) -->
+        <section id="my-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🏃‍♂️ Eventos que Participo</h3>
+                </div>
+                <p>Lista dos eventos em que está inscrito ou vai participar.</p>
+            </div>
+        </section>
+
+        <section id="event-history" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📜 Histórico de Eventos</h3>
+                </div>
+                <p>Histórico completo das suas participações em eventos.</p>
+            </div>
+        </section>
+
+        <section id="registrations" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📋 Inscrições</h3>
+                </div>
+                <p>Gestão das suas inscrições em eventos.</p>
+            </div>
+        </section>
+
+        <section id="organized-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🗓️ Eventos Organizados</h3>
+                </div>
+                <p>Lista dos eventos que organizou ou está a organizar.</p>
+            </div>
+        </section>
+
+        <section id="create-event" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">➕ Criar Evento</h3>
+                </div>
+                <p>Formulário para criar um novo evento desportivo.</p>
+            </div>
+        </section>
+
+        <section id="event-management" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🛠️ Gestão de Eventos</h3>
+                </div>
+                <p>Ferramentas para gerir os seus eventos ativos.</p>
+            </div>
+        </section>
+
+        <section id="event-reports" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📊 Relatórios de Eventos</h3>
+                </div>
+                <p>Analytics e relatórios dos seus eventos.</p>
+            </div>
+        </section>
+
+        <!-- Admin Sections -->
+        <section id="all-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🌐 Todos os Eventos da Plataforma</h3>
+                </div>
+                <p>Vista completa de todos os eventos na plataforma KROMI.</p>
+            </div>
+        </section>
+
+        <section id="active-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">▶️ Eventos Ativos</h3>
+                </div>
+                <p>Eventos que estão atualmente em andamento.</p>
+            </div>
+        </section>
+
+        <section id="pending-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">⏳ Eventos Pendentes</h3>
+                </div>
+                <p>Eventos aguardando aprovação ou revisão.</p>
+            </div>
+        </section>
+
+        <section id="platform-reports" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📈 Relatórios da Plataforma</h3>
+                </div>
+                <p>Analytics globais da plataforma KROMI.</p>
+            </div>
+        </section>
+
+        <section id="platform-config" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">⚙️ Configurações da Plataforma</h3>
+                </div>
+                <p>Configurações gerais do sistema KROMI.</p>
+            </div>
+        </section>
+
+        <section id="integrations" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🔌 Integrações</h3>
+                </div>
+                <p>Gestão de APIs e integrações com serviços externos.</p>
+            </div>
+        </section>
+
+        <section id="email-templates" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📧 Templates de Email</h3>
+                </div>
+                <p>Gestão dos templates de email da plataforma.</p>
+            </div>
+        </section>
+
+        <section id="system" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🖥️ Sistema</h3>
+                </div>
+                <p>Logs, backup, manutenção e monitorização do sistema.</p>
+            </div>
+        </section>
+
+        <section id="users-list" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">👥 Lista de Utilizadores</h3>
+                </div>
+                <p>Gestão completa dos utilizadores da plataforma.</p>
+            </div>
+        </section>
+
+        <section id="user-management" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">👤 Gestão de Perfis</h3>
+                </div>
+                <p>Edição e gestão de perfis de utilizadores.</p>
+            </div>
+        </section>
+
+        <section id="permissions" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🛡️ Permissões</h3>
+                </div>
+                <p>Gestão de roles e permissões dos utilizadores.</p>
+            </div>
+        </section>
+
+        <section id="user-reports" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📊 Relatórios de Utilizadores</h3>
+                </div>
+                <p>Analytics e relatórios sobre utilizadores.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global state
+        let currentUserRole = 'user'; // 'user' or 'superadmin'
+        let currentSection = 'dashboard';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            initializeNavigation();
+            initializeProfileTabs();
+            initializeForms();
+            updateUIForRole();
+        });
+
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            document.getElementById('themeToggle').addEventListener('click', function() {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+        }
+
+        // Navigation management
+        function initializeNavigation() {
+            // Menu toggle for mobile
+            document.getElementById('menuToggle').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('active');
+            });
+
+            // Navigation links
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('nav-link') || e.target.closest('.nav-link')) {
+                    e.preventDefault();
+                    const link = e.target.closest('.nav-link');
+                    const section = link.getAttribute('data-section');
+                    if (section) {
+                        navigateToSection(section);
+                    }
+                }
+            });
+
+            // Close sidebar on outside click (mobile)
+            document.addEventListener('click', function(e) {
+                const sidebar = document.getElementById('sidebar');
+                const menuToggle = document.getElementById('menuToggle');
+                if (window.innerWidth < 1024 && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
+
+        // Navigate to section
+        function navigateToSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+
+            // Update breadcrumbs
+            updateBreadcrumbs(sectionId);
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
+
+            currentSection = sectionId;
+        }
+
+        // Update breadcrumbs
+        function updateBreadcrumbs(sectionId) {
+            const breadcrumbsContainer = document.getElementById('breadcrumbs');
+            const sectionNames = {
+                'dashboard': 'Dashboard',
+                'admin-dashboard': 'Dashboard Admin',
+                'profile': 'Meu Perfil',
+                'edit-profile': 'Editar Perfil',
+                'profile-settings': 'Configurações do Perfil',
+                'my-events': 'Eventos que Participo',
+                'event-history': 'Histórico de Eventos',
+                'registrations': 'Inscrições',
+                'organized-events': 'Eventos Organizados',
+                'create-event': 'Criar Evento',
+                'event-management': 'Gestão de Eventos',
+                'event-reports': 'Relatórios de Eventos',
+                'all-events': 'Todos os Eventos',
+                'active-events': 'Eventos Ativos',
+                'pending-events': 'Eventos Pendentes',
+                'platform-reports': 'Relatórios da Plataforma',
+                'platform-config': 'Configurações da Plataforma',
+                'integrations': 'Integrações',
+                'email-templates': 'Templates de Email',
+                'system': 'Sistema',
+                'users-list': 'Lista de Utilizadores',
+                'user-management': 'Gestão de Perfis',
+                'permissions': 'Permissões',
+                'user-reports': 'Relatórios de Utilizadores'
+            };
+
+            const sectionName = sectionNames[sectionId] || sectionId;
+            breadcrumbsContainer.innerHTML = `
+                <div class="breadcrumb-item">
+                    <i class="fas fa-home"></i>
+                    <span>${sectionName}</span>
+                </div>
+            `;
+        }
+
+        // Profile tabs management
+        function initializeProfileTabs() {
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('profile-tab')) {
+                    const tabId = e.target.getAttribute('data-tab');
+                    
+                    // Update tab buttons
+                    document.querySelectorAll('.profile-tab').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    e.target.classList.add('active');
+
+                    // Update tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId).classList.add('active');
+                }
+            });
+        }
+
+        // Switch user profile (for demo)
+        function switchProfile() {
+            currentUserRole = currentUserRole === 'user' ? 'superadmin' : 'user';
+            updateUIForRole();
+            
+            // Navigate to appropriate dashboard
+            const dashboardSection = currentUserRole === 'superadmin' ? 'admin-dashboard' : 'dashboard';
+            navigateToSection(dashboardSection);
+        }
+
+        // Update UI based on user role
+        function updateUIForRole() {
+            const userMenu = document.getElementById('userMenu');
+            const adminMenu = document.getElementById('adminMenu');
+            const currentRoleSpan = document.getElementById('currentRole');
+            const headerUserRole = document.getElementById('headerUserRole');
+
+            if (currentUserRole === 'superadmin') {
+                userMenu.classList.add('hidden');
+                adminMenu.classList.remove('hidden');
+                currentRoleSpan.textContent = 'SuperAdmin';
+                headerUserRole.textContent = 'SuperAdmin';
+            } else {
+                userMenu.classList.remove('hidden');
+                adminMenu.classList.add('hidden');
+                currentRoleSpan.textContent = 'Utilizador';
+                headerUserRole.textContent = 'Utilizador';
+            }
+        }
+
+        // Form handling
+        function initializeForms() {
+            // Avatar upload
+            document.getElementById('avatarInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const avatarPreview = document.getElementById('avatarPreview');
+                        avatarPreview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Form submissions
+            document.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formId = e.target.id;
+                handleFormSubmission(formId);
+            });
+        }
+
+        // Handle form submissions
+        function handleFormSubmission(formId) {
+            console.log(`Submitting form: ${formId}`);
+            
+            // Show success message
+            const form = document.getElementById(formId);
+            const existingMessage = form.querySelector('.success-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const successMessage = document.createElement('div');
+            successMessage.className = 'success-message';
+            successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Alterações guardadas com sucesso!';
+            successMessage.style.padding = '12px';
+            successMessage.style.marginTop = '16px';
+            successMessage.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+            successMessage.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            successMessage.style.borderRadius = '8px';
+
+            form.appendChild(successMessage);
+
+            // Remove message after 3 seconds
+            setTimeout(function() {
+                successMessage.remove();
+            }, 3000);
+        }
+
+        // Geocode address (placeholder function)
+        function geocodeAddress() {
+            // This would integrate with a geocoding service
+            console.log('Geocoding address...');
+            
+            // Simulate geocoding
+            setTimeout(function() {
+                document.getElementById('addressLat').value = '38.7223';
+                document.getElementById('addressLng').value = '-9.1393';
+                document.getElementById('addressFormatted').value = 
+                    document.getElementById('addressLine1').value + ', ' +
+                    document.getElementById('city').value + ', ' +
+                    document.getElementById('country').options[document.getElementById('country').selectedIndex].text;
+            }, 1000);
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDossmMn0%2FJA3QjPA8YGGFI9C3hFICnxMGOdh%2F43qXHxNUDSvWTvGY4lFmdRIIHGN3lFYz1Yw6RQHxF8Va9N8FFxpLkeI%2F0IXQ0gWWojGJ8CzBk%2F1tgvs8TrUJ5QlCzPnJNelG%2FKRiBEz10eYRvRuzxX9S9LM33ihgmFK%2BEDpbeKJr54zOpsT74zCIJKkaL6bmMz5aZMo0RnciNNkxNIWZPGvSep5KkhSzwRRhoOPwq1AOJuuJvWnq%2FvCrbNIpYsKI8PJEmZ0y%2B7Vcw%2BpKheIXmAXpMgSRBLhbPUTB8rAit1Ft5%2BL3KmN8RF0z9SERniu0PPcRvkHx8sMWyjWB1TD9xJKSTlV1ZBghOFIhDEySFYr2A4Ympss0IgYQA5o5sufo27JSoKhOHCQqukEtWuQrVPjvMUuxomqz5rVhHm35WvPqw4iT7saexj3A5e2x5zenzX26PskXinvpup2sHoLy7Elu8C5xWA2alZPRDcDOdd%2F7UWzq%2BQwA4WXIWX0Wsz%2FSg%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDossmMn0/JA3QjPA8YGGFI9C3hFICnxMGOdh/43qXHxNUDSvWTvGY4lFmdRIIHGN3lFYz1Yw6RQHxF8Va9N8FFxpLkeI/0IXQ0gWWojGJ8CzBk/1tgvs8TrUJ5QlCzPnJNelG/KRiBEz10eYRvRuzxX9S9LM33ihgmFK+EDpbeKJr54zOpsT74zCIJKkaL6bmMz5aZMo0RnciNNkxNIWZPGvSep5KkhSzwRRhoOPwq1AOJuuJvWnq/vCrbNIpYsKI8PJEmZ0y+7Vcw+pKheIXmAXpMgSRBLhbPUTB8rAit1Ft5+L3KmN8RF0z9SERniu0PPcRvkHx8sMWyjWB1TD9xJKSTlV1ZBghOFIhDEySFYr2A4Ympss0IgYQA5o5sufo27JSoKhOHCQqukEtWuQrVPjvMUuxomqz5rVhHm35WvPqw4iT7saexj3A5e2x5zenzX26PskXinvpup2sHoLy7Elu8C5xWA2alZPRDcDOdd/7UWzq+QwA4WXIWX0Wsz/Sg==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

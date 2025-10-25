@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Sistema de Administração SuperAdmin</title>
+    
+    <!-- External Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-light: #ffffff;
+            --bg-dark: #000000;
+            --card-light: #f8fafc;
+            --card-dark: #1a1a1a;
+            --text-light: #1f2937;
+            --text-dark: #ffffff;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --muted: #6b7280;
+            --accent: #22d3ee;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --bg-secondary: var(--card-dark);
+            --text-primary: var(--text-dark);
+            --text-secondary: #a0a0a0;
+            --border-color: var(--border-dark);
+            --card: var(--card-dark);
+            --text: var(--text-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --bg-secondary: var(--card-light);
+            --text-primary: var(--text-light);
+            --text-secondary: #6b7280;
+            --border-color: var(--border-light);
+            --card: var(--card-light);
+            --text: var(--text-light);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 60px;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar.active { transform: translateX(280px); }
+
+        @media (min-width: 1024px) {
+            .sidebar { left: 0; transform: none; }
+            .sidebar.active { transform: none; }
+            .main-content { margin-left: 280px; }
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 20px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 8px; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-link:hover { background: rgba(252, 107, 3, 0.1); color: var(--primary); }
+        .nav-link.active { background: var(--primary); color: white; }
+        .nav-link i { font-size: 18px; width: 20px; text-align: center; }
+
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        [data-theme="dark"] .theme-toggle::before { content: '🌙'; left: 26px; }
+        [data-theme="dark"] .theme-toggle { background: var(--primary); }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: var(--border-color); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .data-table th:hover { background: var(--border-color); }
+        .data-table th.sortable::after {
+            content: " ↕️";
+            font-size: 10px;
+        }
+        .data-table th.sort-asc::after { content: " ↑"; }
+        .data-table th.sort-desc::after { content: " ↓"; }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .data-table tbody tr:hover { background: rgba(252, 107, 3, 0.05); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.hidden { display: none; }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .icon-btn.edit:hover { color: var(--info); }
+        .icon-btn.delete:hover { color: var(--danger); }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active { background: var(--success); }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::before { left: 22px; }
+
+        .nav-separator {
+            height: 1px;
+            background: var(--border-color);
+            margin: 16px 0;
+        }
+
+        .nav-category {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding: 0 16px;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .main-content { padding: 16px; }
+            .sidebar { width: 100%; left: -100%; }
+            .sidebar.active { transform: translateX(100%); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+            .hide-mobile { display: none; }
+        }
+
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <button id="menuToggle" class="lg:hidden">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; background: linear-gradient(45deg, var(--primary), var(--primary-dark)); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-weight: bold; font-size: 14px;">K</span>
+                </div>
+                <h1 style="font-size: 18px; font-weight: bold;">KROMI SuperAdmin</h1>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="theme-toggle" id="themeToggle"></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">SA</div>
+                <div style="display: flex; flex-direction: column; font-size: 12px;">
+                    <span style="font-weight: 500;">SuperAdmin</span>
+                    <span style="color: var(--text-secondary);">Administrador</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar">
+        <div class="nav-category">Dashboard</div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Visão Geral</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-separator"></div>
+        <div class="nav-category">Gestão de Utilizadores</div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link" data-section="user-profiles">
+                    <i class="fas fa-user-tag"></i>
+                    <span>Perfis de Utilizador</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-section="permissions">
+                    <i class="fas fa-key"></i>
+                    <span>Permissões</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-separator"></div>
+        <div class="nav-category">Eventos</div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link" data-section="event-types">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Tipos de Eventos</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-section="event-modalities">
+                    <i class="fas fa-running"></i>
+                    <span>Modalidades</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-separator"></div>
+        <div class="nav-category">Dispositivos</div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link" data-section="device-types">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Tipos de Dispositivos</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-separator"></div>
+        <div class="nav-category">Sistema</div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link" data-section="platform-settings">
+                    <i class="fas fa-cogs"></i>
+                    <span>Configurações</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Dashboard SuperAdmin</h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-label">Total Utilizadores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">52</div>
+                        <div class="stat-label">Eventos Ativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Tipos de Eventos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">Modalidades</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">324</div>
+                        <div class="stat-label">Dispositivos</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Utilizadores por Perfil</h3>
+                        <div class="chart-container">
+                            <canvas id="userProfilesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Eventos por Tipo</h3>
+                        <div class="chart-container">
+                            <canvas id="eventTypesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Profiles Section -->
+        <section id="user-profiles" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👥 Perfis de Utilizador</h2>
+                    <button class="btn btn-primary" onclick="openModal('userProfileModal')">
+                        <i class="fas fa-plus"></i> Criar Perfil
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar perfis..." id="userProfilesSearch">
+                    <button class="btn btn-secondary" onclick="refreshUserProfiles()">
+                        <i class="fas fa-sync"></i> Atualizar
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="profileName">Nome do Perfil</th>
+                                <th class="sortable" data-sort="description">Descrição</th>
+                                <th class="sortable" data-sort="isActive">Status</th>
+                                <th class="sortable" data-sort="createdAt">Criado Em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userProfilesTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Permissions Section -->
+        <section id="permissions" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔐 Permissões do Sistema</h2>
+                    <button class="btn btn-primary" onclick="openModal('permissionModal')">
+                        <i class="fas fa-plus"></i> Criar Permissão
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar permissões..." id="permissionsSearch">
+                    <select class="form-select" style="width: 200px;" id="categoryFilter">
+                        <option value="">Todas as Categorias</option>
+                        <option value="users">Utilizadores</option>
+                        <option value="events">Eventos</option>
+                        <option value="devices">Dispositivos</option>
+                        <option value="settings">Configurações</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="permissionKey">Chave</th>
+                                <th class="sortable" data-sort="permissionName">Nome</th>
+                                <th class="sortable" data-sort="category">Categoria</th>
+                                <th class="sortable" data-sort="description">Descrição</th>
+                                <th class="sortable" data-sort="isActive">Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="permissionsTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Event Types Section -->
+        <section id="event-types" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📅 Tipos de Eventos</h2>
+                    <button class="btn btn-primary" onclick="openModal('eventTypeModal')">
+                        <i class="fas fa-plus"></i> Criar Tipo
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar tipos de eventos..." id="eventTypesSearch">
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="name">Nome</th>
+                                <th class="sortable" data-sort="description">Descrição</th>
+                                <th class="sortable" data-sort="createdAt">Criado Em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventTypesTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Event Modalities Section -->
+        <section id="event-modalities" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🏃 Modalidades de Eventos</h2>
+                    <button class="btn btn-primary" onclick="openModal('modalityModal')">
+                        <i class="fas fa-plus"></i> Criar Modalidade
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar modalidades..." id="modalitiesSearch">
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="eventId">ID Evento</th>
+                                <th class="sortable" data-sort="modalityId">ID Modalidade</th>
+                                <th class="sortable" data-sort="modalityName">Nome da Modalidade</th>
+                                <th class="sortable" data-sort="eventName">Nome do Evento</th>
+                                <th class="sortable" data-sort="createdAt">Criado Em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalitiesTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Device Types Section -->
+        <section id="device-types" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📱 Tipos de Dispositivos</h2>
+                    <button class="btn btn-primary" onclick="openModal('deviceTypeModal')">
+                        <i class="fas fa-plus"></i> Criar Tipo
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar tipos de dispositivos..." id="deviceTypesSearch">
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="typeName">Nome Técnico</th>
+                                <th class="sortable" data-sort="displayName">Nome de Exibição</th>
+                                <th class="sortable" data-sort="description">Descrição</th>
+                                <th class="sortable" data-sort="isActive">Status</th>
+                                <th class="sortable" data-sort="createdAt">Criado Em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceTypesTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Settings Section -->
+        <section id="platform-settings" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Configurações da Plataforma</h2>
+                    <button class="btn btn-primary" onclick="openModal('settingModal')">
+                        <i class="fas fa-plus"></i> Nova Configuração
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Pesquisar configurações..." id="settingsSearch">
+                    <select class="form-select" style="width: 200px;" id="settingsCategory">
+                        <option value="">Todas as Categorias</option>
+                        <option value="general">Geral</option>
+                        <option value="email">Email</option>
+                        <option value="notifications">Notificações</option>
+                        <option value="security">Segurança</option>
+                        <option value="api">API</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="key">Chave</th>
+                                <th class="sortable" data-sort="value">Valor</th>
+                                <th class="sortable" data-sort="description">Descrição</th>
+                                <th class="sortable" data-sort="updatedAt">Atualizado Em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settingsTable">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- User Profile Modal -->
+    <div id="userProfileModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Perfil de Utilizador</h3>
+                <button class="modal-close" onclick="closeModal('userProfileModal')">&times;</button>
+            </div>
+            <form id="userProfileForm">
+                <div class="form-group">
+                    <label for="profileName">Nome do Perfil</label>
+                    <input type="text" id="profileName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileDescription">Descrição</label>
+                    <textarea id="profileDescription" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="profileActive"> Perfil Ativo
+                    </label>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('userProfileModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Permission Modal -->
+    <div id="permissionModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Permissão</h3>
+                <button class="modal-close" onclick="closeModal('permissionModal')">&times;</button>
+            </div>
+            <form id="permissionForm">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="permissionKey">Chave da Permissão</label>
+                        <input type="text" id="permissionKey" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="permissionName">Nome da Permissão</label>
+                        <input type="text" id="permissionName" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="permissionCategory">Categoria</label>
+                    <select id="permissionCategory" class="form-select">
+                        <option value="users">Utilizadores</option>
+                        <option value="events">Eventos</option>
+                        <option value="devices">Dispositivos</option>
+                        <option value="settings">Configurações</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="permissionDescriptionField">Descrição</label>
+                    <textarea id="permissionDescriptionField" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="permissionActiveField"> Permissão Ativa
+                    </label>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('permissionModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Event Type Modal -->
+    <div id="eventTypeModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Tipo de Evento</h3>
+                <button class="modal-close" onclick="closeModal('eventTypeModal')">&times;</button>
+            </div>
+            <form id="eventTypeForm">
+                <div class="form-group">
+                    <label for="eventTypeName">Nome do Tipo</label>
+                    <input type="text" id="eventTypeName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="eventTypeDescription">Descrição</label>
+                    <textarea id="eventTypeDescription" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('eventTypeModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modality Modal -->
+    <div id="modalityModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Modalidade</h3>
+                <button class="modal-close" onclick="closeModal('modalityModal')">&times;</button>
+            </div>
+            <form id="modalityForm">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="modalityEventId">ID do Evento</label>
+                        <input type="number" id="modalityEventId" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalityId">ID da Modalidade</label>
+                        <input type="number" id="modalityId" class="form-input" required>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="modalityName">Nome da Modalidade</label>
+                        <input type="text" id="modalityName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalityEventName">Nome do Evento</label>
+                        <input type="text" id="modalityEventName" class="form-input" required>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalityModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Device Type Modal -->
+    <div id="deviceTypeModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Tipo de Dispositivo</h3>
+                <button class="modal-close" onclick="closeModal('deviceTypeModal')">&times;</button>
+            </div>
+            <form id="deviceTypeForm">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="deviceTypeName">Nome Técnico</label>
+                        <input type="text" id="deviceTypeName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deviceDisplayName">Nome de Exibição</label>
+                        <input type="text" id="deviceDisplayName" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="deviceDescription">Descrição</label>
+                    <textarea id="deviceDescription" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="requiredPermissions">Permissões Necessárias</label>
+                    <input type="text" id="requiredPermissions" class="form-input" placeholder="Ex: device.read,device.write">
+                </div>
+                <div class="form-group">
+                    <label for="availableFeatures">Funcionalidades Disponíveis</label>
+                    <input type="text" id="availableFeatures" class="form-input" placeholder="Ex: camera,gps,audio">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="deviceTypeActive"> Tipo Ativo
+                    </label>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deviceTypeModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Setting Modal -->
+    <div id="settingModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar/Editar Configuração</h3>
+                <button class="modal-close" onclick="closeModal('settingModal')">&times;</button>
+            </div>
+            <form id="settingForm">
+                <div class="form-group">
+                    <label for="settingKey">Chave da Configuração</label>
+                    <input type="text" id="settingKey" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="settingValue">Valor</label>
+                    <textarea id="settingValue" class="form-textarea" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="settingDescription">Descrição</label>
+                    <textarea id="settingDescription" class="form-textarea" rows="2"></textarea>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('settingModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Mock Data
+        const mockData = {
+            userProfiles: [
+                { profileId: 1, profileName: 'Super Admin', description: 'Acesso total ao sistema', isActive: true, createdAt: '2024-01-15' },
+                { profileId: 2, profileName: 'Organizador', description: 'Pode criar e gerir eventos', isActive: true, createdAt: '2024-01-20' },
+                { profileId: 3, profileName: 'Participante', description: 'Pode participar em eventos', isActive: true, createdAt: '2024-01-25' },
+                { profileId: 4, profileName: 'Staff', description: 'Apoio durante eventos', isActive: false, createdAt: '2024-02-01' },
+            ],
+            permissions: [
+                { permissionId: 1, permissionKey: 'users.read', permissionName: 'Ler Utilizadores', description: 'Visualizar dados de utilizadores', category: 'users', isActive: true, createdAt: '2024-01-15' },
+                { permissionId: 2, permissionKey: 'users.write', permissionName: 'Editar Utilizadores', description: 'Criar e editar utilizadores', category: 'users', isActive: true, createdAt: '2024-01-15' },
+                { permissionId: 3, permissionKey: 'events.create', permissionName: 'Criar Eventos', description: 'Criar novos eventos', category: 'events', isActive: true, createdAt: '2024-01-16' },
+                { permissionId: 4, permissionKey: 'devices.manage', permissionName: 'Gerir Dispositivos', description: 'Configurar dispositivos', category: 'devices', isActive: true, createdAt: '2024-01-17' },
+                { permissionId: 5, permissionKey: 'settings.admin', permissionName: 'Admin Configurações', description: 'Alterar configurações do sistema', category: 'settings', isActive: true, createdAt: '2024-01-18' },
+            ],
+            eventTypes: [
+                { eventTypeId: 1, name: 'Corrida de Rua', description: 'Corridas em percurso urbano', createdAt: '2024-01-10' },
+                { eventTypeId: 2, name: 'Trail Running', description: 'Corridas em natureza', createdAt: '2024-01-12' },
+                { eventTypeId: 3, name: 'Maratona', description: 'Corridas de 42,195km', createdAt: '2024-01-14' },
+                { eventTypeId: 4, name: 'Ciclismo', description: 'Eventos de ciclismo', createdAt: '2024-01-16' },
+                { eventTypeId: 5, name: 'Triatlo', description: 'Natação, ciclismo e corrida', createdAt: '2024-01-18' },
+            ],
+            eventModalities: [
+                { eventModalityId: 1, eventId: 101, modalityId: 1, modalityName: 'Seniores', eventName: 'Maratona Lisboa 2024', createdAt: '2024-02-01' },
+                { eventModalityId: 2, eventId: 102, modalityId: 2, modalityName: 'Masters', eventName: 'Trail Serra da Estrela', createdAt: '2024-02-02' },
+                { eventModalityId: 3, eventId: 103, modalityId: 3, modalityName: 'Sub-23', eventName: 'Corrida do Tejo', createdAt: '2024-02-03' },
+                { eventModalityId: 4, eventId: 104, modalityId: 4, modalityName: 'Veteranos', eventName: 'Volta ao Parque', createdAt: '2024-02-04' },
+            ],
+            deviceTypes: [
+                { deviceTypeId: 1, typeName: 'smartphone', displayName: 'Smartphone', description: 'Dispositivo móvel com câmara', requiredPermissions: 'camera.access,location.access', availableFeatures: 'camera,gps,accelerometer', isActive: true, createdAt: '2024-01-20' },
+                { deviceTypeId: 2, typeName: 'tablet', displayName: 'Tablet', description: 'Tablet para registo', requiredPermissions: 'camera.access', availableFeatures: 'camera,touch', isActive: true, createdAt: '2024-01-22' },
+                { deviceTypeId: 3, typeName: 'camera_fixed', displayName: 'Câmara Fixa', description: 'Câmara de vigilância fixa', requiredPermissions: 'camera.manage', availableFeatures: 'camera,network', isActive: true, createdAt: '2024-01-24' },
+                { deviceTypeId: 4, typeName: 'rfid_reader', displayName: 'Leitor RFID', description: 'Dispositivo de leitura RFID', requiredPermissions: 'rfid.read', availableFeatures: 'rfid,bluetooth', isActive: false, createdAt: '2024-01-26' },
+            ],
+            settings: [
+                { key: 'platform.name', value: 'KROMI Platform', description: 'Nome da plataforma', updatedAt: '2024-08-20' },
+                { key: 'email.smtp.host', value: 'smtp.gmail.com', description: 'Servidor SMTP para emails', updatedAt: '2024-08-19' },
+                { key: 'email.smtp.port', value: '587', description: 'Porta do servidor SMTP', updatedAt: '2024-08-19' },
+                { key: 'notifications.enabled', value: 'true', description: 'Ativar sistema de notificações', updatedAt: '2024-08-18' },
+                { key: 'security.session.timeout', value: '3600', description: 'Timeout da sessão em segundos', updatedAt: '2024-08-17' },
+                { key: 'api.rate.limit', value: '1000', description: 'Limite de requests por hora', updatedAt: '2024-08-16' },
+                { key: 'file.upload.max.size', value: '10485760', description: 'Tamanho máximo de upload (bytes)', updatedAt: '2024-08-15' },
+            ]
+        };
+
+        // Current edit item
+        let currentEditItem = null;
+        let currentEditType = null;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            initializeNavigation();
+            initializeEventListeners();
+            initializeCharts();
+            loadAllData();
+        });
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function initializeNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = link.getAttribute('data-section');
+                    navigateToSection(sectionId);
+                });
+            });
+        }
+
+        function navigateToSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            // Close mobile sidebar
+            if (window.innerWidth < 1024) {
+                closeSidebar();
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('active');
+        }
+
+        function initializeEventListeners() {
+            document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Search functionality
+            document.getElementById('userProfilesSearch').addEventListener('input', (e) => {
+                filterTable('userProfilesTable', e.target.value, ['profileName', 'description']);
+            });
+            
+            document.getElementById('permissionsSearch').addEventListener('input', (e) => {
+                filterTable('permissionsTable', e.target.value, ['permissionKey', 'permissionName', 'description']);
+            });
+            
+            document.getElementById('eventTypesSearch').addEventListener('input', (e) => {
+                filterTable('eventTypesTable', e.target.value, ['name', 'description']);
+            });
+            
+            document.getElementById('modalitiesSearch').addEventListener('input', (e) => {
+                filterTable('modalitiesTable', e.target.value, ['modalityName', 'eventName']);
+            });
+            
+            document.getElementById('deviceTypesSearch').addEventListener('input', (e) => {
+                filterTable('deviceTypesTable', e.target.value, ['typeName', 'displayName', 'description']);
+            });
+            
+            document.getElementById('settingsSearch').addEventListener('input', (e) => {
+                filterTable('settingsTable', e.target.value, ['key', 'value', 'description']);
+            });
+            
+            // Category filters
+            document.getElementById('categoryFilter').addEventListener('change', (e) => {
+                filterTableByCategory('permissionsTable', e.target.value, 'category');
+            });
+            
+            document.getElementById('settingsCategory').addEventListener('change', (e) => {
+                filterTableByKey('settingsTable', e.target.value);
+            });
+            
+            // Form submissions
+            document.getElementById('userProfileForm').addEventListener('submit', handleUserProfileSubmit);
+            document.getElementById('permissionForm').addEventListener('submit', handlePermissionSubmit);
+            document.getElementById('eventTypeForm').addEventListener('submit', handleEventTypeSubmit);
+            document.getElementById('modalityForm').addEventListener('submit', handleModalitySubmit);
+            document.getElementById('deviceTypeForm').addEventListener('submit', handleDeviceTypeSubmit);
+            document.getElementById('settingForm').addEventListener('submit', handleSettingSubmit);
+            
+            // Click outside to close sidebar on mobile
+            document.addEventListener('click', (e) => {
+                const sidebar = document.getElementById('sidebar');
+                const menuToggle = document.getElementById('menuToggle');
+                
+                if (window.innerWidth < 1024 && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+        }
+
+        function initializeCharts() {
+            // User Profiles Chart
+            const userProfilesCtx = document.getElementById('userProfilesChart').getContext('2d');
+            new Chart(userProfilesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Super Admin', 'Organizador', 'Participante', 'Staff'],
+                    datasets: [{
+                        data: [5, 23, 1180, 39],
+                        backgroundColor: ['#fc6b03', '#22d3ee', '#10b981', '#f59e0b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+
+            // Event Types Chart
+            const eventTypesCtx = document.getElementById('eventTypesChart').getContext('2d');
+            new Chart(eventTypesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Corrida', 'Trail', 'Maratona', 'Ciclismo', 'Triatlo'],
+                    datasets: [{
+                        label: 'Eventos',
+                        data: [25, 12, 8, 5, 2],
+                        backgroundColor: '#fc6b03',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: '#374151' }
+                        },
+                        x: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: '#374151' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadAllData() {
+            populateUserProfiles();
+            populatePermissions();
+            populateEventTypes();
+            populateEventModalities();
+            populateDeviceTypes();
+            populateSettings();
+        }
+
+        function populateUserProfiles() {
+            const tbody = document.getElementById('userProfilesTable');
+            tbody.innerHTML = mockData.userProfiles.map(profile => `
+                <tr>
+                    <td>${profile.profileName}</td>
+                    <td>${profile.description}</td>
+                    <td><span class="badge ${profile.isActive ? 'badge-success' : 'badge-danger'}">${profile.isActive ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>${formatDate(profile.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editUserProfile(${profile.profileId})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteUserProfile(${profile.profileId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populatePermissions() {
+            const tbody = document.getElementById('permissionsTable');
+            tbody.innerHTML = mockData.permissions.map(permission => `
+                <tr>
+                    <td><code>${permission.permissionKey}</code></td>
+                    <td>${permission.permissionName}</td>
+                    <td><span class="badge badge-success">${permission.category}</span></td>
+                    <td>${permission.description}</td>
+                    <td><span class="badge ${permission.isActive ? 'badge-success' : 'badge-danger'}">${permission.isActive ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editPermission(${permission.permissionId})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deletePermission(${permission.permissionId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateEventTypes() {
+            const tbody = document.getElementById('eventTypesTable');
+            tbody.innerHTML = mockData.eventTypes.map(eventType => `
+                <tr>
+                    <td>${eventType.name}</td>
+                    <td>${eventType.description}</td>
+                    <td>${formatDate(eventType.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editEventType(${eventType.eventTypeId})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteEventType(${eventType.eventTypeId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateEventModalities() {
+            const tbody = document.getElementById('modalitiesTable');
+            tbody.innerHTML = mockData.eventModalities.map(modality => `
+                <tr>
+                    <td>${modality.eventId}</td>
+                    <td>${modality.modalityId}</td>
+                    <td>${modality.modalityName}</td>
+                    <td>${modality.eventName}</td>
+                    <td>${formatDate(modality.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editModality(${modality.eventModalityId})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteModality(${modality.eventModalityId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateDeviceTypes() {
+            const tbody = document.getElementById('deviceTypesTable');
+            tbody.innerHTML = mockData.deviceTypes.map(deviceType => `
+                <tr>
+                    <td><code>${deviceType.typeName}</code></td>
+                    <td>${deviceType.displayName}</td>
+                    <td>${deviceType.description}</td>
+                    <td><span class="badge ${deviceType.isActive ? 'badge-success' : 'badge-danger'}">${deviceType.isActive ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>${formatDate(deviceType.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editDeviceType(${deviceType.deviceTypeId})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteDeviceType(${deviceType.deviceTypeId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateSettings() {
+            const tbody = document.getElementById('settingsTable');
+            tbody.innerHTML = mockData.settings.map(setting => `
+                <tr>
+                    <td><code>${setting.key}</code></td>
+                    <td>${setting.value.length > 50 ? setting.value.substring(0, 50) + '...' : setting.value}</td>
+                    <td>${setting.description}</td>
+                    <td>${formatDate(setting.updatedAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="icon-btn edit" onclick="editSetting('${setting.key}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteSetting('${setting.key}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Utility Functions
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('pt-PT');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            clearForm(modalId);
+            currentEditItem = null;
+            currentEditType = null;
+        }
+
+        function clearForm(modalId) {
+            const modal = document.getElementById(modalId);
+            const form = modal.querySelector('form');
+            if (form) {
+                form.reset();
+            }
+        }
+
+        function filterTable(tableId, searchTerm, searchFields) {
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length && !found; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    if (cellText.includes(searchTerm.toLowerCase())) {
+                        found = true;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+
+        function filterTableByCategory(tableId, category, categoryColumn) {
+            if (!category) {
+                // Show all rows
+                const table = document.getElementById(tableId);
+                const rows = table.getElementsByTagName('tr');
+                for (let i = 0; i < rows.length; i++) {
+                    rows[i].style.display = '';
+                }
+                return;
+            }
+            
+            filterTable(tableId, category, [categoryColumn]);
+        }
+
+        function filterTableByKey(tableId, category) {
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                if (cells.length > 0) {
+                    const key = cells[0].textContent;
+                    const show = !category || key.toLowerCase().includes(category.toLowerCase());
+                    rows[i].style.display = show ? '' : 'none';
+                }
+            }
+        }
+
+        // CRUD Functions
+        function editUserProfile(id) {
+            const profile = mockData.userProfiles.find(p => p.profileId === id);
+            if (profile) {
+                document.getElementById('profileName').value = profile.profileName;
+                document.getElementById('profileDescription').value = profile.description;
+                document.getElementById('profileActive').checked = profile.isActive;
+                
+                currentEditItem = profile;
+                currentEditType = 'userProfile';
+                openModal('userProfileModal');
+            }
+        }
+
+        function deleteUserProfile(id) {
+            if (confirm('Tem certeza que deseja eliminar este perfil?')) {
+                mockData.userProfiles = mockData.userProfiles.filter(p => p.profileId !== id);
+                populateUserProfiles();
+                showNotification('Perfil eliminado com sucesso!', 'success');
+            }
+        }
+
+        function editPermission(id) {
+            const permission = mockData.permissions.find(p => p.permissionId === id);
+            if (permission) {
+                document.getElementById('permissionKey').value = permission.permissionKey;
+                document.getElementById('permissionName').value = permission.permissionName;
+                document.getElementById('permissionCategory').value = permission.category;
+                document.getElementById('permissionDescriptionField').value = permission.description;
+                document.getElementById('permissionActiveField').checked = permission.isActive;
+                
+                currentEditItem = permission;
+                currentEditType = 'permission';
+                openModal('permissionModal');
+            }
+        }
+
+        function deletePermission(id) {
+            if (confirm('Tem certeza que deseja eliminar esta permissão?')) {
+                mockData.permissions = mockData.permissions.filter(p => p.permissionId !== id);
+                populatePermissions();
+                showNotification('Permissão eliminada com sucesso!', 'success');
+            }
+        }
+
+        function editEventType(id) {
+            const eventType = mockData.eventTypes.find(e => e.eventTypeId === id);
+            if (eventType) {
+                document.getElementById('eventTypeName').value = eventType.name;
+                document.getElementById('eventTypeDescription').value = eventType.description;
+                
+                currentEditItem = eventType;
+                currentEditType = 'eventType';
+                openModal('eventTypeModal');
+            }
+        }
+
+        function deleteEventType(id) {
+            if (confirm('Tem certeza que deseja eliminar este tipo de evento?')) {
+                mockData.eventTypes = mockData.eventTypes.filter(e => e.eventTypeId !== id);
+                populateEventTypes();
+                showNotification('Tipo de evento eliminado com sucesso!', 'success');
+            }
+        }
+
+        function editModality(id) {
+            const modality = mockData.eventModalities.find(m => m.eventModalityId === id);
+            if (modality) {
+                document.getElementById('modalityEventId').value = modality.eventId;
+                document.getElementById('modalityId').value = modality.modalityId;
+                document.getElementById('modalityName').value = modality.modalityName;
+                document.getElementById('modalityEventName').value = modality.eventName;
+                
+                currentEditItem = modality;
+                currentEditType = 'modality';
+                openModal('modalityModal');
+            }
+        }
+
+        function deleteModality(id) {
+            if (confirm('Tem certeza que deseja eliminar esta modalidade?')) {
+                mockData.eventModalities = mockData.eventModalities.filter(m => m.eventModalityId !== id);
+                populateEventModalities();
+                showNotification('Modalidade eliminada com sucesso!', 'success');
+            }
+        }
+
+        function editDeviceType(id) {
+            const deviceType = mockData.deviceTypes.find(d => d.deviceTypeId === id);
+            if (deviceType) {
+                document.getElementById('deviceTypeName').value = deviceType.typeName;
+                document.getElementById('deviceDisplayName').value = deviceType.displayName;
+                document.getElementById('deviceDescription').value = deviceType.description;
+                document.getElementById('requiredPermissions').value = deviceType.requiredPermissions;
+                document.getElementById('availableFeatures').value = deviceType.availableFeatures;
+                document.getElementById('deviceTypeActive').checked = deviceType.isActive;
+                
+                currentEditItem = deviceType;
+                currentEditType = 'deviceType';
+                openModal('deviceTypeModal');
+            }
+        }
+
+        function deleteDeviceType(id) {
+            if (confirm('Tem certeza que deseja eliminar este tipo de dispositivo?')) {
+                mockData.deviceTypes = mockData.deviceTypes.filter(d => d.deviceTypeId !== id);
+                populateDeviceTypes();
+                showNotification('Tipo de dispositivo eliminado com sucesso!', 'success');
+            }
+        }
+
+        function editSetting(key) {
+            const setting = mockData.settings.find(s => s.key === key);
+            if (setting) {
+                document.getElementById('settingKey').value = setting.key;
+                document.getElementById('settingValue').value = setting.value;
+                document.getElementById('settingDescription').value = setting.description;
+                
+                currentEditItem = setting;
+                currentEditType = 'setting';
+                openModal('settingModal');
+            }
+        }
+
+        function deleteSetting(key) {
+            if (confirm('Tem certeza que deseja eliminar esta configuração?')) {
+                mockData.settings = mockData.settings.filter(s => s.key !== key);
+                populateSettings();
+                showNotification('Configuração eliminada com sucesso!', 'success');
+            }
+        }
+
+        // Form Submission Handlers
+        function handleUserProfileSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                profileName: document.getElementById('profileName').value,
+                description: document.getElementById('profileDescription').value,
+                isActive: document.getElementById('profileActive').checked
+            };
+            
+            if (currentEditItem && currentEditType === 'userProfile') {
+                // Update existing
+                Object.assign(currentEditItem, formData, { updatedAt: new Date().toISOString().split('T')[0] });
+                showNotification('Perfil atualizado com sucesso!', 'success');
+            } else {
+                // Create new
+                const newProfile = {
+                    ...formData,
+                    profileId: Math.max(...mockData.userProfiles.map(p => p.profileId)) + 1,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                mockData.userProfiles.push(newProfile);
+                showNotification('Perfil criado com sucesso!', 'success');
+            }
+            
+            populateUserProfiles();
+            closeModal('userProfileModal');
+        }
+
+        function handlePermissionSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                permissionKey: document.getElementById('permissionKey').value,
+                permissionName: document.getElementById('permissionName').value,
+                category: document.getElementById('permissionCategory').value,
+                description: document.getElementById('permissionDescriptionField').value,
+                isActive: document.getElementById('permissionActiveField').checked
+            };
+            
+            if (currentEditItem && currentEditType === 'permission') {
+                // Update existing
+                Object.assign(currentEditItem, formData);
+                showNotification('Permissão atualizada com sucesso!', 'success');
+            } else {
+                // Create new
+                const newPermission = {
+                    ...formData,
+                    permissionId: Math.max(...mockData.permissions.map(p => p.permissionId)) + 1,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                mockData.permissions.push(newPermission);
+                showNotification('Permissão criada com sucesso!', 'success');
+            }
+            
+            populatePermissions();
+            closeModal('permissionModal');
+        }
+
+        function handleEventTypeSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('eventTypeName').value,
+                description: document.getElementById('eventTypeDescription').value
+            };
+            
+            if (currentEditItem && currentEditType === 'eventType') {
+                // Update existing
+                Object.assign(currentEditItem, formData);
+                showNotification('Tipo de evento atualizado com sucesso!', 'success');
+            } else {
+                // Create new
+                const newEventType = {
+                    ...formData,
+                    eventTypeId: Math.max(...mockData.eventTypes.map(e => e.eventTypeId)) + 1,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                mockData.eventTypes.push(newEventType);
+                showNotification('Tipo de evento criado com sucesso!', 'success');
+            }
+            
+            populateEventTypes();
+            closeModal('eventTypeModal');
+        }
+
+        function handleModalitySubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                eventId: parseInt(document.getElementById('modalityEventId').value),
+                modalityId: parseInt(document.getElementById('modalityId').value),
+                modalityName: document.getElementById('modalityName').value,
+                eventName: document.getElementById('modalityEventName').value
+            };
+            
+            if (currentEditItem && currentEditType === 'modality') {
+                // Update existing
+                Object.assign(currentEditItem, formData);
+                showNotification('Modalidade atualizada com sucesso!', 'success');
+            } else {
+                // Create new
+                const newModality = {
+                    ...formData,
+                    eventModalityId: Math.max(...mockData.eventModalities.map(m => m.eventModalityId)) + 1,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                mockData.eventModalities.push(newModality);
+                showNotification('Modalidade criada com sucesso!', 'success');
+            }
+            
+            populateEventModalities();
+            closeModal('modalityModal');
+        }
+
+        function handleDeviceTypeSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                typeName: document.getElementById('deviceTypeName').value,
+                displayName: document.getElementById('deviceDisplayName').value,
+                description: document.getElementById('deviceDescription').value,
+                requiredPermissions: document.getElementById('requiredPermissions').value,
+                availableFeatures: document.getElementById('availableFeatures').value,
+                isActive: document.getElementById('deviceTypeActive').checked
+            };
+            
+            if (currentEditItem && currentEditType === 'deviceType') {
+                // Update existing
+                Object.assign(currentEditItem, formData);
+                showNotification('Tipo de dispositivo atualizado com sucesso!', 'success');
+            } else {
+                // Create new
+                const newDeviceType = {
+                    ...formData,
+                    deviceTypeId: Math.max(...mockData.deviceTypes.map(d => d.deviceTypeId)) + 1,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                mockData.deviceTypes.push(newDeviceType);
+                showNotification('Tipo de dispositivo criado com sucesso!', 'success');
+            }
+            
+            populateDeviceTypes();
+            closeModal('deviceTypeModal');
+        }
+
+        function handleSettingSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                key: document.getElementById('settingKey').value,
+                value: document.getElementById('settingValue').value,
+                description: document.getElementById('settingDescription').value,
+                updatedAt: new Date().toISOString().split('T')[0]
+            };
+            
+            if (currentEditItem && currentEditType === 'setting') {
+                // Update existing
+                Object.assign(currentEditItem, formData);
+                showNotification('Configuração atualizada com sucesso!', 'success');
+            } else {
+                // Create new
+                mockData.settings.push(formData);
+                showNotification('Configuração criada com sucesso!', 'success');
+            }
+            
+            populateSettings();
+            closeModal('settingModal');
+        }
+
+        function refreshUserProfiles() {
+            populateUserProfiles();
+            showNotification('Dados atualizados!', 'info');
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'});
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 3000;
+                animation: slideIn 0.3s ease;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
+        });
+    </script>
+
+    <style>
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
+
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDi%2BZvRDAvQ%2Fwnx36d0lsYIIyomikLSiKk7dpUtrQuymfuoMtij5lvKAcQicYTA%2FYrbjVIj7yyKMSMDbiipCz%2B1zQeASEQa%2FMMDwHQwGYu7I3LYsztKuDicak4MaQbRQrubn9jKNRh05evsz4JX4CwDSKho0%2FHDNFzChqN6IDtvP5jBSzJ%2F4SYaePcsP3ishXXI%2FYpGBxBxLU2Ap4XAsetPcX%2F6A%2BcErIzmyfzqI5cwxraJzozm9AaRUKCpgza1qv%2FSes51fQlBhe7ssnkfGxYanbLyqkFJj%2BY0kCc16SOqVbOWUJZ7s6YT1AqD77o2oDtjfd0RiyC4Bm%2Bj7KrWiMEe1w8KEwvCbhcl%2FwbK%2FORau1XoS11GelSQuweAFl3sA0ZwwRcVfHPrw%2B1NI1Z3EO6LdXlm0Kh3rVboFFn2r%2FD2cbWy%2BzN5eDkeQ%2FTZjM%2FLVQLH9UJ9F6ux%2BCBLisPxNiLozbiRRoEDMzmrjBQzFYYWhzDODqcT%2F5i5ljAmvb5VxUmQ%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDi+ZvRDAvQ/wnx36d0lsYIIyomikLSiKk7dpUtrQuymfuoMtij5lvKAcQicYTA/YrbjVIj7yyKMSMDbiipCz+1zQeASEQa/MMDwHQwGYu7I3LYsztKuDicak4MaQbRQrubn9jKNRh05evsz4JX4CwDSKho0/HDNFzChqN6IDtvP5jBSzJ/4SYaePcsP3ishXXI/YpGBxBxLU2Ap4XAsetPcX/6A+cErIzmyfzqI5cwxraJzozm9AaRUKCpgza1qv/Ses51fQlBhe7ssnkfGxYanbLyqkFJj+Y0kCc16SOqVbOWUJZ7s6YT1AqD77o2oDtjfd0RiyC4Bm+j7KrWiMEe1w8KEwvCbhcl/wbK/ORau1XoS11GelSQuweAFl3sA0ZwwRcVfHPrw+1NI1Z3EO6LdXlm0Kh3rVboFFn2r/D2cbWy+zN5eDkeQ/TZjM/LVQLH9UJ9F6ux+CBLisPxNiLozbiRRoEDMzmrjBQzFYYWhzDODqcT/5i5ljAmvb5VxUmQ==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

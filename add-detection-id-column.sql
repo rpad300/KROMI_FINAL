@@ -1,0 +1,61 @@
+-- Script simples para adicionar coluna detection_id e atualizar view
+-- Execute este script no Supabase SQL Editor
+
+-- 1. Adicionar coluna detection_id se não existir
+DO $$
+BEGIN
+    -- Verificar se a coluna detection_id existe
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'classifications' 
+        AND column_name = 'detection_id'
+    ) THEN
+        -- Adicionar coluna detection_id
+        ALTER TABLE classifications ADD COLUMN detection_id UUID REFERENCES detections(id);
+        RAISE NOTICE '✅ Coluna detection_id adicionada à tabela classifications';
+    ELSE
+        RAISE NOTICE 'ℹ️ Coluna detection_id já existe na tabela classifications';
+    END IF;
+END $$;
+
+-- 2. Recriar a view com a coluna detection_id
+DROP VIEW IF EXISTS event_classifications;
+
+CREATE VIEW event_classifications AS
+SELECT 
+    c.event_id,
+    c.dorsal_number,
+    c.device_order,
+    c.checkpoint_time,
+    c.split_time,
+    c.total_time,
+    c.is_penalty,
+    c.penalty_reason,
+    c.detection_id,
+    ROW_NUMBER() OVER (
+        PARTITION BY c.event_id 
+        ORDER BY 
+            CASE WHEN c.is_penalty THEN 1 ELSE 0 END,
+            c.total_time ASC NULLS LAST
+    ) as position,
+    e.event_started_at,
+    e.name as event_name
+FROM classifications c
+JOIN events e ON c.event_id = e.id
+WHERE e.is_active = true OR e.event_ended_at IS NOT NULL
+ORDER BY c.event_id, position;
+
+-- 3. Verificar resultado
+SELECT 'RESULTADO FINAL:' as info;
+SELECT 
+    dorsal_number,
+    position,
+    total_time,
+    detection_id,
+    CASE 
+        WHEN detection_id IS NOT NULL THEN '✅ Com foto'
+        ELSE '❌ Sem foto'
+    END as status_foto
+FROM event_classifications 
+WHERE event_id = 'a6301479-56c8-4269-a42d-aa8a7650a575'
+ORDER BY position;

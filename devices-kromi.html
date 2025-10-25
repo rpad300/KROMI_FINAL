@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispositivos - VisionKrono</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VisionKrono">
+    <meta name="description" content="Sistema de detecção de dorsais VisionKrono">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+        <link rel="stylesheet" href="kromi-layout-fixes.css">
+        <script src="kromi-sidebar-toggle.js"></script>
+        <script src="kromi-sidebar-toggle.js"></script>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Devices page styles */
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .device-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+            transition: transform var(--transition-base), box-shadow var(--transition-base);
+        }
+        
+        .device-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .device-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .device-id {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-family: var(--font-family-mono);
+        }
+        
+        .device-status {
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-base);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .status-offline {
+            background: rgba(107, 114, 128, 0.15);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-4);
+            padding-top: var(--spacing-4);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        @media (max-width: 768px) {
+            .device-info {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+        
+        .info-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .device-actions {
+            display: flex;
+            gap: var(--spacing-2);
+            margin-top: var(--spacing-4);
+            flex-wrap: wrap;
+        }
+        
+        .device-actions .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: var(--spacing-12);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .empty-state p {
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin-bottom: var(--spacing-4);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .device-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .device-actions {
+                flex-direction: column;
+            }
+            
+            .device-actions .btn {
+                width: 100%;
+                min-width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    📱 Dispositivos
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    📱 Dispositivos Físicos
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2); align-items: center;" id="headerActions">
+                <div id="connectionStatus" style="font-size: var(--font-size-xs); padding: var(--spacing-2); border-radius: var(--radius-full); display: flex; align-items: center; gap: var(--spacing-1);">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger);"></div>
+                    <span>Verificando...</span>
+                </div>
+                <button class="btn btn-sm btn-primary" id="addDeviceBtn">
+                    <i>➕</i> Adicionar Dispositivo
+                </button>
+                <button class="btn btn-sm btn-secondary" id="refreshDevices" title="Clique para recarregar do Supabase">
+                    <i>🔄</i> Atualizar
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="window.location.reload()" title="Recarregar página completa">
+                    <i>↻</i> Reload
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Info Section -->
+                <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: var(--spacing-4); margin-bottom: var(--spacing-5); border: 1px solid var(--border-color);">
+                    <p style="margin: 0 0 var(--spacing-2) 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                        📱 Gerencie os <strong>dispositivos físicos</strong> (smartphones, tablets) associados ao evento.
+                        Para configurar a <strong>ordem dos checkpoints</strong>, vá em 
+                        <a href="#" id="goToCheckpointOrder" style="color: var(--primary); text-decoration: underline;">Ordem dos Checkpoints</a>.
+                    </p>
+                    <p style="margin: var(--spacing-2) 0 0 0; padding-top: var(--spacing-2); border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: var(--font-size-xs);">
+                        🔐 <strong>Segurança:</strong> Cada dispositivo requer um PIN (4-6 dígitos) para acesso. 
+                        O operador terá que inserir o PIN ao abrir o link de detecção.
+                    </p>
+                    <div id="debugInfo" style="margin-top: var(--spacing-3); padding: var(--spacing-2); background: var(--bg-primary); border-radius: var(--radius-base); font-size: var(--font-size-xs); color: var(--text-secondary); font-family: var(--font-family-mono);">
+                        Event ID: <span id="debugEventId">...</span><br>
+                        Query Status: <span id="debugQueryStatus">...</span><br>
+                        Dispositivos Encontrados: <span id="debugDeviceCount">...</span>
+                    </div>
+                </div>
+                
+                <!-- Devices Grid -->
+                <div id="devicesContainer">
+                    <h3 style="margin: 0 0 var(--spacing-4) 0; color: var(--text-primary);">
+                        📱 Dispositivos Associados
+                    </h3>
+                    <div class="devices-grid" id="devicesGrid">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📱</div>
+                    <h3>Nenhum dispositivo associado</h3>
+                    <p>Adicione dispositivos físicos para começar a capturar dorsais durante o evento.</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('addDeviceBtn').click()">
+                        ➕ Adicionar Primeiro Dispositivo
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav" id="bottomNav">
+            <!-- Será preenchido por navigation.js -->
+        </nav>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="navigation.js"></script>
+    <script src="supabase.js"></script>
+    
+    <!-- Devices Logic -->
+    <script>
+        let currentEvent = null;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Inicializando página devices...');
+            
+            // Initialize Supabase
+            if (window.supabaseClient) {
+                await window.supabaseClient.init();
+            }
+            
+            // Get event from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            const eventName = urlParams.get('eventName');
+            
+            if (!eventId) {
+                showError('Nenhum evento selecionado');
+                setTimeout(() => window.location.href = '/events', 2000);
+                return;
+            }
+            
+            currentEvent = { id: eventId, name: eventName };
+            
+            // Initialize navigation
+            if (window.Navigation) {
+                window.Navigation.init('devices', eventId);
+            }
+            
+            // Update UI
+            updateEventInfo(eventName);
+            
+            // Verificar conexão Supabase
+            console.log('🔍 Verificando conexão Supabase...');
+            console.log('  - window.supabaseClient:', !!window.supabaseClient);
+            console.log('  - supabase:', !!window.supabaseClient?.supabase);
+            console.log('  - isConnected:', window.supabaseClient?.isConnected);
+            
+            // Load devices
+            await loadDevices();
+            
+            // Update connection status
+            updateConnectionStatus();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            console.log('✅ Página inicializada');
+        });
+        
+        function setupEventListeners() {
+            document.getElementById('addDeviceBtn').addEventListener('click', showAddDeviceModal);
+            document.getElementById('refreshDevices').addEventListener('click', () => {
+                console.log('🔄 Refresh manual acionado');
+                loadDevices();
+            });
+            
+            // Link para checkpoint order
+            document.getElementById('goToCheckpointOrder').addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.href = `/checkpoint-order?event=${currentEvent.id}&eventName=${encodeURIComponent(currentEvent.name)}`;
+            });
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-open');
+                });
+            }
+        }
+        
+        function updateEventInfo(eventName) {
+            document.getElementById('pageTitle').textContent = `📱 Dispositivos - ${eventName || 'Evento'}`;
+            
+            const eventInfoPanel = document.getElementById('eventInfoPanel');
+            const currentEventInfo = document.getElementById('currentEventInfo');
+            
+            if (eventInfoPanel && eventName) {
+                eventInfoPanel.style.display = 'block';
+                currentEventInfo.innerHTML = `
+                    <strong>${eventName}</strong><br>
+                    Gestão de Dispositivos Físicos
+                `;
+            }
+        }
+        
+        async function loadDevices() {
+            try {
+                console.log('📋 loadDevices: Iniciando...');
+                console.log('📋 Event ID:', currentEvent.id);
+                
+                // Update debug info
+                if (document.getElementById('debugEventId')) {
+                    document.getElementById('debugEventId').textContent = currentEvent.id;
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('❌ Supabase não disponível');
+                    if (document.getElementById('debugQueryStatus')) {
+                        document.getElementById('debugQueryStatus').textContent = 'Supabase não conectado';
+                        document.getElementById('debugQueryStatus').style.color = 'var(--danger)';
+                    }
+                    showError('Supabase não disponível');
+                    return;
+                }
+                
+                console.log('✅ Supabase disponível, fazendo query...');
+                console.log('📊 Query: SELECT * FROM event_devices WHERE event_id = ' + currentEvent.id);
+                
+                // Tentar query simples primeiro
+                const { data: testData, error: testError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('*')
+                    .eq('event_id', currentEvent.id);
+                
+                console.log('🧪 Teste query simples:');
+                console.log('   Data:', testData);
+                console.log('   Error:', testError);
+                console.log('   Count:', testData?.length || 0);
+                
+                if (testError) {
+                    console.error('❌ Erro em query simples - Possível problema de RLS!');
+                    showError('Erro de permissões. Execute fix-rls-policies.sql no Supabase.');
+                    return;
+                }
+                
+                // Agora query com JOIN
+                const { data: devices, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select(`
+                        *,
+                        devices (
+                            id,
+                            device_name,
+                            device_type,
+                            status,
+                            last_seen
+                        )
+                    `)
+                    .eq('event_id', currentEvent.id)
+                    .order('assigned_at', { ascending: true });
+                
+                console.log('📊 Resultado da query:');
+                console.log('  - Error:', error);
+                console.log('  - Devices:', devices);
+                console.log('  - Quantidade:', devices?.length || 0);
+                
+                // Update debug info
+                if (document.getElementById('debugQueryStatus')) {
+                    document.getElementById('debugQueryStatus').textContent = error ? `Erro: ${error.message}` : 'Success';
+                    document.getElementById('debugQueryStatus').style.color = error ? 'var(--danger)' : 'var(--success)';
+                }
+                if (document.getElementById('debugDeviceCount')) {
+                    document.getElementById('debugDeviceCount').textContent = devices?.length || 0;
+                    document.getElementById('debugDeviceCount').style.color = (devices?.length || 0) > 0 ? 'var(--success)' : 'var(--danger)';
+                }
+                
+                if (error) {
+                    console.error('❌ Erro na query:', error);
+                    throw error;
+                }
+                
+                // Log detalhado de cada dispositivo
+                if (devices && devices.length > 0) {
+                    console.log('📱 Dispositivos encontrados:');
+                    devices.forEach((d, i) => {
+                        console.log(`  ${i+1}. UUID: ${d.device_id}`);
+                        console.log(`     Nome: ${d.devices?.device_name || 'N/A'}`);
+                        console.log(`     Role: ${d.role}`);
+                        console.log(`     Associado: ${d.assigned_at}`);
+                    });
+                } else {
+                    console.log('⚠️ Nenhum dispositivo encontrado em event_devices para este evento');
+                    console.log('💡 Execute no Supabase SQL:');
+                    console.log(`   SELECT * FROM event_devices WHERE event_id = '${currentEvent.id}';`);
+                }
+                
+                console.log('✅ Renderizando', devices?.length || 0, 'dispositivos');
+                renderDevices(devices || []);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar dispositivos:', error);
+                showError(`Erro ao carregar: ${error.message}`);
+            }
+        }
+        
+        function renderDevices(devices) {
+            const grid = document.getElementById('devicesGrid');
+            const container = document.getElementById('devicesContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (devices.length === 0) {
+                container.style.display = 'none';
+                emptyState.style.display = 'flex';
+                return;
+            }
+            
+            container.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            grid.innerHTML = devices.map((device, index) => {
+                const deviceInfo = device.devices || {};
+                
+                // Extrair nome original (remover sufixo _EventID_Timestamp)
+                let displayName = deviceInfo.device_name || 'Dispositivo';
+                const nameParts = displayName.split('_');
+                if (nameParts.length >= 3) {
+                    // Se tem formato Nome_EventID_Timestamp, pegar só o Nome
+                    displayName = nameParts.slice(0, -2).join('_');
+                }
+                
+                return `
+                <div class="device-card">
+                    <div class="device-header">
+                        <div>
+                            <div class="device-title">📱 ${displayName}</div>
+                            <div class="device-id">UUID: ${device.device_id.substring(0, 12)}...</div>
+                        </div>
+                        <span class="device-status status-offline">
+                            Offline
+                        </span>
+                    </div>
+                    
+                    <div class="device-info">
+                        <div class="info-item">
+                            <div class="info-label">Tipo</div>
+                            <div class="info-value">${deviceInfo.device_type || 'mobile'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Role</div>
+                            <div class="info-value">${device.role || 'detector'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">PIN</div>
+                            <div class="info-value">${device.device_pin ? '🔐 ****' : '🔓 Sem PIN'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Sessões</div>
+                            <div class="info-value">
+                                <span style="color: ${(device.active_sessions || 0) >= (device.max_sessions || 1) ? 'var(--danger)' : 'var(--success)'}">
+                                    ${device.active_sessions || 0}/${device.max_sessions || 1}
+                                </span>
+                                <button onclick="editMaxSessions('${device.device_id}', ${device.max_sessions || 1})" 
+                                    style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; margin-left: 4px;" 
+                                    title="Alterar limite de sessões">
+                                    ✏️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- URL de Detecção -->
+                    <div style="margin-top: var(--spacing-4); padding-top: var(--spacing-4); border-top: 1px solid var(--border-color);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--spacing-2);">🔗 Link de Detecção:</div>
+                        <input type="text" readonly value="${window.location.origin}/detection?event=${currentEvent.id}&device=${device.device_id}&eventName=${encodeURIComponent(currentEvent.name)}" 
+                            id="deviceUrl-${device.device_id}"
+                            style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary); font-size: var(--font-size-xs); font-family: var(--font-family-mono); margin-bottom: var(--spacing-2);">
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <button class="btn btn-sm btn-primary" onclick="openDetection('${device.device_id}')">
+                                <i>📱</i> Abrir Detecção
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="copyDeviceUrl('${device.device_id}')">
+                                <i>📋</i> Copiar URL
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="device-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="editDevicePin('${device.device_id}', '${device.device_pin || ''}')">
+                            <i>🔐</i> ${device.device_pin ? 'Alterar PIN' : 'Definir PIN'}
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="clearDeviceSessions('${device.device_id}')" 
+                            ${(device.active_sessions || 0) === 0 ? 'disabled' : ''}>
+                            <i>🧹</i> Limpar Sessões ${(device.active_sessions || 0) > 0 ? `(${device.active_sessions})` : ''}
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="removeDevice('${device.device_id}')">
+                            <i>🗑️</i> Remover
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+        
+        function showAddDeviceModal() {
+            const deviceName = prompt('Digite o nome do dispositivo (ex: iPhone de João, Samsung Galaxy):');
+            
+            if (!deviceName || deviceName.trim() === '') {
+                showError('Nome do dispositivo é obrigatório');
+                return;
+            }
+            
+            const devicePin = prompt('Digite um PIN de segurança (4-6 dígitos):');
+            
+            if (!devicePin || devicePin.trim() === '') {
+                showError('PIN é obrigatório para segurança');
+                return;
+            }
+            
+            // Validar PIN (4-6 dígitos)
+            if (!/^\d{4,6}$/.test(devicePin)) {
+                showError('PIN deve ter 4 a 6 dígitos numéricos');
+                return;
+            }
+            
+            const maxSessions = prompt('Quantas sessões simultâneas permitir? (1-10):', '1');
+            
+            if (!maxSessions || isNaN(parseInt(maxSessions))) {
+                showError('Número de sessões inválido');
+                return;
+            }
+            
+            const sessionsLimit = parseInt(maxSessions);
+            if (sessionsLimit < 1 || sessionsLimit > 10) {
+                showError('Número de sessões deve ser entre 1 e 10');
+                return;
+            }
+            
+            addDevice(deviceName.trim(), devicePin, sessionsLimit);
+        }
+        
+        async function addDevice(deviceName, devicePin, maxSessions) {
+            try {
+                console.log('🔄 Iniciando adição de dispositivo:', deviceName);
+                console.log('🔗 Event ID:', currentEvent.id);
+                console.log('🔐 PIN definido:', devicePin ? '****' : 'Nenhum');
+                console.log('📊 Max sessões:', maxSessions);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    showError('Supabase não conectado. Aguarde e tente novamente.');
+                    return;
+                }
+                
+                console.log('✅ Supabase conectado');
+                
+                // Criar nome único global (event-specific)
+                // Formato: "Nome_EventID_Timestamp" garante unicidade
+                const uniqueDeviceName = `${deviceName}_${currentEvent.id.substring(0, 8)}_${Date.now()}`;
+                
+                console.log('📝 Criando dispositivo com nome único:', uniqueDeviceName);
+                
+                // Criar novo dispositivo específico para este evento
+                const { data: newDevice, error: deviceError } = await window.supabaseClient.supabase
+                    .from('devices')
+                    .insert([{
+                        device_name: uniqueDeviceName, // Nome único globalmente
+                        device_type: 'mobile',
+                        status: 'active'
+                    }])
+                    .select()
+                    .single();
+                
+                if (deviceError) {
+                    console.error('❌ Erro ao criar device:', deviceError);
+                    throw deviceError;
+                }
+                
+                console.log('✅ Dispositivo criado:', newDevice);
+                console.log('🆔 UUID gerado:', newDevice.id);
+                
+                // Associar ao evento
+                console.log('🔗 Associando ao evento...');
+                console.log('📊 Dados a inserir em event_devices:');
+                console.log('   event_id:', currentEvent.id);
+                console.log('   device_id:', newDevice.id);
+                console.log('   role: detector');
+                
+                const { data: assocData, error: assocError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .insert([{
+                        event_id: currentEvent.id,
+                        device_id: newDevice.id,
+                        role: 'detector',
+                        device_pin: devicePin,
+                        max_sessions: maxSessions || 1,
+                        active_sessions: 0
+                    }])
+                    .select();
+                
+                console.log('📊 Resultado do INSERT em event_devices:');
+                console.log('   Data:', assocData);
+                console.log('   Error:', assocError);
+                
+                if (assocError) {
+                    console.error('❌ Erro ao associar:', assocError);
+                    console.error('   Code:', assocError.code);
+                    console.error('   Message:', assocError.message);
+                    console.error('   Details:', assocError.details);
+                    throw assocError;
+                }
+                
+                if (assocData && assocData.length > 0) {
+                    console.log('✅ Dispositivo associado ao evento!');
+                    console.log('✅ Registro criado:', assocData[0]);
+                    console.log('   ID:', assocData[0].id);
+                    console.log('   event_id:', assocData[0].event_id);
+                    console.log('   device_id:', assocData[0].device_id);
+                } else {
+                    console.warn('⚠️ INSERT retornou sem erro mas sem dados');
+                }
+                
+                // Verificar se foi realmente salvo (double-check)
+                console.log('🔍 Verificando se foi realmente salvo...');
+                const { data: verification, error: verifyError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('*')
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', newDevice.id)
+                    .single();
+                
+                console.log('🔍 Verificação:');
+                console.log('   Data:', verification);
+                console.log('   Error:', verifyError);
+                
+                if (verification) {
+                    console.log('✅✅ CONFIRMADO: Dispositivo está em event_devices!');
+                } else {
+                    console.error('❌❌ PROBLEMA: Dispositivo NÃO está em event_devices!');
+                    console.error('   Possível problema de RLS (Row Level Security)');
+                }
+                
+                showSuccess(`Dispositivo "${deviceName}" adicionado ao evento com sucesso!`);
+                
+                // Recarregar lista
+                console.log('🔄 Recarregando lista de dispositivos...');
+                await loadDevices();
+                console.log('✅ Lista recarregada');
+                
+            } catch (error) {
+                console.error('❌ Erro completo:', error);
+                showError(`Erro: ${error.message || error.code || 'Desconhecido'}`);
+            }
+        }
+        
+        async function editMaxSessions(deviceId, currentMax) {
+            const newMax = prompt(`Quantas sessões simultâneas permitir? (1-10):`, currentMax || '1');
+            
+            if (newMax === null) return;
+            
+            const maxSessions = parseInt(newMax);
+            
+            if (isNaN(maxSessions) || maxSessions < 1 || maxSessions > 10) {
+                showError('Número de sessões deve ser entre 1 e 10');
+                return;
+            }
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .update({ max_sessions: maxSessions })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId);
+                
+                if (error) throw error;
+                
+                showSuccess(`Limite de sessões atualizado para ${maxSessions}!`);
+                await loadDevices();
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar limite:', error);
+                showError('Erro ao atualizar');
+            }
+        }
+        
+        async function editDevicePin(deviceId, currentPin) {
+            const newPin = prompt(`${currentPin ? 'Alterar' : 'Definir'} PIN de segurança (4-6 dígitos):`, currentPin || '');
+            
+            if (newPin === null) return; // Cancelado
+            
+            // Validar PIN
+            if (newPin.trim() !== '' && !/^\d{4,6}$/.test(newPin)) {
+                showError('PIN deve ter 4 a 6 dígitos numéricos');
+                return;
+            }
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .update({ device_pin: newPin.trim() || null })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId);
+                
+                if (error) throw error;
+                
+                if (newPin.trim()) {
+                    showSuccess('PIN atualizado com sucesso!');
+                } else {
+                    showSuccess('PIN removido');
+                }
+                
+                await loadDevices();
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar PIN:', error);
+                showError('Erro ao atualizar PIN');
+            }
+        }
+        
+        function openDetection(deviceId) {
+            const url = `/detection?event=${currentEvent.id}&device=${deviceId}&eventName=${encodeURIComponent(currentEvent.name)}`;
+            window.open(url, '_blank');
+        }
+        
+        function copyDeviceUrl(deviceId) {
+            const input = document.getElementById(`deviceUrl-${deviceId}`);
+            if (input) {
+                input.select();
+                document.execCommand('copy');
+                showSuccess('URL copiado para área de transferência!');
+            }
+        }
+        
+        async function clearDeviceSessions(deviceId) {
+            const confirmMessage = `⚠️ ATENÇÃO! Isto irá encerrar TODAS as sessões ativas deste dispositivo.
+
+Todos os operadores ativos serão desconectados e terão que inserir o PIN novamente.
+
+Esta ação é útil quando:
+• Dispositivos ficaram "presos" (sessões não encerraram)
+• Precisa libertar slots urgentemente
+• Quer resetar acessos
+
+Digite "LIMPAR" (em maiúsculas) para confirmar:`;
+            
+            const confirmation = prompt(confirmMessage);
+            
+            if (confirmation !== 'LIMPAR') {
+                showError('Limpeza cancelada. Digite exatamente "LIMPAR" para confirmar.');
+                return;
+            }
+            
+            try {
+                console.log('🧹 Limpando sessões do dispositivo:', deviceId);
+                
+                // 1. Marcar todas as sessões como inativas
+                const { error: sessionError } = await window.supabaseClient.supabase
+                    .from('device_sessions')
+                    .update({ 
+                        is_active: false,
+                        ended_at: new Date().toISOString()
+                    })
+                    .eq('device_id', deviceId)
+                    .eq('event_id', currentEvent.id);
+                
+                if (sessionError && sessionError.code !== '42P01') { // Ignorar se tabela não existe
+                    console.warn('⚠️ Erro ao atualizar device_sessions:', sessionError);
+                }
+                
+                // 2. Resetar contador active_sessions para 0
+                const { error: updateError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .update({ active_sessions: 0 })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId);
+                
+                if (updateError) throw updateError;
+                
+                console.log('✅ Sessões limpas');
+                showSuccess('Todas as sessões foram encerradas! Operadores terão que inserir PIN novamente.');
+                
+                await loadDevices();
+                
+            } catch (error) {
+                console.error('❌ Erro ao limpar sessões:', error);
+                showError('Erro ao limpar sessões');
+            }
+        }
+        
+        async function removeDevice(deviceId) {
+            if (!confirm(`Tem certeza que deseja remover o dispositivo ${deviceId}?`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .delete()
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId);
+                
+                if (error) throw error;
+                
+                showSuccess('Dispositivo removido!');
+                await loadDevices();
+                
+            } catch (error) {
+                console.error('❌ Erro ao remover dispositivo:', error);
+                showError('Erro ao remover dispositivo');
+            }
+        }
+        
+        function showError(message) {
+            alert(`❌ ${message}`);
+        }
+        
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (!statusDiv) return;
+            
+            const isConnected = window.supabaseClient && window.supabaseClient.supabase && window.supabaseClient.isConnected;
+            
+            if (isConnected) {
+                statusDiv.innerHTML = `
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></div>
+                    <span style="color: var(--success);">Conectado</span>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger);"></div>
+                    <span style="color: var(--danger);">Desconectado</span>
+                `;
+            }
+            
+            // Atualizar a cada 5 segundos
+            setTimeout(updateConnectionStatus, 5000);
+        }
+        
+        function showError(message) {
+            alert(`❌ ${message}`);
+        }
+        
+        function showSuccess(message) {
+            alert(`✅ ${message}`);
+        }
+    </script>
+</body>
+</html>

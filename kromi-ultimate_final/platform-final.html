@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Plataforma Completa</title>
+    
+    <!-- External Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-light: #ffffff;
+            --bg-dark: #000000;
+            --card-light: #f8fafc;
+            --card-dark: #1a1a1a;
+            --text-light: #1f2937;
+            --text-dark: #ffffff;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --muted: #6b7280;
+            --accent: #22d3ee;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --bg-secondary: var(--card-dark);
+            --text-primary: var(--text-dark);
+            --text-secondary: #a0a0a0;
+            --border-color: var(--border-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --bg-secondary: var(--card-light);
+            --text-primary: var(--text-light);
+            --text-secondary: #6b7280;
+            --border-color: var(--border-light);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 60px;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar.active { transform: translateX(280px); }
+
+        @media (min-width: 1024px) {
+            .sidebar { left: 0; transform: none; }
+            .main-content { margin-left: 280px; }
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 20px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+
+        .nav-separator {
+            height: 1px;
+            background: var(--border-color);
+            margin: 16px 0;
+        }
+
+        .nav-category {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin: 16px 0 8px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 4px; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .nav-link:hover {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-link i {
+            font-size: 16px;
+            width: 18px;
+            text-align: center;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            content: '🌙';
+            left: 26px;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background: var(--primary);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(252, 107, 3, 0.05);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .profile-tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .profile-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .profile-tab-content {
+            display: none;
+        }
+
+        .profile-tab-content.active {
+            display: block;
+        }
+
+        .avatar-upload {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+            }
+            
+            .main-content {
+                padding: 16px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+            
+            .sidebar.active {
+                transform: translateX(100%);
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .role-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            background: rgba(252, 107, 3, 0.2);
+            color: var(--primary);
+        }
+
+        .chart-container {
+            height: 300px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <!-- Header -->
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <button id="menuToggle" class="lg:hidden">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; background: linear-gradient(45deg, var(--primary), var(--primary-dark)); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-weight: bold; font-size: 14px;">K</span>
+                </div>
+                <h1 style="font-size: 18px; font-weight: bold;">KROMI</h1>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="theme-toggle" id="themeToggle"></div>
+            <button id="roleSwitch" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                <i class="fas fa-user-cog"></i>
+                <span id="roleSwitchText">Alternar Perfil</span>
+            </button>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">JS</div>
+                <div style="display: flex; flex-direction: column; font-size: 12px;">
+                    <span id="userName" style="font-weight: 500;">João Silva</span>
+                    <span id="userRole" class="role-badge">Utilizador</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar">
+        <div id="sidebarContent">
+            <!-- Content will be populated by JavaScript based on user role -->
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" id="dashboardTitle">📊 Dashboard</h2>
+                </div>
+                
+                <div class="stats-grid" id="dashboardStats">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Atividade Recente</h3>
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Distribuição</h3>
+                        <div class="chart-container">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section id="profile" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👤 Meu Perfil</h2>
+                    <button id="editProfileBtn" class="btn btn-primary">
+                        <i class="fas fa-edit"></i>
+                        Editar Perfil
+                    </button>
+                </div>
+                
+                <div class="profile-tabs">
+                    <button class="profile-tab active" data-tab="general">Geral</button>
+                    <button class="profile-tab" data-tab="contact">Contactos</button>
+                    <button class="profile-tab" data-tab="physical">Info Física</button>
+                    <button class="profile-tab" data-tab="documents">Documentos</button>
+                    <button class="profile-tab" data-tab="preferences">Preferências</button>
+                    <button class="profile-tab" data-tab="privacy">Privacidade</button>
+                </div>
+
+                <div id="tab-general" class="profile-tab-content active">
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" id="avatarPreview">JS</div>
+                        <div>
+                            <button class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()">
+                                <i class="fas fa-camera"></i>
+                                Alterar Foto
+                            </button>
+                            <input type="file" id="avatarInput" style="display: none;" accept="image/*">
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">JPG, PNG ou WebP. Max 2MB.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" class="form-input" id="fullName" value="João Silva">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" class="form-input" id="email" value="joao@example.com" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Data de Nascimento</label>
+                            <input type="date" class="form-input" id="dateOfBirth">
+                        </div>
+                        <div class="form-group">
+                            <label>Género</label>
+                            <select class="form-select" id="gender">
+                                <option value="">Selecionar...</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="O">Outro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nacionalidade</label>
+                            <input type="text" class="form-input" id="nationality" placeholder="Ex: Portuguesa">
+                        </div>
+                        <div class="form-group">
+                            <label>Organização</label>
+                            <input type="text" class="form-input" id="organization" placeholder="Empresa/Clube">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Biografia</label>
+                        <textarea class="form-textarea" id="bio" rows="3" placeholder="Conte-nos um pouco sobre si..."></textarea>
+                    </div>
+                </div>
+
+                <div id="tab-contact" class="profile-tab-content">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <div style="display: flex; gap: 8px;">
+                                <select class="form-select" style="width: 100px;" id="phoneCountryCode">
+                                    <option value="+351">🇵🇹 +351</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                </select>
+                                <input type="tel" class="form-input" id="phone" placeholder="912345678">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <div style="display: flex; gap: 8px;">
+                                <select class="form-select" style="width: 100px;" id="whatsappCountryCode">
+                                    <option value="+351">🇵🇹 +351</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                </select>
+                                <input type="tel" class="form-input" id="whatsapp" placeholder="912345678">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Morada Linha 1</label>
+                            <input type="text" class="form-input" id="addressLine1" placeholder="Rua, número">
+                        </div>
+                        <div class="form-group">
+                            <label>Morada Linha 2</label>
+                            <input type="text" class="form-input" id="addressLine2" placeholder="Andar, apartamento">
+                        </div>
+                        <div class="form-group">
+                            <label>Cidade</label>
+                            <input type="text" class="form-input" id="city" placeholder="Lisboa">
+                        </div>
+                        <div class="form-group">
+                            <label>Código Postal</label>
+                            <input type="text" class="form-input" id="postalCode" placeholder="1000-001">
+                        </div>
+                        <div class="form-group">
+                            <label>País</label>
+                            <select class="form-select" id="country">
+                                <option value="">Selecionar país...</option>
+                                <option value="PT">Portugal</option>
+                                <option value="ES">Espanha</option>
+                                <option value="FR">França</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 24px 0;">
+                        <h4 style="margin-bottom: 16px; color: var(--primary);">Redes Sociais</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Instagram</label>
+                                <input type="text" class="form-input" id="instagramHandle" placeholder="@username">
+                            </div>
+                            <div class="form-group">
+                                <label>X (Twitter)</label>
+                                <input type="text" class="form-input" id="xHandle" placeholder="@username">
+                            </div>
+                            <div class="form-group">
+                                <label>Facebook</label>
+                                <input type="url" class="form-input" id="facebookUrl" placeholder="https://facebook.com/...">
+                            </div>
+                            <div class="form-group">
+                                <label>LinkedIn</label>
+                                <input type="url" class="form-input" id="linkedinUrl" placeholder="https://linkedin.com/in/...">
+                            </div>
+                            <div class="form-group">
+                                <label>TikTok</label>
+                                <input type="text" class="form-input" id="tiktokHandle" placeholder="@username">
+                            </div>
+                            <div class="form-group">
+                                <label>Discord</label>
+                                <input type="text" class="form-input" id="discordHandle" placeholder="username#1234">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-physical" class="profile-tab-content">
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Tamanho Roupa (Topo)</label>
+                            <select class="form-select" id="clothingSizeTop">
+                                <option value="">Selecionar...</option>
+                                <option value="XS">XS</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="XXL">XXL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tamanho Roupa (Baixo)</label>
+                            <select class="form-select" id="clothingSizeBottom">
+                                <option value="">Selecionar...</option>
+                                <option value="XS">XS</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="XXL">XXL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Número Calçado</label>
+                            <select class="form-select" id="shoeSize">
+                                <option value="">Selecionar...</option>
+                                <option value="35">35</option>
+                                <option value="36">36</option>
+                                <option value="37">37</option>
+                                <option value="38">38</option>
+                                <option value="39">39</option>
+                                <option value="40">40</option>
+                                <option value="41">41</option>
+                                <option value="42">42</option>
+                                <option value="43">43</option>
+                                <option value="44">44</option>
+                                <option value="45">45</option>
+                                <option value="46">46</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-documents" class="profile-tab-content">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Número BI/CC</label>
+                            <input type="text" class="form-input" id="nationalId" placeholder="12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>Número Passaporte</label>
+                            <input type="text" class="form-input" id="passportNumber" placeholder="A1234567">
+                        </div>
+                        <div class="form-group">
+                            <label>Número Fiscal (NIF)</label>
+                            <input type="text" class="form-input" id="taxNumber" placeholder="123456789">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-preferences" class="profile-tab-content">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Idioma Preferido</label>
+                            <select class="form-select" id="preferredLanguage">
+                                <option value="pt">Português</option>
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tema</label>
+                            <select class="form-select" id="themePreference">
+                                <option value="system">Sistema</option>
+                                <option value="dark">Escuro</option>
+                                <option value="light">Claro</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Tags/Interesses</label>
+                        <input type="text" class="form-input" id="tags" placeholder="corrida, ciclismo, natação (separar por vírgulas)">
+                    </div>
+                </div>
+
+                <div id="tab-privacy" class="profile-tab-content">
+                    <div style="space-y: 16px;">
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="marketingOptIn">
+                                <span>Aceito receber comunicações de marketing</span>
+                            </label>
+                        </div>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="consentEmailOptIn">
+                                <span>Aceito receber emails promocionais</span>
+                            </label>
+                        </div>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="consentSmsOptIn">
+                                <span>Aceito receber SMS promocionais</span>
+                            </label>
+                        </div>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="consentWhatsAppOptIn">
+                                <span>Aceito receber mensagens WhatsApp promocionais</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" id="cancelProfileBtn">Cancelar</button>
+                    <button class="btn btn-primary" id="saveProfileBtn">
+                        <i class="fas fa-save"></i>
+                        Guardar Alterações
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- My Events Section -->
+        <section id="my-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🏃‍♂️ Eventos que Participo</h2>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Inscrever em Evento
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Evento</th>
+                                <th>Data</th>
+                                <th>Local</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Maratona de Lisboa 2024</td>
+                                <td>15/12/2024</td>
+                                <td>Lisboa</td>
+                                <td><span class="badge badge-success">Inscrito</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">Ver</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Organized Events Section -->
+        <section id="organized-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🎯 Eventos Organizados</h2>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Criar Evento
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Evento</th>
+                                <th>Data</th>
+                                <th>Participantes</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Trail Running Porto</td>
+                                <td>20/01/2025</td>
+                                <td>45/100</td>
+                                <td><span class="badge badge-warning">Ativo</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">Gerir</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Events Section (SuperAdmin) -->
+        <section id="platform-events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🌐 Eventos da Plataforma</h2>
+                    <div class="search-filter">
+                        <input type="text" class="form-input search-input" placeholder="Pesquisar eventos...">
+                        <select class="form-select" style="width: 150px;">
+                            <option value="">Todos os Status</option>
+                            <option value="active">Ativos</option>
+                            <option value="pending">Pendentes</option>
+                            <option value="finished">Finalizados</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">156</div>
+                        <div class="stat-label">Total Eventos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">23</div>
+                        <div class="stat-label">Ativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">125</div>
+                        <div class="stat-label">Finalizados</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Evento</th>
+                                <th>Organizador</th>
+                                <th>Data</th>
+                                <th>Participantes</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="platformEventsTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Settings Section (SuperAdmin) -->
+        <section id="platform-settings" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Configurações da Plataforma</h2>
+                    <button class="btn btn-primary" id="addSettingBtn">
+                        <i class="fas fa-plus"></i>
+                        Nova Configuração
+                    </button>
+                </div>
+                
+                <div class="search-filter">
+                    <input type="text" class="form-input search-input" placeholder="Pesquisar configurações..." id="settingsSearch">
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Chave</th>
+                                <th>Valor</th>
+                                <th>Descrição</th>
+                                <th>Atualizado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settingsTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Users Section (SuperAdmin) -->
+        <section id="platform-users" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👥 Utilizadores da Plataforma</h2>
+                    <div class="search-filter">
+                        <input type="text" class="form-input search-input" placeholder="Pesquisar utilizadores...">
+                        <select class="form-select" style="width: 150px;">
+                            <option value="">Todos os Roles</option>
+                            <option value="user">Utilizador</option>
+                            <option value="organizer">Organizador</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">SuperAdmin</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-label">Total Utilizadores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1,156</div>
+                        <div class="stat-label">Ativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">91</div>
+                        <div class="stat-label">Inativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">89</div>
+                        <div class="stat-label">Organizadores</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Utilizador</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Ativo</th>
+                                <th>Último Login</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="platformUsersTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Profiles Management (SuperAdmin) -->
+        <section id="user-profiles" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👤 Gestão de Perfis</h2>
+                    <button class="btn btn-primary" id="addProfileBtn">
+                        <i class="fas fa-plus"></i>
+                        Novo Perfil
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome do Perfil</th>
+                                <th>Descrição</th>
+                                <th>Ativo</th>
+                                <th>Criado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userProfilesTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Permissions Management (SuperAdmin) -->
+        <section id="permissions" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔐 Gestão de Permissões</h2>
+                    <button class="btn btn-primary" id="addPermissionBtn">
+                        <i class="fas fa-plus"></i>
+                        Nova Permissão
+                    </button>
+                </div>
+                
+                <div class="search-filter">
+                    <input type="text" class="form-input search-input" placeholder="Pesquisar permissões...">
+                    <select class="form-select" style="width: 150px;">
+                        <option value="">Todas Categorias</option>
+                        <option value="events">Eventos</option>
+                        <option value="users">Utilizadores</option>
+                        <option value="system">Sistema</option>
+                    </select>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Chave</th>
+                                <th>Nome</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Ativo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="permissionsTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Event Types Management (SuperAdmin) -->
+        <section id="event-types" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🏃‍♂️ Tipos de Eventos</h2>
+                    <button class="btn btn-primary" id="addEventTypeBtn">
+                        <i class="fas fa-plus"></i>
+                        Novo Tipo
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Descrição</th>
+                                <th>Criado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventTypesTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Device Types Management (SuperAdmin) -->
+        <section id="device-types" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📱 Tipos de Dispositivos</h2>
+                    <button class="btn btn-primary" id="addDeviceTypeBtn">
+                        <i class="fas fa-plus"></i>
+                        Novo Tipo
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Nome Exibição</th>
+                                <th>Descrição</th>
+                                <th>Ativo</th>
+                                <th>Criado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceTypesTable">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="settingsModalTitle">Nova Configuração</h3>
+                <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
+            </div>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label for="settingKey">Chave</label>
+                    <input type="text" class="form-input" id="settingKey" required>
+                </div>
+                <div class="form-group">
+                    <label for="settingValue">Valor</label>
+                    <textarea class="form-textarea" id="settingValue" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="settingDescription">Descrição</label>
+                    <input type="text" class="form-input" id="settingDescription">
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" onclick="closeModal('settingsModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Generic Modal for other forms -->
+    <div id="genericModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="genericModalTitle">Título</h3>
+                <button class="modal-close" onclick="closeModal('genericModal')">&times;</button>
+            </div>
+            <div id="genericModalContent">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentUser = {
+            role: 'user',
+            name: 'João Silva',
+            email: 'joao@example.com',
+            avatar: 'JS'
+        };
+
+        let currentSection = 'dashboard';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            updateSidebarForRole();
+            initializeCharts();
+            loadMockData();
+            setupEventListeners();
+        });
+
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Role management
+        function switchRole() {
+            currentUser.role = currentUser.role === 'user' ? 'superadmin' : 'user';
+            updateSidebarForRole();
+            updateDashboard();
+            updateUserInfo();
+        }
+
+        function updateUserInfo() {
+            const roleText = currentUser.role === 'superadmin' ? 'SuperAdmin' : 'Utilizador';
+            document.getElementById('userRole').textContent = roleText;
+        }
+
+        // Sidebar management
+        function updateSidebarForRole() {
+            const sidebar = document.getElementById('sidebarContent');
+            
+            if (currentUser.role === 'superadmin') {
+                sidebar.innerHTML = `
+                    <div class="nav-category">DASHBOARD</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-section="dashboard">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Dashboard Admin</span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="nav-separator"></div>
+                    
+                    <div class="nav-category">PERFIL</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="profile">
+                                <i class="fas fa-user"></i>
+                                <span>Meu Perfil</span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="nav-separator"></div>
+                    
+                    <div class="nav-category">GESTÃO DE EVENTOS</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="platform-events">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Eventos da Plataforma</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="event-types">
+                                <i class="fas fa-tags"></i>
+                                <span>Tipos de Eventos</span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="nav-separator"></div>
+                    
+                    <div class="nav-category">ADMINISTRAÇÃO</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="platform-settings">
+                                <i class="fas fa-cogs"></i>
+                                <span>Configurações</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="platform-users">
+                                <i class="fas fa-users"></i>
+                                <span>Utilizadores</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="user-profiles">
+                                <i class="fas fa-user-cog"></i>
+                                <span>Perfis de Utilizador</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="permissions">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Permissões</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="device-types">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span>Tipos de Dispositivos</span>
+                            </a>
+                        </li>
+                    </ul>
+                `;
+            } else {
+                sidebar.innerHTML = `
+                    <div class="nav-category">DASHBOARD</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-section="dashboard">
+                                <i class="fas fa-home"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="nav-separator"></div>
+                    
+                    <div class="nav-category">MEU PERFIL</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="profile">
+                                <i class="fas fa-user"></i>
+                                <span>Ver Perfil</span>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="nav-separator"></div>
+                    
+                    <div class="nav-category">EVENTOS</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="my-events">
+                                <i class="fas fa-running"></i>
+                                <span>Eventos que Participo</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-section="organized-events">
+                                <i class="fas fa-calendar-plus"></i>
+                                <span>Eventos Organizados</span>
+                            </a>
+                        </li>
+                    </ul>
+                `;
+            }
+            
+            // Re-setup navigation event listeners
+            setupNavigation();
+        }
+
+        // Navigation
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = link.getAttribute('data-section');
+                    navigateToSection(sectionId);
+                });
+            });
+        }
+
+        function navigateToSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            currentSection = sectionId;
+            
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                closeSidebar();
+            }
+        }
+
+        // Dashboard management
+        function updateDashboard() {
+            const dashboardTitle = document.getElementById('dashboardTitle');
+            const dashboardStats = document.getElementById('dashboardStats');
+            
+            if (currentUser.role === 'superadmin') {
+                dashboardTitle.textContent = '📊 Dashboard Administrativo';
+                dashboardStats.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-label">Total Utilizadores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">156</div>
+                        <div class="stat-label">Eventos Ativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">89</div>
+                        <div class="stat-label">Organizadores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€24.5K</div>
+                        <div class="stat-label">Receita Mensal</div>
+                    </div>
+                `;
+            } else {
+                dashboardTitle.textContent = '📊 Dashboard';
+                dashboardStats.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Eventos Participados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Eventos Organizados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">45</div>
+                        <div class="stat-label">Horas de Atividade</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">156</div>
+                        <div class="stat-label">Km Percorridos</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Charts initialization
+        function initializeCharts() {
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart');
+            if (activityCtx) {
+                new Chart(activityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                        datasets: [{
+                            label: 'Atividade',
+                            data: [12, 19, 3, 5, 2, 3],
+                            borderColor: '#fc6b03',
+                            backgroundColor: 'rgba(252, 107, 3, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgb(156, 163, 175)'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: 'rgb(156, 163, 175)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: 'rgb(156, 163, 175)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Distribution Chart
+            const distributionCtx = document.getElementById('distributionChart');
+            if (distributionCtx) {
+                new Chart(distributionCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Corrida', 'Ciclismo', 'Natação'],
+                        datasets: [{
+                            data: [45, 35, 20],
+                            backgroundColor: ['#fc6b03', '#22d3ee', '#10b981']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgb(156, 163, 175)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Load mock data
+        function loadMockData() {
+            loadPlatformEvents();
+            loadSettings();
+            loadPlatformUsers();
+            loadUserProfiles();
+            loadPermissions();
+            loadEventTypes();
+            loadDeviceTypes();
+        }
+
+        function loadPlatformEvents() {
+            const table = document.getElementById('platformEventsTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>Maratona Lisboa 2024</td>
+                        <td>João Silva</td>
+                        <td>15/12/2024</td>
+                        <td>245/500</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Ver</button>
+                            <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Trail Running Porto</td>
+                        <td>Maria Santos</td>
+                        <td>20/01/2025</td>
+                        <td>45/100</td>
+                        <td><span class="badge badge-warning">Pendente</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Ver</button>
+                            <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;">Aprovar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadSettings() {
+            const table = document.getElementById('settingsTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>platform_name</td>
+                        <td>KROMI Platform</td>
+                        <td>Nome da plataforma</td>
+                        <td>23/08/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editSetting('platform_name')">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>max_event_participants</td>
+                        <td>1000</td>
+                        <td>Máximo de participantes por evento</td>
+                        <td>20/08/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editSetting('max_event_participants')">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadPlatformUsers() {
+            const table = document.getElementById('platformUsersTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>João Silva</td>
+                        <td>joao@example.com</td>
+                        <td><span class="badge badge-success">Utilizador</span></td>
+                        <td><span class="badge badge-success">Sim</span></td>
+                        <td>23/08/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Ver</button>
+                            <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Maria Santos</td>
+                        <td>maria@example.com</td>
+                        <td><span class="badge badge-warning">Organizador</span></td>
+                        <td><span class="badge badge-success">Sim</span></td>
+                        <td>22/08/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Ver</button>
+                            <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadUserProfiles() {
+            const table = document.getElementById('userProfilesTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>Utilizador Padrão</td>
+                        <td>Perfil padrão para utilizadores normais</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Organizador de Eventos</td>
+                        <td>Perfil para organizadores de eventos</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadPermissions() {
+            const table = document.getElementById('permissionsTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>events.create</td>
+                        <td>Criar Eventos</td>
+                        <td>Permite criar novos eventos</td>
+                        <td>Eventos</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>users.manage</td>
+                        <td>Gerir Utilizadores</td>
+                        <td>Permite gerir utilizadores da plataforma</td>
+                        <td>Utilizadores</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadEventTypes() {
+            const table = document.getElementById('eventTypesTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>Corrida de Rua</td>
+                        <td>Eventos de corrida em estrada</td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Trail Running</td>
+                        <td>Corridas em trilhos e montanha</td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function loadDeviceTypes() {
+            const table = document.getElementById('deviceTypesTable');
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td>mobile_device</td>
+                        <td>Dispositivo Móvel</td>
+                        <td>Smartphones e tablets</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>timing_device</td>
+                        <td>Dispositivo de Cronometragem</td>
+                        <td>Dispositivos para cronometragem de eventos</td>
+                        <td><span class="badge badge-success">Ativo</span></td>
+                        <td>01/01/2024</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Profile tab management
+        function setupProfileTabs() {
+            const tabs = document.querySelectorAll('.profile-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.profile-tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tabId}`).classList.add('active');
+                });
+            });
+        }
+
+        // Event listeners setup
+        function setupEventListeners() {
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Role switch
+            document.getElementById('roleSwitch').addEventListener('click', switchRole);
+            
+            // Menu toggle for mobile
+            document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+            
+            // Profile tabs
+            setupProfileTabs();
+            
+            // Settings form
+            const settingsForm = document.getElementById('settingsForm');
+            if (settingsForm) {
+                settingsForm.addEventListener('submit', handleSettingsSubmit);
+            }
+            
+            // Add setting button
+            const addSettingBtn = document.getElementById('addSettingBtn');
+            if (addSettingBtn) {
+                addSettingBtn.addEventListener('click', () => openSettingsModal());
+            }
+            
+            // Profile save button
+            const saveProfileBtn = document.getElementById('saveProfileBtn');
+            if (saveProfileBtn) {
+                saveProfileBtn.addEventListener('click', saveProfile);
+            }
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                const sidebar = document.getElementById('sidebar');
+                const menuToggle = document.getElementById('menuToggle');
+                
+                if (window.innerWidth < 1024 && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+        }
+
+        // Sidebar functions
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('active');
+        }
+
+        // Modal functions
+        function openSettingsModal(key = '', value = '', description = '') {
+            const modal = document.getElementById('settingsModal');
+            const title = document.getElementById('settingsModalTitle');
+            
+            title.textContent = key ? 'Editar Configuração' : 'Nova Configuração';
+            
+            document.getElementById('settingKey').value = key;
+            document.getElementById('settingValue').value = value;
+            document.getElementById('settingDescription').value = description;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function editSetting(key) {
+            // Mock data for editing
+            const mockSettings = {
+                'platform_name': { value: 'KROMI Platform', description: 'Nome da plataforma' },
+                'max_event_participants': { value: '1000', description: 'Máximo de participantes por evento' }
+            };
+            
+            const setting = mockSettings[key];
+            if (setting) {
+                openSettingsModal(key, setting.value, setting.description);
+            }
+        }
+
+        function handleSettingsSubmit(e) {
+            e.preventDefault();
+            
+            const key = document.getElementById('settingKey').value;
+            const value = document.getElementById('settingValue').value;
+            const description = document.getElementById('settingDescription').value;
+            
+            // Here you would normally send the data to your backend
+            console.log('Settings saved:', { key, value, description });
+            
+            // Show success message
+            alert('Configuração guardada com sucesso!');
+            
+            closeModal('settingsModal');
+            
+            // Reload settings table
+            loadSettings();
+        }
+
+        function saveProfile() {
+            // Collect all profile data
+            const profileData = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                gender: document.getElementById('gender').value,
+                nationality: document.getElementById('nationality').value,
+                organization: document.getElementById('organization').value,
+                bio: document.getElementById('bio').value,
+                // Add all other fields...
+            };
+            
+            // Here you would normally send the data to your backend
+            console.log('Profile saved:', profileData);
+            
+            // Show success message
+            alert('Perfil guardado com sucesso!');
+        }
+
+        // Initialize everything when page loads
+        updateDashboard();
+        updateUserInfo();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
+        });
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDkB%2BKCWjR4byGYBecCM8SiDlk%2Fodf%2F63aeT0Jg8UIWgZ3jrULafbiOWqwBOiyUyA39UI6NsdnuUkY0w4UFfKU176YsOfSUmlHmdDW%2F3MbebEuDbthdYrUflAiy5ruDBmH7p%2FNXlMXLyjscf1%2BFMuE8geaZzXKCDDNTNy2a7Sv%2FdpopZ4Lef90VhHkjip%2FC4o8mor57MQqm1rfQj3ZE5xDA7mDi3V5obf0HMVmBSgUbNvJLrP7iTw0flsOoZSNFRqD7JExDfST2IcPo20KWZxCFmo4N7I1OfntLYbTpgE71dS2W%2Bx8d2rhiuzHibj4ebtuzP0G%2BXWPTnPw8IkUqes9vde9%2BQeiu30kCGW3LflgUdaGuMVmhJ3slEl4PrFmP0iuR5C9VcISerufLySHGVJ9eW075QXGXY%2Fek1vH4tC8VkVrrx3v2cH2xGjYs9ZByun%2B3rAyjtUexrIDieOvVFZ9y3Gg%2FV7dDk6aRpGhUdkvkkbogDj1D9Lfk%2FyQpeMsbjgTQ%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDkB+KCWjR4byGYBecCM8SiDlk/odf/63aeT0Jg8UIWgZ3jrULafbiOWqwBOiyUyA39UI6NsdnuUkY0w4UFfKU176YsOfSUmlHmdDW/3MbebEuDbthdYrUflAiy5ruDBmH7p/NXlMXLyjscf1+FMuE8geaZzXKCDDNTNy2a7Sv/dpopZ4Lef90VhHkjip/C4o8mor57MQqm1rfQj3ZE5xDA7mDi3V5obf0HMVmBSgUbNvJLrP7iTw0flsOoZSNFRqD7JExDfST2IcPo20KWZxCFmo4N7I1OfntLYbTpgE71dS2W+x8d2rhiuzHibj4ebtuzP0G+XWPTnPw8IkUqes9vde9+Qeiu30kCGW3LflgUdaGuMVmhJ3slEl4PrFmP0iuR5C9VcISerufLySHGVJ9eW075QXGXY/ek1vH4tC8VkVrrx3v2cH2xGjYs9ZByun+3rAyjtUexrIDieOvVFZ9y3Gg/V7dDk6aRpGhUdkvkkbogDj1D9Lfk/yQpeMsbjgTQ==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

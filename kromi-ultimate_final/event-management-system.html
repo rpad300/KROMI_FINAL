@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KROMI - Gestão Total de Eventos</title>
+  <link rel="icon" type="image/png" href="Logos/icon_kromi_color.png">
+  <link rel="apple-touch-icon" href="Logos/icon_kromi_color.png">
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#fc6b03">
+  <meta name="background-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- External Dependencies -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --primary: #fc6b03;
+      --primary-dark: #e55a02;
+      --bg-light: #ffffff;
+      --bg-dark: #000000;
+      --card-light: #f8fafc;
+      --card-dark: #1a1a1a;
+      --text-light: #1f2937;
+      --text-dark: #ffffff;
+      --border-light: #e5e7eb;
+      --border-dark: #374151;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --safe-area-inset-top: env(safe-area-inset-top);
+      --safe-area-inset-bottom: env(safe-area-inset-bottom);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: var(--bg-dark);
+      --bg-secondary: var(--card-dark);
+      --text-primary: var(--text-dark);
+      --text-secondary: #a0a0a0;
+      --border-color: var(--border-dark);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: var(--bg-light);
+      --bg-secondary: var(--card-light);
+      --text-primary: var(--text-light);
+      --text-secondary: #6b7280;
+      --border-color: var(--border-light);
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      overflow-x: hidden;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .app-container { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .app-header { height: 56px; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); flex-shrink: 0; padding-top: var(--safe-area-inset-top); }
+    .app-content { flex: 1; overflow-y: auto; padding: 8px; }
+    .app-bottom-nav { height: 60px; background: var(--bg-primary); border-top: 1px solid var(--border-color); flex-shrink: 0; padding-bottom: var(--safe-area-inset-bottom); }
+
+    .compact-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; transition: all 0.2s ease; margin-bottom: 12px; }
+    .compact-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(252, 107, 3, 0.1); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-primary); font-size: 14px; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 14px; transition: border-color 0.2s ease; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1); }
+
+    .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: var(--border-color); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { background: #dc2626; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .stat-mini { text-align: center; padding: 8px 4px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); }
+
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; display: inline-block; }
+    .badge-active { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-scheduled { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-finished { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+    .badge-draft { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+
+    .filter-tabs { display: flex; gap: 4px; margin-bottom: 16px; overflow-x: auto; padding: 0 4px; }
+    .filter-tab { padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease; white-space: nowrap; flex-shrink: 0; }
+    .filter-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .theme-toggle { position: relative; width: 48px; height: 24px; background: var(--border-color); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; }
+    .theme-toggle::before { content: '☀️'; position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-size: 16px; transition: all 0.3s ease; }
+    [data-theme="dark"] .theme-toggle::before { content: '🌙'; left: 24px; }
+    [data-theme="dark"] .theme-toggle { background: var(--primary); }
+
+    .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100vh; background: var(--bg-secondary); border-right: 1px solid var(--border-color); z-index: 1000; transition: transform 0.3s ease; overflow-y: auto; }
+    .sidebar.active { transform: translateX(280px); }
+    .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+    .sidebar-overlay.active { opacity: 1; visibility: visible; }
+    @media (min-width: 1024px) { .app-bottom-nav { display: none; } .sidebar { position: relative; left: 0; transform: none; width: 280px; border-right: 1px solid var(--border-color); } .app-container { flex-direction: row; } .main-content { flex: 1; display: flex; flex-direction: column; } }
+
+    .nav-item { display: flex; align-items: center; padding: 12px 16px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease; }
+    .nav-item:hover { background: var(--bg-primary); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary); color: white; }
+    .nav-item i { margin-right: 12px; width: 20px; text-align: center; }
+
+    .notification { position: fixed; top: 20px; right: 20px; background: var(--primary); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); transform: translateX(400px); transition: transform 0.3s ease; z-index: 2000; }
+    .notification.show { transform: translateX(0); }
+
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal.hidden { display: none; }
+    .modal-content { background: var(--bg-primary); border-radius: 12px; padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+
+    .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); max-height: 400px; overflow-y: auto; }
+    .data-table { width: 100%; border-collapse: collapse; background: var(--bg-secondary); font-size: 12px; }
+    .data-table th { background: var(--bg-primary); color: var(--text-secondary); padding: 8px 6px; border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 10px; text-transform: uppercase; position: sticky; top: 0; z-index: 10; }
+    .data-table td { padding: 8px 6px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 11px; }
+    .data-table tbody tr:hover { background: rgba(252, 107, 3, 0.05); }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+
+    .activity-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .participant-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); }
+    .participant-row:last-child { border-bottom: none; }
+
+    .device-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .device-status.online { color: var(--success); }
+    .device-status.offline { color: var(--text-secondary); }
+
+    .progress-bar { width: 100%; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--primary); transition: width 0.3s ease; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- Main App -->
+  <div id="mainApp" class="app-container">
+    <!-- Sidebar (Desktop) -->
+    <nav id="sidebar" class="sidebar">
+      <div class="p-4">
+        <div class="flex items-center space-x-3 mb-6">
+          <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+            <i class="fas fa-calendar text-white"></i>
+          </div>
+          <div>
+            <h2 class="font-bold">KROMI</h2>
+            <p class="text-xs opacity-60">Gestão Total de Eventos</p>
+          </div>
+        </div>
+
+        <div class="nav-item active" data-view="overview">
+          <i class="fas fa-chart-pie"></i>
+          <span>Visão Geral</span>
+        </div>
+        <div class="nav-item" data-view="create">
+          <i class="fas fa-plus"></i>
+          <span>Criar Evento</span>
+        </div>
+        <div class="nav-item" data-view="activities">
+          <i class="fas fa-running"></i>
+          <span>Atividades</span>
+        </div>
+        <div class="nav-item" data-view="participants">
+          <i class="fas fa-users"></i>
+          <span>Participantes</span>
+        </div>
+        <div class="nav-item" data-view="devices">
+          <i class="fas fa-mobile-alt"></i>
+          <span>Dispositivos</span>
+        </div>
+        <div class="nav-item" data-view="live">
+          <i class="fas fa-video"></i>
+          <span>Ao Vivo</span>
+        </div>
+        <div class="nav-item" data-view="results">
+          <i class="fas fa-trophy"></i>
+          <span>Resultados</span>
+        </div>
+        <div class="nav-item" data-view="analytics">
+          <i class="fas fa-chart-bar"></i>
+          <span>Analytics</span>
+        </div>
+        <div class="nav-item" data-view="settings">
+          <i class="fas fa-cog"></i>
+          <span>Configurações</span>
+        </div>
+
+        <div class="border-t border-gray-700 mt-6 pt-4">
+          <div class="nav-item" onclick="goBack()">
+            <i class="fas fa-arrow-left"></i>
+            <span>Voltar</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="flex items-center justify-between px-4 h-full">
+          <div class="flex items-center space-x-3">
+            <button id="menuToggle" class="lg:hidden">
+              <i class="fas fa-bars text-lg"></i>
+            </button>
+            <h1 class="font-bold text-lg" id="pageTitle">Gestão de Eventos</h1>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div class="text-xs opacity-60" id="eventName">Maratona Lisboa 2025</div>
+            <button class="theme-toggle" id="themeToggle"></button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Views -->
+      <div class="app-content">
+        
+        <!-- Overview View -->
+        <div id="overviewView" class="view">
+          <div class="stats-row">
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-orange-500" id="totalParticipants">247</div>
+              <div class="text-xs opacity-75">Inscritos</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-green-500" id="activeDevices">12</div>
+              <div class="text-xs opacity-75">Dispositivos</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-blue-500" id="totalActivities">3</div>
+              <div class="text-xs opacity-75">Atividades</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-purple-500" id="liveDetections">156</div>
+              <div class="text-xs opacity-75">Detecções</div>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-3">Status do Evento</h3>
+            <div class="grid-2">
+              <div>
+                <div class="text-sm opacity-75">Estado Atual</div>
+                <div class="font-semibold text-warning">Programado</div>
+              </div>
+              <div>
+                <div class="text-sm opacity-75">Início</div>
+                <div class="font-semibold">15 Dez 2024 - 09:00</div>
+              </div>
+              <div>
+                <div class="text-sm opacity-75">Localização</div>
+                <div class="font-semibold">Porto, Portugal</div>
+              </div>
+              <div>
+                <div class="text-sm opacity-75">Distância</div>
+                <div class="font-semibold">21.0 km</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-3">Progresso de Inscrições</h3>
+            <div class="progress-bar mb-2">
+              <div class="progress-fill" style="width: 82%;"></div>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span>247 / 300 inscritos</span>
+              <span class="text-success">82%</span>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-3">Atividade Hoje</h3>
+            <div style="height: 200px;">
+              <canvas id="overviewChart"></canvas>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-3">Ações Rápidas</h3>
+            <div class="grid-2">
+              <button class="btn btn-primary" onclick="showView('participants')">
+                <i class="fas fa-users"></i>Gerir Participantes
+              </button>
+              <button class="btn btn-secondary" onclick="showView('devices')">
+                <i class="fas fa-mobile-alt"></i>Dispositivos
+              </button>
+              <button class="btn btn-success" onclick="startEvent()">
+                <i class="fas fa-play"></i>Iniciar Evento
+              </button>
+              <button class="btn btn-secondary" onclick="showView('live')">
+                <i class="fas fa-video"></i>Ver Ao Vivo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Event View -->
+        <div id="createView" class="view" style="display: none;">
+          <div class="compact-card">
+            <h3 class="font-semibold mb-4">Criar Novo Evento</h3>
+            <form id="createEventForm">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label>Nome do Evento</label>
+                  <input type="text" class="form-input" id="eventNameInput" placeholder="Ex: Maratona Lisboa 2025" required>
+                </div>
+                <div class="form-group">
+                  <label>Tipo de Evento</label>
+                  <select class="form-select" id="eventTypeSelect" required>
+                    <option value="">Selecionar tipo</option>
+                    <option value="marathon">Maratona</option>
+                    <option value="half-marathon">Meia Maratona</option>
+                    <option value="10k">10K</option>
+                    <option value="5k">5K</option>
+                    <option value="trail">Trail</option>
+                    <option value="cycling">Ciclismo</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Data de Início</label>
+                  <input type="datetime-local" class="form-input" id="eventStartDate" required>
+                </div>
+                <div class="form-group">
+                  <label>Localização</label>
+                  <input type="text" class="form-input" id="eventLocation" placeholder="Cidade, País" required>
+                </div>
+                <div class="form-group">
+                  <label>Distância (km)</label>
+                  <input type="number" class="form-input" id="eventDistance" step="0.1" placeholder="21.0" required>
+                </div>
+                <div class="form-group">
+                  <label>Participantes Esperados</label>
+                  <input type="number" class="form-input" id="expectedParticipants" placeholder="300" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Descrição</label>
+                <textarea class="form-textarea" id="eventDescription" rows="3" placeholder="Descrição do evento"></textarea>
+              </div>
+              <div class="flex gap-3">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i>Criar Evento
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="showView('overview')">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Activities View -->
+        <div id="activitiesView" class="view" style="display: none;">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Atividades do Evento</h3>
+            <button class="btn btn-primary" onclick="openModal('activityModal')">
+              <i class="fas fa-plus"></i>Nova Atividade
+            </button>
+          </div>
+
+          <div id="activitiesList">
+            <div class="activity-card">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <h4 class="font-semibold">Maratona Masculina</h4>
+                  <p class="text-sm opacity-75">42.195 km • Início: 09:00</p>
+                </div>
+                <span class="badge badge-active">Ativa</span>
+              </div>
+              <div class="grid-3">
+                <div class="text-center">
+                  <div class="font-bold text-blue-500">156</div>
+                  <div class="text-xs opacity-75">Inscritos</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-green-500">89</div>
+                  <div class="text-xs opacity-75">Em Prova</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-purple-500">23</div>
+                  <div class="text-xs opacity-75">Finalizaram</div>
+                </div>
+              </div>
+              <div class="flex gap-2 mt-3">
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-edit"></i>Editar
+                </button>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-users"></i>Participantes
+                </button>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-trophy"></i>Resultados
+                </button>
+              </div>
+            </div>
+
+            <div class="activity-card">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <h4 class="font-semibold">Maratona Feminina</h4>
+                  <p class="text-sm opacity-75">42.195 km • Início: 09:00</p>
+                </div>
+                <span class="badge badge-active">Ativa</span>
+              </div>
+              <div class="grid-3">
+                <div class="text-center">
+                  <div class="font-bold text-blue-500">91</div>
+                  <div class="text-xs opacity-75">Inscritos</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-green-500">67</div>
+                  <div class="text-xs opacity-75">Em Prova</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-purple-500">15</div>
+                  <div class="text-xs opacity-75">Finalizaram</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participants View -->
+        <div id="participantsView" class="view" style="display: none;">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Participantes</h3>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary">
+                <i class="fas fa-upload"></i>Importar CSV
+              </button>
+              <button class="btn btn-primary" onclick="openModal('participantModal')">
+                <i class="fas fa-user-plus"></i>Adicionar
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-tabs">
+            <div class="filter-tab active">Todos (247)</div>
+            <div class="filter-tab">Em Prova (156)</div>
+            <div class="filter-tab">Finalizaram (38)</div>
+            <div class="filter-tab">DNS (5)</div>
+            <div class="filter-tab">DNF (12)</div>
+          </div>
+
+          <div class="compact-card">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Dorsal</th>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th>Status</th>
+                    <th>Tempo</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>247</strong></td>
+                    <td>João Silva</td>
+                    <td>M40-49</td>
+                    <td><span class="badge badge-active">Em Prova</span></td>
+                    <td>1:45:23</td>
+                    <td><button class="btn btn-sm">Ver</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>156</strong></td>
+                    <td>Maria Santos</td>
+                    <td>F30-39</td>
+                    <td><span class="badge badge-finished">Finalizado</span></td>
+                    <td>1:32:15</td>
+                    <td><button class="btn btn-sm">Ver</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>89</strong></td>
+                    <td>Pedro Costa</td>
+                    <td>M30-39</td>
+                    <td><span class="badge badge-active">Em Prova</span></td>
+                    <td>2:01:45</td>
+                    <td><button class="btn btn-sm">Ver</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Devices View -->
+        <div id="devicesView" class="view" style="display: none;">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Dispositivos de Captação</h3>
+            <button class="btn btn-primary" onclick="openModal('deviceModal')">
+              <i class="fas fa-plus"></i>Adicionar Dispositivo
+            </button>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-green-500">8</div>
+              <div class="text-xs opacity-75">Online</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-red-500">4</div>
+              <div class="text-xs opacity-75">Offline</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-blue-500">2,345</div>
+              <div class="text-xs opacity-75">Detecções</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-purple-500">95.2%</div>
+              <div class="text-xs opacity-75">Precisão</div>
+            </div>
+          </div>
+
+          <div id="devicesList">
+            <div class="device-card">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <h4 class="font-semibold">CAM-001</h4>
+                  <p class="text-sm opacity-75">iPhone 14 Pro - Largada</p>
+                </div>
+                <span class="device-status online">
+                  <i class="fas fa-circle"></i> Online
+                </span>
+              </div>
+              <div class="grid-3">
+                <div class="text-center">
+                  <div class="font-bold text-green-500">156</div>
+                  <div class="text-xs opacity-75">Detecções</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-blue-500">98.5%</div>
+                  <div class="text-xs opacity-75">Precisão</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-purple-500">23ms</div>
+                  <div class="text-xs opacity-75">Latência</div>
+                </div>
+              </div>
+              <div class="flex gap-2 mt-3">
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-video"></i>Ver Feed
+                </button>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-cog"></i>Configurar
+                </button>
+              </div>
+            </div>
+
+            <div class="device-card">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <h4 class="font-semibold">CAM-002</h4>
+                  <p class="text-sm opacity-75">Samsung S24 - Meta</p>
+                </div>
+                <span class="device-status offline">
+                  <i class="fas fa-circle"></i> Offline
+                </span>
+              </div>
+              <div class="grid-3">
+                <div class="text-center">
+                  <div class="font-bold text-gray-500">0</div>
+                  <div class="text-xs opacity-75">Detecções</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-gray-500">-</div>
+                  <div class="text-xs opacity-75">Precisão</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-bold text-gray-500">-</div>
+                  <div class="text-xs opacity-75">Latência</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live View -->
+        <div id="liveView" class="view" style="display: none;">
+          <div class="compact-card mb-4">
+            <h3 class="font-semibold mb-3">Monitorização em Tempo Real</h3>
+            <div class="stats-row">
+              <div class="stat-mini">
+                <div class="text-lg font-bold text-green-500" id="liveParticipants">156</div>
+                <div class="text-xs opacity-75">Em Prova</div>
+              </div>
+              <div class="stat-mini">
+                <div class="text-lg font-bold text-blue-500" id="liveDetectionsNow">23</div>
+                <div class="text-xs opacity-75">Última min</div>
+              </div>
+              <div class="text-center">
+                <button class="btn btn-success">
+                  <i class="fas fa-broadcast-tower"></i>Live
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="compact-card">
+              <h4 class="font-semibold mb-3">Feeds das Câmaras</h4>
+              <div class="grid-2 gap-2">
+                <div class="bg-black rounded-lg aspect-video flex items-center justify-center text-white">
+                  <div class="text-center">
+                    <i class="fas fa-video text-2xl mb-2"></i>
+                    <div class="text-xs">CAM-001</div>
+                  </div>
+                </div>
+                <div class="bg-black rounded-lg aspect-video flex items-center justify-center text-white">
+                  <div class="text-center">
+                    <i class="fas fa-video text-2xl mb-2"></i>
+                    <div class="text-xs">CAM-002</div>
+                  </div>
+                </div>
+                <div class="bg-black rounded-lg aspect-video flex items-center justify-center text-white">
+                  <div class="text-center">
+                    <i class="fas fa-video text-2xl mb-2"></i>
+                    <div class="text-xs">CAM-003</div>
+                  </div>
+                </div>
+                <div class="bg-black rounded-lg aspect-video flex items-center justify-center text-white">
+                  <div class="text-center">
+                    <i class="fas fa-video text-2xl mb-2"></i>
+                    <div class="text-xs">CAM-004</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="compact-card">
+              <h4 class="font-semibold mb-3">Últimas Detecções</h4>
+              <div class="space-y-2">
+                <div class="flex justify-between items-center py-2 border-b border-gray-700">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm font-bold text-blue-500">#247</span>
+                    <span class="text-sm">João Silva</span>
+                  </div>
+                  <span class="text-xs opacity-60">14:32:15</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-700">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm font-bold text-blue-500">#156</span>
+                    <span class="text-sm">Maria Santos</span>
+                  </div>
+                  <span class="text-xs opacity-60">14:31:58</span>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm font-bold text-blue-500">#89</span>
+                    <span class="text-sm">Pedro Costa</span>
+                  </div>
+                  <span class="text-xs opacity-60">14:31:42</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results View -->
+        <div id="resultsView" class="view" style="display: none;">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Resultados</h3>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary">
+                <i class="fas fa-download"></i>Exportar
+              </button>
+              <button class="btn btn-primary">
+                <i class="fas fa-trophy"></i>Classificações
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-tabs">
+            <div class="filter-tab active">Geral</div>
+            <div class="filter-tab">Masculino</div>
+            <div class="filter-tab">Feminino</div>
+            <div class="filter-tab">Por Categoria</div>
+          </div>
+
+          <div class="compact-card">
+            <h4 class="font-semibold mb-3">Top 10 Classificação Geral</h4>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Dorsal</th>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th>Tempo</th>
+                    <th>Ritmo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>🥇 1</td>
+                    <td><strong>156</strong></td>
+                    <td>Maria Santos</td>
+                    <td>F30-39</td>
+                    <td><strong>1:32:15</strong></td>
+                    <td>4:23/km</td>
+                  </tr>
+                  <tr>
+                    <td>🥈 2</td>
+                    <td><strong>247</strong></td>
+                    <td>João Silva</td>
+                    <td>M40-49</td>
+                    <td><strong>1:34:23</strong></td>
+                    <td>4:29/km</td>
+                  </tr>
+                  <tr>
+                    <td>🥉 3</td>
+                    <td><strong>89</strong></td>
+                    <td>Pedro Costa</td>
+                    <td>M30-39</td>
+                    <td><strong>1:36:12</strong></td>
+                    <td>4:35/km</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h4 class="font-semibold mb-3">Estatísticas do Evento</h4>
+            <div style="height: 200px;">
+              <canvas id="resultsChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytics View -->
+        <div id="analyticsView" class="view" style="display: none;">
+          <div class="stats-row">
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-blue-500">247</div>
+              <div class="text-xs opacity-75">Total Inscritos</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-green-500">235</div>
+              <div class="text-xs opacity-75">Largaram</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-purple-500">223</div>
+              <div class="text-xs opacity-75">Finalizaram</div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-lg font-bold text-yellow-500">90.3%</div>
+              <div class="text-xs opacity-75">Taxa Finalização</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="compact-card">
+              <h4 class="font-semibold mb-3">Detecções por Hora</h4>
+              <div style="height: 200px;">
+                <canvas id="detectionsChart"></canvas>
+              </div>
+            </div>
+
+            <div class="compact-card">
+              <h4 class="font-semibold mb-3">Distribuição por Categoria</h4>
+              <div style="height: 200px;">
+                <canvas id="categoriesChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h4 class="font-semibold mb-3">Performance dos Dispositivos</h4>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Dispositivo</th>
+                    <th>Detecções</th>
+                    <th>Precisão</th>
+                    <th>Uptime</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>CAM-001</td>
+                    <td>1,245</td>
+                    <td>98.5%</td>
+                    <td>99.2%</td>
+                    <td><span class="badge badge-active">Online</span></td>
+                  </tr>
+                  <tr>
+                    <td>CAM-002</td>
+                    <td>1,156</td>
+                    <td>97.8%</td>
+                    <td>95.1%</td>
+                    <td><span class="badge badge-active">Online</span></td>
+                  </tr>
+                  <tr>
+                    <td>CAM-003</td>
+                    <td>0</td>
+                    <td>-</td>
+                    <td>0%</td>
+                    <td><span class="badge">Offline</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settingsView" class="view" style="display: none;">
+          <div class="compact-card">
+            <h3 class="font-semibold mb-4">Configurações do Evento</h3>
+            <form>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label>Nome do Evento</label>
+                  <input type="text" class="form-input" value="Maratona Lisboa 2025">
+                </div>
+                <div class="form-group">
+                  <label>Data e Hora</label>
+                  <input type="datetime-local" class="form-input" value="2024-12-15T09:00">
+                </div>
+                <div class="form-group">
+                  <label>Localização</label>
+                  <input type="text" class="form-input" value="Porto, Portugal">
+                </div>
+                <div class="form-group">
+                  <label>Distância (km)</label>
+                  <input type="number" class="form-input" value="21.0" step="0.1">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Descrição</label>
+                <textarea class="form-textarea" rows="3">Maratona anual da cidade de Lisboa com percurso pela zona histórica.</textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i>Guardar Alterações
+              </button>
+            </form>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-4">Configurações Avançadas</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium">Detecção Automática</div>
+                  <div class="text-sm opacity-75">Ativar detecção automática de dorsais</div>
+                </div>
+                <input type="checkbox" checked class="w-4 h-4">
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium">Resultados em Tempo Real</div>
+                  <div class="text-sm opacity-75">Publicar resultados automaticamente</div>
+                </div>
+                <input type="checkbox" checked class="w-4 h-4">
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-medium">Backup Automático</div>
+                  <div class="text-sm opacity-75">Fazer backup dos dados a cada 10 min</div>
+                </div>
+                <input type="checkbox" class="w-4 h-4">
+              </div>
+            </div>
+          </div>
+
+          <div class="compact-card">
+            <h3 class="font-semibold mb-4">Zona de Perigo</h3>
+            <div class="space-y-3">
+              <button class="btn btn-secondary w-full">
+                <i class="fas fa-download"></i>Exportar Todos os Dados
+              </button>
+              <button class="btn btn-danger w-full">
+                <i class="fas fa-trash"></i>Eliminar Evento
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="app-bottom-nav lg:hidden">
+      <div class="flex justify-around items-center h-full">
+        <button class="nav-btn active" data-view="overview">
+          <i class="fas fa-chart-pie text-lg"></i>
+          <div class="text-xs mt-1">Geral</div>
+        </button>
+        <button class="nav-btn" data-view="participants">
+          <i class="fas fa-users text-lg"></i>
+          <div class="text-xs mt-1">Atletas</div>
+        </button>
+        <button class="nav-btn" data-view="live">
+          <i class="fas fa-video text-lg"></i>
+          <div class="text-xs mt-1">Ao Vivo</div>
+        </button>
+        <button class="nav-btn" data-view="settings">
+          <i class="fas fa-cog text-lg"></i>
+          <div class="text-xs mt-1">Config</div>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <!-- Modals -->
+  <div id="activityModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nova Atividade</h3>
+        <button class="modal-close" onclick="closeModal('activityModal')">&times;</button>
+      </div>
+      <form>
+        <div class="form-group">
+          <label>Nome da Atividade</label>
+          <input type="text" class="form-input" placeholder="Ex: Maratona Masculina">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Distância (km)</label>
+            <input type="number" class="form-input" step="0.1" placeholder="42.195">
+          </div>
+          <div class="form-group">
+            <label>Hora de Início</label>
+            <input type="time" class="form-input" value="09:00">
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" class="btn btn-primary">Criar</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('activityModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="participantModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Adicionar Participante</h3>
+        <button class="modal-close" onclick="closeModal('participantModal')">&times;</button>
+      </div>
+      <form>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome</label>
+            <input type="text" class="form-input" placeholder="Nome completo">
+          </div>
+          <div class="form-group">
+            <label>Dorsal</label>
+            <input type="number" class="form-input" placeholder="247">
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select class="form-select">
+              <option>M18-29</option>
+              <option>M30-39</option>
+              <option>M40-49</option>
+              <option>F18-29</option>
+              <option>F30-39</option>
+              <option>F40-49</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Atividade</label>
+            <select class="form-select">
+              <option>Maratona Masculina</option>
+              <option>Maratona Feminina</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" class="btn btn-primary">Adicionar</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('participantModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="deviceModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Adicionar Dispositivo</h3>
+        <button class="modal-close" onclick="closeModal('deviceModal')">&times;</button>
+      </div>
+      <form>
+        <div class="form-group">
+          <label>Nome do Dispositivo</label>
+          <input type="text" class="form-input" placeholder="CAM-001">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select class="form-select">
+              <option>Câmara Mobile</option>
+              <option>Câmara Fixa</option>
+              <option>Sensor RFID</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Localização</label>
+            <input type="text" class="form-input" placeholder="Largada, Meta, Km 10...">
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" class="btn btn-primary">Adicionar</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('deviceModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification -->
+  <div id="notification" class="notification">
+    <div id="notificationText">Mensagem</div>
+  </div>
+
+  <script>
+    // Global State
+    let currentView = 'overview';
+
+    // Theme Management
+    function toggleTheme() {
+      const body = document.body;
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      body.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.body.setAttribute('data-theme', saved);
+    }
+
+    // Navigation
+    function showView(viewId) {
+      // Hide all views
+      document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+      
+      // Show target view
+      const target = document.getElementById(viewId + 'View');
+      if (target) target.style.display = 'block';
+      
+      // Update navigation states
+      document.querySelectorAll('.nav-item, .nav-btn').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll(`[data-view="${viewId}"]`).forEach(i => i.classList.add('active'));
+      
+      currentView = viewId;
+      updatePageTitle(viewId);
+      closeSidebar();
+      
+      // Initialize charts for specific views
+      if (viewId === 'overview') {
+        setTimeout(initOverviewChart, 100);
+      } else if (viewId === 'analytics') {
+        setTimeout(initAnalyticsCharts, 100);
+      } else if (viewId === 'results') {
+        setTimeout(initResultsChart, 100);
+      }
+    }
+
+    function updatePageTitle(view) {
+      const titles = {
+        overview: 'Visão Geral',
+        create: 'Criar Evento',
+        activities: 'Atividades',
+        participants: 'Participantes',
+        devices: 'Dispositivos',
+        live: 'Ao Vivo',
+        results: 'Resultados',
+        analytics: 'Analytics',
+        settings: 'Configurações'
+      };
+      document.getElementById('pageTitle').textContent = titles[view] || view;
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (window.innerWidth < 1024) {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+      }
+    }
+
+    function closeSidebar() {
+      if (window.innerWidth < 1024) {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+      }
+    }
+
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Modals
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // Notifications
+    function showNotification(text, type = 'info') {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notificationText');
+      
+      notificationText.textContent = text;
+      notification.classList.add('show');
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    // Charts
+    function initOverviewChart() {
+      const ctx = document.getElementById('overviewChart');
+      if (ctx && !ctx.chart) {
+        ctx.chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00'],
+            datasets: [{
+              label: 'Inscrições por Hora',
+              data: [15, 32, 48, 67, 85, 92],
+              borderColor: '#fc6b03',
+              backgroundColor: 'rgba(252, 107, 3, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+              x: { grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+          }
+        });
+      }
+    }
+
+    function initAnalyticsCharts() {
+      // Detections Chart
+      const detectionsCtx = document.getElementById('detectionsChart');
+      if (detectionsCtx && !detectionsCtx.chart) {
+        detectionsCtx.chart = new Chart(detectionsCtx, {
+          type: 'bar',
+          data: {
+            labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00'],
+            datasets: [{
+              label: 'Detecções',
+              data: [245, 389, 567, 423, 378, 156],
+              backgroundColor: '#fc6b03'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+              x: { grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+          }
+        });
+      }
+
+      // Categories Chart
+      const categoriesCtx = document.getElementById('categoriesChart');
+      if (categoriesCtx && !categoriesCtx.chart) {
+        categoriesCtx.chart = new Chart(categoriesCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['M30-39', 'M40-49', 'F30-39', 'F40-49', 'M18-29', 'F18-29'],
+            datasets: [{
+              data: [45, 38, 32, 28, 25, 22],
+              backgroundColor: [
+                '#fc6b03', '#e55a02', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+    }
+
+    function initResultsChart() {
+      const ctx = document.getElementById('resultsChart');
+      if (ctx && !ctx.chart) {
+        ctx.chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['0km', '5km', '10km', '15km', '20km', '21km'],
+            datasets: [{
+              label: 'Tempo Médio',
+              data: [0, 25, 50, 75, 95, 105],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+              x: { grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+          }
+        });
+      }
+    }
+
+    // Event Actions
+    function startEvent() {
+      if (confirm('Tem a certeza que pretende iniciar o evento?')) {
+        showNotification('Evento iniciado com sucesso!', 'success');
+        // Update UI to reflect event start
+        document.querySelector('.badge-scheduled').className = 'badge badge-active';
+        document.querySelector('.badge-scheduled').textContent = 'Ativo';
+      }
+    }
+
+    // Form Handlers
+    document.addEventListener('DOMContentLoaded', function() {
+      // Create Event Form
+      const createForm = document.getElementById('createEventForm');
+      if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          showNotification('Evento criado com sucesso!', 'success');
+          setTimeout(() => showView('overview'), 1500);
+        });
+      }
+
+      // Initialize theme
+      initTheme();
+
+      // Event listeners
+      document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+      document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+      document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+      // Navigation event listeners
+      document.querySelectorAll('[data-view]').forEach(item => {
+        item.addEventListener('click', () => {
+          showView(item.getAttribute('data-view'));
+        });
+      });
+
+      // Initialize charts for default view
+      setTimeout(initOverviewChart, 100);
+
+      // Show welcome notification
+      showNotification('Bem-vindo à gestão do seu evento!');
+    });
+
+    // Real-time updates simulation
+    function simulateRealTimeUpdates() {
+      setInterval(() => {
+        // Update live participants count
+        const liveParticipants = document.getElementById('liveParticipants');
+        if (liveParticipants) {
+          const current = parseInt(liveParticipants.textContent);
+          liveParticipants.textContent = Math.max(0, current + Math.floor(Math.random() * 3) - 1);
+        }
+
+        // Update live detections
+        const liveDetections = document.getElementById('liveDetectionsNow');
+        if (liveDetections) {
+          liveDetections.textContent = Math.floor(Math.random() * 50);
+        }
+
+        // Update total detections
+        const totalDetections = document.getElementById('liveDetections');
+        if (totalDetections) {
+          const current = parseInt(totalDetections.textContent);
+          totalDetections.textContent = current + Math.floor(Math.random() * 5);
+        }
+      }, 5000);
+    }
+
+    // Start real-time simulation
+    setTimeout(simulateRealTimeUpdates, 2000);
+  </script>
+
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDmoednQi6Zh3yyHANuYjIu8IDWMMSeeNFRiGTqQuPNl31%2BCf9V2TdFLNsBQPXbTrOCNgal69m3XrZDl7AE40zN1%2BWTaA8ic4T6f4q7fBP7oNiEDesR9F9YCoNkpYqLOud9elUJcpvIXFCyPgrrGtrlvQ0jjRz5z2fjvRL2QXuurtoVD9qsRRyO6OfamDyi2p%2BWK5rINShhOkg2ceYW11jiaFdEfhP9Xb2scRqj0e7V8VxbBnc6ybvXvxQy5MKoS7u%2BBJrf5PRmO5oMEXnb1cOhNvNpZAeI1hkpbZuHKIKLGaRhQRORhZCc%2Fq8RHo2wlUfYsBSm6UdfDWjKfPqzqQjkjtS%2BpavLLOBSCSlu42ZElIqym9GFud4QfjX%2BcN1X0iVu7g2bzCzaElbnD76N2m%2F9KV8CDV5ogirb2tQ9lhlf5Eq0Cy3dgKWLKr4Mq%2BAM8M61LQ%2FYR2wcgBg3d%2FhBEycEE0FnnjoxjY0zP1Kzr16KiQ8FCYhWDUU1RbG%2FBJ0xBBqt9iy%2FJ%2Bmws98LN525FRrR0%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDmoednQi6Zh3yyHANuYjIu8IDWMMSeeNFRiGTqQuPNl31+Cf9V2TdFLNsBQPXbTrOCNgal69m3XrZDl7AE40zN1+WTaA8ic4T6f4q7fBP7oNiEDesR9F9YCoNkpYqLOud9elUJcpvIXFCyPgrrGtrlvQ0jjRz5z2fjvRL2QXuurtoVD9qsRRyO6OfamDyi2p+WK5rINShhOkg2ceYW11jiaFdEfhP9Xb2scRqj0e7V8VxbBnc6ybvXvxQy5MKoS7u+BJrf5PRmO5oMEXnb1cOhNvNpZAeI1hkpbZuHKIKLGaRhQRORhZCc/q8RHo2wlUfYsBSm6UdfDWjKfPqzqQjkjtS+pavLLOBSCSlu42ZElIqym9GFud4QfjX+cN1X0iVu7g2bzCzaElbnD76N2m/9KV8CDV5ogirb2tQ9lhlf5Eq0Cy3dgKWLKr4Mq+AM8M61LQ/YR2wcgBg3d/hBEycEE0FnnjoxjY0zP1Kzr16KiQ8FCYhWDUU1RbG/BJ0xBBqt9iy/J+mws98LN525FRrR0=";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

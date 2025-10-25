@@ -1,0 +1,19 @@
+{
+  "name": "VisionKrono - Cronometragem Esportiva",
+  "short_name": "VisionKrono",
+  "description": "Sistema profissional de cronometragem com detecção automática de dorsais",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#fc6b03",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "pt-PT",
+  "dir": "ltr",
+  "categories": ["sports", "utilities", "productivity"],
+  "icons": [],
+  "shortcuts": [],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
+

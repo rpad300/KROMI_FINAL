@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI Design System - Mockup Funcional</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        /* ========================================
+           KROMI ULTIMATE DESIGN SYSTEM
+        ======================================== */
+        
+        /* CSS Variables */
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --secondary: #6366f1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --muted: #64748b;
+            --accent: #22d3ee;
+            
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+            
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-md: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+            --font-size-2xl: 32px;
+            
+            --transition: all 0.2s ease;
+            --transition-slow: all 0.3s ease;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+        
+        /* Reset & Base */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+        
+        /* Layout */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            transition: var(--transition);
+        }
+        
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-md) var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .content-area {
+            padding: var(--spacing-lg);
+        }
+        
+        /* Logo */
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Navigation */
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        
+        .nav-link:hover {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Content Sections */
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Components */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .component-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            transition: var(--transition);
+        }
+        
+        .component-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        .component-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+        }
+        
+        .component-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+            min-height: 40px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        
+        .btn-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            transition: var(--transition);
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+        
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .checkbox-item, .radio-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .card-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+        }
+        
+        .table th, .table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table tbody tr:hover {
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-lg);
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: var(--font-size-xl);
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .toast {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .toast-success { border-left: 4px solid var(--success); }
+        .toast-danger { border-left: 4px solid var(--danger); }
+        .toast-warning { border-left: 4px solid var(--warning); }
+        .toast-info { border-left: 4px solid var(--info); }
+        
+        /* Progress Bar */
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px var(--spacing-xs);
+            border-radius: 12px;
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .badge-primary { background: rgba(252, 107, 3, 0.1); color: var(--primary); }
+        .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .badge-info { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        [data-theme="dark"] .theme-toggle::before {
+            content: '🌙';
+            left: 26px;
+        }
+        
+        [data-theme="dark"] .theme-toggle {
+            background: var(--primary);
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Dropdown */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .dropdown.active .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-secondary);
+        }
+        
+        /* Carousel */
+        .carousel {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--border-radius);
+        }
+        
+        .carousel-inner {
+            display: flex;
+            transition: transform 0.3s ease;
+        }
+        
+        .carousel-item {
+            min-width: 100%;
+            background: var(--bg-secondary);
+            padding: var(--spacing-xl);
+            text-align: center;
+        }
+        
+        .carousel-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        
+        .carousel-prev { left: var(--spacing-sm); }
+        .carousel-next { right: var(--spacing-sm); }
+        
+        /* Loading */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Rating */
+        .rating {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .rating-star {
+            color: var(--border-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .rating-star.active,
+        .rating-star:hover {
+            color: var(--warning);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                height: 100vh;
+                z-index: 1000;
+                transition: var(--transition);
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .component-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+            }
+        }
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mb-2 { margin-bottom: var(--spacing-sm); }
+        .mb-4 { margin-bottom: var(--spacing-md); }
+        .mt-4 { margin-top: var(--spacing-md); }
+        .p-4 { padding: var(--spacing-md); }
+        .flex { display: flex; }
+        .flex-1 { flex: 1; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: var(--spacing-sm); }
+        .gap-4 { gap: var(--spacing-md); }
+        .hidden { display: none; }
+        .block { display: block; }
+        
+        /* Header Controls */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: var(--font-size-lg);
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon">K</div>
+                <span>KROMI Design System</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-section="overview">
+                        <i class="fas fa-home"></i>
+                        <span>Overview</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="buttons">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Buttons</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="forms">
+                        <i class="fas fa-edit"></i>
+                        <span>Forms</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="tables">
+                        <i class="fas fa-table"></i>
+                        <span>Tables</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="cards">
+                        <i class="fas fa-clone"></i>
+                        <span>Cards</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="navigation">
+                        <i class="fas fa-compass"></i>
+                        <span>Navigation</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="feedback">
+                        <i class="fas fa-bell"></i>
+                        <span>Feedback</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="overlays">
+                        <i class="fas fa-window-restore"></i>
+                        <span>Overlays</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="interactive">
+                        <i class="fas fa-gamepad"></i>
+                        <span>Interactive</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="flex items-center gap-4">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">Design System Overview</h1>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="theme-toggle" id="themeToggle"></div>
+                    <div class="flex items-center gap-2">
+                        <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">A</div>
+                        <span style="font-size: var(--font-size-sm);">Admin</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Overview Section -->
+                <section id="overview" class="section active">
+                    <div class="mb-4">
+                        <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-md);">🎨 KROMI Design System</h2>
+                        <p style="color: var(--text-secondary); font-size: var(--font-size-lg);">Sistema de design completo e funcional com todos os componentes para a plataforma KROMI.</p>
+                    </div>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">🔘 Buttons & Actions</h3>
+                            <p class="component-description">Botões primários, secundários, estados e variações de cores</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary">Primary</button>
+                                <button class="btn btn-secondary">Secondary</button>
+                                <button class="btn btn-success">Success</button>
+                                <button class="btn btn-danger">Danger</button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">📝 Form Elements</h3>
+                            <p class="component-description">Inputs, selects, checkboxes e validação de formulários</p>
+                            <div class="form-group">
+                                <input type="text" class="form-input" placeholder="Digite algo aqui...">
+                            </div>
+                            <div class="form-group">
+                                <select class="form-select">
+                                    <option>Selecione uma opção</option>
+                                    <option>Opção 1</option>
+                                    <option>Opção 2</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">📊 Data Display</h3>
+                            <p class="component-description">Tabelas, cards, listas e visualização de dados</p>
+                            <div class="flex gap-2 mb-2">
+                                <span class="badge badge-primary">Primary</span>
+                                <span class="badge badge-success">Success</span>
+                                <span class="badge badge-danger">Danger</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: 75%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">🎭 Interactive</h3>
+                            <p class="component-description">Modals, tooltips, dropdowns e componentes interativos</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="showModal()">Open Modal</button>
+                                <button class="btn btn-secondary" onclick="showToast('success')">Show Toast</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📱 Responsive Design</h3>
+                        </div>
+                        <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                            Este sistema é totalmente responsivo e otimizado para todos os dispositivos:
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-primary); border-radius: var(--border-radius);">
+                                <i class="fas fa-mobile-alt" style="font-size: var(--font-size-xl); color: var(--primary); margin-bottom: var(--spacing-sm);"></i>
+                                <h4>Mobile</h4>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary);">320px - 767px</p>
+                            </div>
+                            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-primary); border-radius: var(--border-radius);">
+                                <i class="fas fa-tablet-alt" style="font-size: var(--font-size-xl); color: var(--primary); margin-bottom: var(--spacing-sm);"></i>
+                                <h4>Tablet</h4>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary);">768px - 1024px</p>
+                            </div>
+                            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-primary); border-radius: var(--border-radius);">
+                                <i class="fas fa-desktop" style="font-size: var(--font-size-xl); color: var(--primary); margin-bottom: var(--spacing-sm);"></i>
+                                <h4>Desktop</h4>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary);">1025px+</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Buttons Section -->
+                <section id="buttons" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">🔘 Buttons & Actions</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Primary Buttons</h3>
+                            <p class="component-description">Botões principais para ações primárias</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Create New
+                                </button>
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-save"></i>
+                                    Save Changes
+                                </button>
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-download"></i>
+                                    Download
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Secondary Buttons</h3>
+                            <p class="component-description">Botões secundários para ações complementares</p>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-edit"></i>
+                                    Edit
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-copy"></i>
+                                    Copy
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-share"></i>
+                                    Share
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Status Buttons</h3>
+                            <p class="component-description">Botões com significado semântico</p>
+                            <div class="btn-group">
+                                <button class="btn btn-success">
+                                    <i class="fas fa-check"></i>
+                                    Approve
+                                </button>
+                                <button class="btn btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                    Delete
+                                </button>
+                                <button class="btn btn-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Warning
+                                </button>
+                                <button class="btn btn-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    Info
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Button Sizes</h3>
+                            <p class="component-description">Diferentes tamanhos de botões</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Small</button>
+                                <button class="btn btn-primary">Medium (Default)</button>
+                                <button class="btn btn-primary" style="padding: 16px 24px; font-size: 16px;">Large</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Forms Section -->
+                <section id="forms" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">📝 Form Components</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Text Inputs</h3>
+                            <p class="component-description">Campos de texto e variações</p>
+                            <div class="form-group">
+                                <label class="form-label">Nome Completo</label>
+                                <input type="text" class="form-input" placeholder="Digite seu nome">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-input" placeholder="email@exemplo.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-input" placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Número</label>
+                                <input type="number" class="form-input" placeholder="0">
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Select & Textarea</h3>
+                            <p class="component-description">Campos de seleção e texto longo</p>
+                            <div class="form-group">
+                                <label class="form-label">Categoria</label>
+                                <select class="form-select">
+                                    <option>Selecione uma categoria</option>
+                                    <option>Tecnologia</option>
+                                    <option>Design</option>
+                                    <option>Marketing</option>
+                                    <option>Vendas</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Descrição</label>
+                                <textarea class="form-textarea" rows="4" placeholder="Digite uma descrição detalhada..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Checkboxes</h3>
+                            <p class="component-description">Opções de múltipla escolha</p>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="cb1" checked>
+                                    <label for="cb1">Enviar notificações por email</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="cb2">
+                                    <label for="cb2">Aceitar termos e condições</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="cb3">
+                                    <label for="cb3">Receber newsletter</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Radio Buttons</h3>
+                            <p class="component-description">Opções de escolha única</p>
+                            <div class="radio-group">
+                                <div class="radio-item">
+                                    <input type="radio" name="plan" id="r1" checked>
+                                    <label for="r1">Plano Básico - €9/mês</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" name="plan" id="r2">
+                                    <label for="r2">Plano Pro - €19/mês</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" name="plan" id="r3">
+                                    <label for="r3">Plano Enterprise - €49/mês</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Complete Form Example</h3>
+                        </div>
+                        <form>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                                <div class="form-group">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-input" placeholder="John">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-input" placeholder="Doe">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-input" placeholder="john.doe@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Company</label>
+                                <select class="form-select">
+                                    <option>Select company size</option>
+                                    <option>1-10 employees</option>
+                                    <option>11-50 employees</option>
+                                    <option>51-200 employees</option>
+                                    <option>200+ employees</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Message</label>
+                                <textarea class="form-textarea" rows="4" placeholder="Tell us about your project..."></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                    Send Message
+                                </button>
+                                <button type="reset" class="btn btn-secondary">
+                                    <i class="fas fa-undo"></i>
+                                    Reset Form
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+                
+                <!-- Tables Section -->
+                <section id="tables" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">📊 Tables & Data</h2>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">User Management Table</h3>
+                            <div class="btn-group">
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Add User
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Last Login</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>#001</td>
+                                        <td>João Silva</td>
+                                        <td>joao@kromi.pt</td>
+                                        <td>Admin</td>
+                                        <td><span class="badge badge-success">Active</span></td>
+                                        <td>2 min ago</td>
+                                        <td>
+                                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#002</td>
+                                        <td>Maria Santos</td>
+                                        <td>maria@kromi.pt</td>
+                                        <td>Manager</td>
+                                        <td><span class="badge badge-success">Active</span></td>
+                                        <td>1 hour ago</td>
+                                        <td>
+                                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#003</td>
+                                        <td>Pedro Costa</td>
+                                        <td>pedro@kromi.pt</td>
+                                        <td>User</td>
+                                        <td><span class="badge badge-warning">Pending</span></td>
+                                        <td>Never</td>
+                                        <td>
+                                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#004</td>
+                                        <td>Ana Oliveira</td>
+                                        <td>ana@kromi.pt</td>
+                                        <td>User</td>
+                                        <td><span class="badge badge-danger">Inactive</span></td>
+                                        <td>1 month ago</td>
+                                        <td>
+                                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Cards Section -->
+                <section id="cards" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">🃏 Cards & Layouts</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--border-radius); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <h3 class="component-title" style="margin: 0;">Total Users</h3>
+                                    <p style="font-size: var(--font-size-2xl); font-weight: bold; color: var(--primary); margin: 0;">1,247</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span style="color: var(--success); font-size: var(--font-size-sm);">
+                                    <i class="fas fa-arrow-up"></i> +12% este mês
+                                </span>
+                                <span class="badge badge-success">+154</span>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div style="width: 60px; height: 60px; background: var(--success); border-radius: var(--border-radius); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div>
+                                    <h3 class="component-title" style="margin: 0;">Revenue</h3>
+                                    <p style="font-size: var(--font-size-2xl); font-weight: bold; color: var(--success); margin: 0;">€45.2K</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span style="color: var(--success); font-size: var(--font-size-sm);">
+                                    <i class="fas fa-arrow-up"></i> +8% este mês
+                                </span>
+                                <span class="badge badge-success">€3.2K</span>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div style="width: 60px; height: 60px; background: var(--info); border-radius: var(--border-radius); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </div>
+                                <div>
+                                    <h3 class="component-title" style="margin: 0;">Orders</h3>
+                                    <p style="font-size: var(--font-size-2xl); font-weight: bold; color: var(--info); margin: 0;">342</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span style="color: var(--danger); font-size: var(--font-size-sm);">
+                                    <i class="fas fa-arrow-down"></i> -5% este mês
+                                </span>
+                                <span class="badge badge-danger">-18</span>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Device Status</h3>
+                            <p class="component-description">Monitor de dispositivo KROMI-001</p>
+                            <div class="flex items-center gap-2 mb-4">
+                                <div style="width: 12px; height: 12px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>
+                                <span style="color: var(--success); font-weight: 500;">Online</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); font-size: var(--font-size-sm);">
+                                <div>
+                                    <span style="color: var(--text-secondary);">Battery:</span>
+                                    <span style="font-weight: 500;">87%</span>
+                                </div>
+                                <div>
+                                    <span style="color: var(--text-secondary);">Signal:</span>
+                                    <span style="font-weight: 500;">Strong</span>
+                                </div>
+                                <div>
+                                    <span style="color: var(--text-secondary);">Last Sync:</span>
+                                    <span style="font-weight: 500;">2 min ago</span>
+                                </div>
+                                <div>
+                                    <span style="color: var(--text-secondary);">Detections:</span>
+                                    <span style="font-weight: 500;">1,247</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Progress Tracking</h3>
+                        </div>
+                        <div style="display: grid; gap: var(--spacing-lg);">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Project Alpha</span>
+                                    <span>75%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: 75%;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Beta Testing</span>
+                                    <span>45%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: 45%; background: var(--warning);"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Documentation</span>
+                                    <span>90%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: 90%; background: var(--success);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Navigation Section -->
+                <section id="navigation" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">🧭 Navigation Components</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Tabs Navigation</h3>
+                            <p class="component-description">Sistema de abas para organizar conteúdo</p>
+                            <div class="tabs" id="demoTabs">
+                                <div class="tab active" data-tab="tab1">Overview</div>
+                                <div class="tab" data-tab="tab2">Analytics</div>
+                                <div class="tab" data-tab="tab3">Settings</div>
+                            </div>
+                            <div class="tab-content active" id="tab1">
+                                <p>Conteúdo da aba Overview. Esta é a primeira aba com informações gerais.</p>
+                            </div>
+                            <div class="tab-content" id="tab2">
+                                <p>Conteúdo da aba Analytics. Aqui você encontra métricas e gráficos.</p>
+                            </div>
+                            <div class="tab-content" id="tab3">
+                                <p>Conteúdo da aba Settings. Configure suas preferências aqui.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Breadcrumbs</h3>
+                            <p class="component-description">Navegação hierárquica</p>
+                            <nav style="padding: var(--spacing-md); background: var(--bg-primary); border-radius: var(--border-radius); margin-bottom: var(--spacing-md);">
+                                <div class="flex items-center gap-2" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                    <a href="#" style="color: var(--primary); text-decoration: none;">Home</a>
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                    <a href="#" style="color: var(--primary); text-decoration: none;">Products</a>
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                    <span>Electronics</span>
+                                </div>
+                            </nav>
+                            <nav style="padding: var(--spacing-md); background: var(--bg-primary); border-radius: var(--border-radius);">
+                                <div class="flex items-center gap-2" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                    <a href="#" style="color: var(--primary); text-decoration: none;">Dashboard</a>
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                    <a href="#" style="color: var(--primary); text-decoration: none;">Events</a>
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                    <a href="#" style="color: var(--primary); text-decoration: none;">Marathon 2024</a>
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                    <span>Participants</span>
+                                </div>
+                            </nav>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Dropdown Menu</h3>
+                            <p class="component-description">Menu suspenso com opções</p>
+                            <div class="dropdown" id="demoDropdown">
+                                <button class="btn btn-secondary" onclick="toggleDropdown()">
+                                    <i class="fas fa-cog"></i>
+                                    Actions
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item">
+                                        <i class="fas fa-edit"></i>
+                                        Edit Profile
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <i class="fas fa-cog"></i>
+                                        Settings
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <i class="fas fa-download"></i>
+                                        Download Data
+                                    </div>
+                                    <hr style="margin: var(--spacing-xs) 0; border: none; border-top: 1px solid var(--border-color);">
+                                    <div class="dropdown-item" style="color: var(--danger);">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        Logout
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Pagination</h3>
+                            <p class="component-description">Navegação de páginas</p>
+                            <div class="flex items-center justify-center gap-2">
+                                <button class="btn btn-secondary" style="padding: 8px;">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-primary" style="padding: 8px 12px;">1</button>
+                                <button class="btn btn-secondary" style="padding: 8px 12px;">2</button>
+                                <button class="btn btn-secondary" style="padding: 8px 12px;">3</button>
+                                <span style="padding: 8px; color: var(--text-secondary);">...</span>
+                                <button class="btn btn-secondary" style="padding: 8px 12px;">10</button>
+                                <button class="btn btn-secondary" style="padding: 8px;">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Feedback Section -->
+                <section id="feedback" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">🔔 Feedback Components</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Toast Notifications</h3>
+                            <p class="component-description">Notificações temporárias</p>
+                            <div class="btn-group">
+                                <button class="btn btn-success" onclick="showToast('success')">Success Toast</button>
+                                <button class="btn btn-danger" onclick="showToast('error')">Error Toast</button>
+                                <button class="btn btn-warning" onclick="showToast('warning')">Warning Toast</button>
+                                <button class="btn btn-info" onclick="showToast('info')">Info Toast</button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Loading States</h3>
+                            <p class="component-description">Estados de carregamento</p>
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="spinner"></div>
+                                <span>Loading...</span>
+                            </div>
+                            <button class="btn btn-primary" onclick="simulateLoading(this)">
+                                <i class="fas fa-download"></i>
+                                Download File
+                            </button>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Rating System</h3>
+                            <p class="component-description">Sistema de avaliação</p>
+                            <div class="mb-4">
+                                <p style="margin-bottom: var(--spacing-sm);">Rate this product:</p>
+                                <div class="rating" id="ratingDemo">
+                                    <i class="fas fa-star rating-star active" data-rating="1"></i>
+                                    <i class="fas fa-star rating-star active" data-rating="2"></i>
+                                    <i class="fas fa-star rating-star active" data-rating="3"></i>
+                                    <i class="fas fa-star rating-star" data-rating="4"></i>
+                                    <i class="fas fa-star rating-star" data-rating="5"></i>
+                                </div>
+                                <p style="margin-top: var(--spacing-sm); color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                    <span id="ratingValue">3</span> out of 5 stars
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Alert Messages</h3>
+                            <p class="component-description">Mensagens de alerta inline</p>
+                            <div style="display: grid; gap: var(--spacing-sm);">
+                                <div style="padding: var(--spacing-md); background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: var(--border-radius); color: var(--success);">
+                                    <i class="fas fa-check-circle"></i>
+                                    Success! Your changes have been saved.
+                                </div>
+                                <div style="padding: var(--spacing-md); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: var(--border-radius); color: var(--danger);">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Error! Something went wrong.
+                                </div>
+                                <div style="padding: var(--spacing-md); background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: var(--border-radius); color: var(--warning);">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Warning! Check your input.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Overlays Section -->
+                <section id="overlays" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">🏠 Overlay Components</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Modal Dialogs</h3>
+                            <p class="component-description">Janelas modais para interações</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="showModal()">Open Modal</button>
+                                <button class="btn btn-secondary" onclick="showConfirmModal()">Confirm Dialog</button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Image Carousel</h3>
+                            <p class="component-description">Galeria de imagens rotativa</p>
+                            <div class="carousel" id="imageCarousel">
+                                <div class="carousel-inner" id="carouselInner">
+                                    <div class="carousel-item">
+                                        <div style="background: linear-gradient(45deg, var(--primary), var(--primary-dark)); color: white; min-height: 200px; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl);">
+                                            Slide 1
+                                        </div>
+                                    </div>
+                                    <div class="carousel-item">
+                                        <div style="background: linear-gradient(45deg, var(--success), var(--info)); color: white; min-height: 200px; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl);">
+                                            Slide 2
+                                        </div>
+                                    </div>
+                                    <div class="carousel-item">
+                                        <div style="background: linear-gradient(45deg, var(--warning), var(--danger)); color: white; min-height: 200px; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl);">
+                                            Slide 3
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="carousel-controls carousel-prev" onclick="carouselPrev()">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="carousel-controls carousel-next" onclick="carouselNext()">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Tooltips</h3>
+                            <p class="component-description">Dicas contextuais</p>
+                            <div class="flex gap-4 items-center">
+                                <button class="btn btn-primary" title="This is a tooltip!">
+                                    <i class="fas fa-info-circle"></i>
+                                    Hover me
+                                </button>
+                                <button class="btn btn-secondary" title="Another helpful tooltip">
+                                    <i class="fas fa-question-circle"></i>
+                                    Help
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Empty States</h3>
+                            <p class="component-description">Estados vazios informativos</p>
+                            <div style="text-align: center; padding: var(--spacing-xl); background: var(--bg-primary); border-radius: var(--border-radius); border: 2px dashed var(--border-color);">
+                                <i class="fas fa-inbox" style="font-size: 48px; color: var(--text-secondary); margin-bottom: var(--spacing-md);"></i>
+                                <h4 style="color: var(--text-primary); margin-bottom: var(--spacing-sm);">No data found</h4>
+                                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">There are no items to display at this time.</p>
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Add New Item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Interactive Section -->
+                <section id="interactive" class="section">
+                    <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-lg);">💬 Interactive Components</h2>
+                    
+                    <div class="component-grid">
+                        <div class="component-card">
+                            <h3 class="component-title">Search Interface</h3>
+                            <p class="component-description">Sistema de busca avançada</p>
+                            <div class="form-group">
+                                <div style="position: relative;">
+                                    <input type="text" class="form-input" placeholder="Search users, products, orders..." style="padding-left: 40px;">
+                                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-filter"></i>
+                                    Filters
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-sort"></i>
+                                    Sort
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Progress Steps</h3>
+                            <p class="component-description">Indicador de progresso</p>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">1</div>
+                                    <span style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">Setup</span>
+                                </div>
+                                <div style="height: 2px; flex: 1; background: var(--primary);"></div>
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">2</div>
+                                    <span style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">Configure</span>
+                                </div>
+                                <div style="height: 2px; flex: 1; background: var(--border-color);"></div>
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <div style="width: 32px; height: 32px; background: var(--border-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-weight: bold;">3</div>
+                                    <span style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">Deploy</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Chat Interface</h3>
+                            <p class="component-description">Sistema de mensagens</p>
+                            <div style="background: var(--bg-primary); border-radius: var(--border-radius); padding: var(--spacing-md); max-height: 200px; overflow-y: auto;">
+                                <div style="margin-bottom: var(--spacing-md);">
+                                    <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-xs);">
+                                        <div style="width: 24px; height: 24px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">JS</div>
+                                        <div style="background: var(--bg-secondary); padding: var(--spacing-sm); border-radius: var(--border-radius); flex: 1;">
+                                            <p style="margin: 0; font-size: var(--font-size-sm);">Olá! Como posso ajudar?</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: var(--spacing-md);">
+                                    <div style="display: flex; gap: var(--spacing-sm); justify-content: flex-end; margin-bottom: var(--spacing-xs);">
+                                        <div style="background: var(--primary); color: white; padding: var(--spacing-sm); border-radius: var(--border-radius); max-width: 70%;">
+                                            <p style="margin: 0; font-size: var(--font-size-sm);">Preciso de ajuda com a configuração do evento.</p>
+                                        </div>
+                                        <div style="width: 24px; height: 24px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">EU</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                                <input type="text" class="form-input" placeholder="Digite sua mensagem..." style="flex: 1;">
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="component-card">
+                            <h3 class="component-title">Color Picker</h3>
+                            <p class="component-description">Seletor de cores</p>
+                            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--spacing-xs); margin-bottom: var(--spacing-md);">
+                                <div style="width: 40px; height: 40px; background: var(--primary); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#fc6b03')"></div>
+                                <div style="width: 40px; height: 40px; background: var(--success); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#10b981')"></div>
+                                <div style="width: 40px; height: 40px; background: var(--danger); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#ef4444')"></div>
+                                <div style="width: 40px; height: 40px; background: var(--warning); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#f59e0b')"></div>
+                                <div style="width: 40px; height: 40px; background: var(--info); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#3b82f6')"></div>
+                                <div style="width: 40px; height: 40px; background: var(--secondary); border-radius: var(--border-radius); cursor: pointer; border: 2px solid transparent;" onclick="selectColor(this, '#6366f1')"></div>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="selectedColor" class="form-input" value="#fc6b03" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Demo Modal -->
+    <div class="modal" id="demoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Example Modal</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div>
+                <p>This is a functional modal dialog. You can put any content here like forms, images, or other components.</p>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-primary" onclick="closeModal()">Confirm</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Action</h3>
+                <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <div>
+                <p>Are you sure you want to perform this action? This cannot be undone.</p>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-danger" onclick="closeConfirmModal()">Delete</button>
+                    <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+        
+        // Navigation
+        function navigateToSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            // Update page title
+            const titles = {
+                overview: 'Design System Overview',
+                buttons: 'Buttons & Actions',
+                forms: 'Form Components',
+                tables: 'Tables & Data',
+                cards: 'Cards & Layouts',
+                navigation: 'Navigation Components',
+                feedback: 'Feedback Components',
+                overlays: 'Overlay Components',
+                interactive: 'Interactive Components'
+            };
+            
+            document.getElementById('pageTitle').textContent = titles[sectionId] || 'KROMI Design System';
+            
+            // Close mobile menu
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
+        }
+        
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+        
+        // Toast Notifications
+        function showToast(type) {
+            const messages = {
+                success: 'Operation completed successfully!',
+                error: 'An error occurred. Please try again.',
+                warning: 'Warning: Please check your input.',
+                info: 'Here is some useful information.'
+            };
+            
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <i class="${icons[type]}"></i>
+                <span>${messages[type]}</span>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+        
+        // Modal Functions
+        function showModal() {
+            document.getElementById('demoModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('demoModal').classList.remove('active');
+        }
+        
+        function showConfirmModal() {
+            document.getElementById('confirmModal').classList.add('active');
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+        
+        // Tab System
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show target tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update tab buttons
+            document.querySelectorAll('#demoTabs .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        }
+        
+        // Dropdown Toggle
+        function toggleDropdown() {
+            document.getElementById('demoDropdown').classList.toggle('active');
+        }
+        
+        // Carousel
+        let currentSlide = 0;
+        const totalSlides = 3;
+        
+        function updateCarousel() {
+            const inner = document.getElementById('carouselInner');
+            inner.style.transform = `translateX(-${currentSlide * 100}%)`;
+        }
+        
+        function carouselNext() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            updateCarousel();
+        }
+        
+        function carouselPrev() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            updateCarousel();
+        }
+        
+        // Rating System
+        function setRating(rating) {
+            document.getElementById('ratingValue').textContent = rating;
+            
+            document.querySelectorAll('#ratingDemo .rating-star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+        
+        // Color Picker
+        function selectColor(element, color) {
+            // Remove previous selection
+            document.querySelectorAll('[onclick*="selectColor"]').forEach(el => {
+                el.style.border = '2px solid transparent';
+            });
+            
+            // Highlight selected color
+            element.style.border = '2px solid var(--text-primary)';
+            
+            // Update input
+            document.getElementById('selectedColor').value = color;
+        }
+        
+        // Loading Simulation
+        function simulateLoading(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div> Loading...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                showToast('success');
+            }, 2000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            // Navigation event listeners
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-section');
+                    navigateToSection(sectionId);
+                });
+            });
+            
+            // Theme toggle event listener
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Mobile menu toggle
+            document.getElementById('mobileMenuToggle').addEventListener('click', toggleMobileMenu);
+            
+            // Tab system event listeners
+            document.querySelectorAll('#demoTabs .tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+            
+            // Rating system event listeners
+            document.querySelectorAll('#ratingDemo .rating-star').forEach((star, index) => {
+                star.addEventListener('click', function() {
+                    setRating(index + 1);
+                });
+            });
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown').forEach(dropdown => {
+                        dropdown.classList.remove('active');
+                    });
+                }
+            });
+            
+            // Close modals when clicking outside
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Auto-play carousel
+            setInterval(carouselNext, 4000);
+        });
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDnnfxrwAOk42p9w47zX3jOtC9y8FJEGYund5liA6DMRp%2FPmZ7SZ4jH9dMD6WUDOnYXhAL5B%2BuUHiwrqEDm%2FTYFnszn9lL8wivyDjYBw63VYhADNS0cnCnmYJmDk8%2F07JA0i6lF3w5oi947LmaG5FiDmfmVE3jFtaL6ihiDhr5XCTseKpQDri19bspAsptxG0pKFTizAK010VpjbB5LY4sLn%2FzCusg5Nc9%2BhAxaW%2BHeZy1MJbsD3ZnL6dg%2FtVFl75UAno89Lr5sM49wUPkDTuFfxKrswpG2WywgZ1KyGMpN%2Blja%2BC5EJh2%2FTYKQTTvtSLHsS8a8NsbLi6iF0Gz1wC0s%2F2b6biBrlSLlfriID%2F6q2VXUtmgq4jfJZJpE04R0td%2FaJopCOsMf5w0HHVpESYc7bOmjq7iwb8KfOH5cT4r3sISFqDPdzb04btsV5F6N9IQDFZbHby%2Bk%2FkVxzY4DFcunAbBqh2SmKMDOBFxn8v0LMKFXs9oNtXskg%2BeXKhDFlG6w%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDnnfxrwAOk42p9w47zX3jOtC9y8FJEGYund5liA6DMRp/PmZ7SZ4jH9dMD6WUDOnYXhAL5B+uUHiwrqEDm/TYFnszn9lL8wivyDjYBw63VYhADNS0cnCnmYJmDk8/07JA0i6lF3w5oi947LmaG5FiDmfmVE3jFtaL6ihiDhr5XCTseKpQDri19bspAsptxG0pKFTizAK010VpjbB5LY4sLn/zCusg5Nc9+hAxaW+HeZy1MJbsD3ZnL6dg/tVFl75UAno89Lr5sM49wUPkDTuFfxKrswpG2WywgZ1KyGMpN+lja+C5EJh2/TYKQTTvtSLHsS8a8NsbLi6iF0Gz1wC0s/2b6biBrlSLlfriID/6q2VXUtmgq4jfJZJpE04R0td/aJopCOsMf5w0HHVpESYc7bOmjq7iwb8KfOH5cT4r3sISFqDPdzb04btsV5F6N9IQDFZbHby+k/kVxzY4DFcunAbBqh2SmKMDOBFxn8v0LMKFXs9oNtXskg+eXKhDFlG6w==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Sistema profissional de cronometragem esportiva">
+    
+    <title>VisionKrono - Gestão de Eventos</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    
+    <style>
+        /* Adaptações e overrides para VisionKrono PWA */
+        
+        /* Layout Structure */
+        .layout-with-sidebar {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sidebar sempre visível em desktop */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        /* Main content area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+        }
+        
+        .main #mainContent {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-5);
+        }
+        
+        /* Event card selected state */
+        .event-card.selected {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 20px rgba(252, 107, 3, 0.4);
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        /* Mobile adaptations */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                z-index: 1050;
+                box-shadow: var(--shadow-2xl);
+                transition: transform var(--transition-slow);
+            }
+            
+            .sidebar.active,
+            .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .main {
+                width: 100% !important;
+                margin-left: 0 !important;
+            }
+            
+            .main #mainContent {
+                padding-bottom: 80px;
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        .event-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .event-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .event-date {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .event-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .event-status.active {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--accent-color);
+        }
+        
+        .event-status.inactive {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-tertiary);
+        }
+        
+        .event-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .event-stat {
+            text-align: center;
+        }
+        
+        .event-stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .event-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* View específica quando evento selecionado */
+        .event-detail-view {
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .event-detail-view.active {
+            display: block;
+        }
+        
+        .event-detail-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .back-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-button:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        /* Modal de Configuração */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-4);
+        }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            padding: var(--spacing-5);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-xl);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--spacing-1);
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            background: var(--surface-secondary);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-5);
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-5);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: var(--spacing-3);
+            justify-content: flex-end;
+            background: var(--surface);
+        }
+        
+        .config-section {
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .config-section h4 {
+            margin: 0 0 var(--spacing-4) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--spacing-2);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-2);
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--surface);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .checkbox-item:hover {
+            background: var(--surface-secondary);
+            border-color: var(--primary);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
+        
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .category-icon {
+            font-size: var(--font-size-lg);
+        }
+        
+        .category-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .category-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .category-details {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .modal {
+                padding: var(--spacing-2);
+            }
+            
+            .modal-content {
+                max-height: 95vh;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .checkbox-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar para Desktop -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">🏃 VisionKrono</h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);">
+                <!-- Nível 1: Gestão Geral -->
+                <div style="margin-bottom: var(--spacing-6);">
+                    <div class="nav-category">Gestão Geral</div>
+                    <a href="/" class="nav-item">
+                        <i class="icon">🏠</i>
+                        <span class="text">Home</span>
+                    </a>
+                    <a href="/events" class="nav-item active">
+                        <i class="icon">🏃</i>
+                        <span class="text">Eventos</span>
+                    </a>
+                    <a href="/image-processor" class="nav-item">
+                        <i class="icon">🤖</i>
+                        <span class="text">Processador</span>
+                    </a>
+                    <a href="/database-management" class="nav-item">
+                        <i class="icon">🗄️</i>
+                        <span class="text">Gestão BD</span>
+                    </a>
+                </div>
+                
+                <!-- Nível 2: Opções do Evento (aparece quando evento selecionado) -->
+                <div id="eventNavSection" style="display: none; margin-bottom: var(--spacing-6);">
+                    <div class="nav-separator"></div>
+                    <div class="nav-category">
+                        <span id="eventNavTitle">Evento Selecionado</span>
+                    </div>
+                    <div class="nav-item" id="detectionNavBtn" style="cursor: pointer;">
+                        <i class="icon">📱</i>
+                        <span class="text">Detecção</span>
+                    </div>
+                    <div class="nav-item" id="classificationsNavBtn" style="cursor: pointer;">
+                        <i class="icon">🏆</i>
+                        <span class="text">Classificações</span>
+                    </div>
+                    <div class="nav-item" id="calibrationNavBtn" style="cursor: pointer;">
+                        <i class="icon">🔧</i>
+                        <span class="text">Calibração</span>
+                    </div>
+                    <div class="nav-item" id="liveStreamNavBtn" style="cursor: pointer;">
+                        <i class="icon">🎥</i>
+                        <span class="text">Live Stream</span>
+                        <span class="badge badge-danger" id="liveStreamDeviceCount" style="display: none;">0</span>
+                    </div>
+                    <div class="nav-item" id="participantsNavBtn" style="cursor: pointer;">
+                        <i class="icon">👥</i>
+                        <span class="text">Participantes</span>
+                    </div>
+                    <div class="nav-separator"></div>
+                    <div class="nav-category">Configuração</div>
+                    <div class="nav-item" id="devicesNavBtn" style="cursor: pointer;">
+                        <i class="icon">📱</i>
+                        <span class="text">Dispositivos</span>
+                        <span class="badge badge-info" id="devicesCount" style="display: none;">0</span>
+                    </div>
+                    <div class="nav-item" id="configNavBtn" style="cursor: pointer;">
+                        <i class="icon">⚙️</i>
+                        <span class="text">Configurações</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn-secondary" id="menuToggle" style="display: none;">☰</button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">Eventos</h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);">
+                <button id="newEventBtn" class="btn btn-primary">+ Novo Evento</button>
+                <button id="refreshBtn" class="btn btn-secondary">🔄</button>
+            </div>
+        </header>
+            
+        <!-- Main Content -->
+        <main class="main" id="mainContent">
+                <!-- View: Lista de Eventos -->
+                <div id="eventsListView">
+                    <!-- Estatísticas Gerais -->
+                    <div class="stats-grid" style="margin-bottom: var(--spacing-6);">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalEvents">0</div>
+                            <div class="stat-label">Eventos Ativos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalDevices">0</div>
+                            <div class="stat-label">Dispositivos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalDetections">0</div>
+                            <div class="stat-label">Total Detecções</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Grid de Eventos -->
+                    <div class="grid grid-auto-fit" id="eventsGrid">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                
+                <!-- View: Detalhes do Evento (inicialmente hidden) -->
+                <div id="eventDetailView" class="event-detail-view">
+                    <div class="event-detail-header">
+                        <button class="back-button" id="backToEventsBtn">←</button>
+                        <div>
+                            <h2 id="eventDetailTitle">Carregando...</h2>
+                            <p id="eventDetailSubtitle" style="color: var(--text-secondary); margin-top: 4px;">Detalhes do evento</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions do Evento -->
+                    <div style="display: flex; gap: var(--spacing-3); margin-bottom: var(--spacing-5); flex-wrap: wrap;">
+                        <button class="btn btn-success" id="startEventBtn">🚀 Iniciar Evento</button>
+                        <button class="btn btn-danger" id="stopEventBtn" style="display: none;">⏹️ Parar Evento</button>
+                        <button class="btn btn-secondary" id="resetEventBtn">🔄 Reset</button>
+                        <button class="btn btn-primary" id="configureEventBtn">⚙️ Configurar</button>
+                    </div>
+                    
+                    <!-- Navegação do Evento -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-4); margin-top: var(--spacing-5);">
+                        <div class="card interactive" id="eventDetectionCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">📱</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Detecção</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Capturar dorsais</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventClassificationsCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">🏆</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Classificações</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Rankings</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventCalibrationCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">🔧</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Calibração</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Configurar IA</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventLiveStreamCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">🎥</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Live Stream</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Streams ao vivo</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventParticipantsCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">👥</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Participantes</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Gestão</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventDevicesCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">📱</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Dispositivos</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);" id="deviceCountLabel">0 dispositivos</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventCategoryRankingsCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">🏅</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Por Escalão</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Classificação</div>
+                        </div>
+                        
+                        <div class="card interactive" id="eventConfigCard" style="cursor: pointer; text-align: center;">
+                            <div style="font-size: 2.5rem; margin-bottom: var(--spacing-3);">⚙️</div>
+                            <div style="font-weight: 600; margin-bottom: var(--spacing-2);">Configurações</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Evento</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Content do evento em tabs/sections -->
+                    <div id="eventDetailContent">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+            </main>
+        
+        <!-- Bottom Navigation para Mobile -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn active" onclick="window.location.href='/events'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/image-processor'">
+                <i>🤖</i>
+                <span>Proces.</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/database-management'">
+                <i>🗄️</i>
+                <span>BD</span>
+            </button>
+        </nav>
+        
+        <!-- Painel de Live Stream (Slide-in lateral) -->
+        <div id="livestream-panel" style="
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: min(450px, 100vw);
+            height: 100vh;
+            background: var(--bg-primary);
+            border-left: 2px solid var(--primary-color);
+            z-index: 1100;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+        ">
+            <div style="
+                padding: var(--spacing-5);
+                background: rgba(252, 107, 3, 0.1);
+                border-bottom: 1px solid rgba(252, 107, 3, 0.3);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <h2 style="color: var(--primary); margin: 0; font-size: 1.2rem;">🎥 Live Stream</h2>
+                <button onclick="closeLiveStreamPanel()" style="
+                    background: none;
+                    border: none;
+                    color: var(--primary);
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    padding: var(--spacing-2);
+                    border-radius: 50%;
+                    transition: background 0.2s;
+                " onmouseover="this.style.background='rgba(252,107,3,0.1)'" onmouseout="this.style.background='none'">&times;</button>
+            </div>
+            
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-lg);">
+                <div style="margin-bottom: var(--spacing-xl);">
+                    <h3 style="color: #fff; font-size: 1rem; margin-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color); padding-bottom: var(--spacing-sm);">📱 Dispositivos Online</h3>
+                    <div id="livestream-devices-list">
+                        <div style="text-align: center; padding: 40px 20px; color: var(--text-tertiary);">
+                            <div style="font-size: 3rem; margin-bottom: 10px;">📱</div>
+                            <div>Carregando...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="color: #fff; font-size: 1rem; margin-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color); padding-bottom: var(--spacing-sm);">📺 Streams Ativos</h3>
+                    <div id="livestream-videos"></div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- Fim .layout-with-sidebar -->
+    
+    <!-- Modal de Configuração do Evento -->
+    <div id="eventConfigModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 id="eventConfigTitle">Configuração do Evento</h3>
+                <button class="modal-close" id="closeEventConfigModal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Informações Básicas -->
+                <div class="config-section">
+                    <h4>📋 Informações Básicas</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="configEventName">Nome do Evento:</label>
+                            <input type="text" id="configEventName" class="form-input" placeholder="Nome do evento">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="configEventType">Tipo de Evento:</label>
+                            <select id="configEventType" class="form-select">
+                                <option value="running">Corrida</option>
+                                <option value="cycling">Ciclismo</option>
+                                <option value="triathlon">Triatlo</option>
+                                <option value="walking">Caminhada</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="configEventDistance">Distância (km):</label>
+                            <input type="number" id="configEventDistance" class="form-input" placeholder="10" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="configEventDate">Data:</label>
+                            <input type="date" id="configEventDate" class="form-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configuração de Modalidades -->
+                <div class="config-section">
+                    <h4>🏃 Modalidades Habilitadas</h4>
+                    <div class="form-group">
+                        <label class="form-label">Selecione as modalidades para este evento:</label>
+                        <div id="modalitiesConfig" class="checkbox-grid">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configuração de Categorias -->
+                <div class="config-section">
+                    <h4>🏅 Categorias Habilitadas</h4>
+                    <div class="form-group">
+                        <label class="form-label">Selecione as categorias para este evento:</label>
+                        <div id="categoriesConfig" class="checkbox-grid">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configurações Avançadas -->
+                <div class="config-section">
+                    <h4>🔧 Configurações Avançadas</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="configHasCategories">Sistema de Categorias:</label>
+                            <select id="configHasCategories" class="form-select">
+                                <option value="true">Ativado</option>
+                                <option value="false">Desativado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="configAutoStart">Início Automático:</label>
+                            <select id="configAutoStart" class="form-select">
+                                <option value="false">Manual</option>
+                                <option value="true">Automático</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelEventConfig">Cancelar</button>
+                <button class="btn btn-primary" id="saveEventConfig">💾 Salvar Configuração</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="navigation.js"></script>
+    <script src="supabase.js"></script>
+    
+    <!-- Socket.IO para Live Stream -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Sistema Live Stream -->
+    <script src="livestream-viewer.js"></script>
+    
+    <!-- PWA App Logic (Não usar events.js antigo!) -->
+    <script>
+        // Registrar Service Worker (apenas se SSL válido)
+        if ('serviceWorker' in navigator && location.protocol === 'https:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('✅ Service Worker registrado'))
+                    .catch(err => {
+                        // Ignorar erro de SSL em dev (certificado auto-assinado)
+                        console.log('ℹ️ Service Worker: SSL auto-assinado em desenvolvimento');
+                        console.log('   App funciona normalmente (cache offline desabilitado)');
+                        console.log('   Para produção, use certificado SSL válido');
+                    });
+            });
+        } else {
+            console.log('ℹ️ Service Worker não disponível (requer HTTPS)');
+        }
+        
+        // Variáveis globais
+        let currentView = 'list';
+        let selectedEvent = null;
+        let liveStreamViewer = null;
+        
+        // Funções de navegação
+        function showEventsList() {
+            document.getElementById('eventsListView').style.display = 'block';
+            document.getElementById('eventDetailView').classList.remove('active');
+            document.getElementById('pageTitle').textContent = 'Eventos';
+            currentView = 'list';
+            selectedEvent = null;
+            updateLiveStreamButton(false);
+            
+            // Esconder navegação do evento
+            const eventNavSection = document.getElementById('eventNavSection');
+            if (eventNavSection) eventNavSection.style.display = 'none';
+        }
+        
+        function showEventDetail(event) {
+            document.getElementById('eventsListView').style.display = 'none';
+            document.getElementById('eventDetailView').classList.add('active');
+            document.getElementById('pageTitle').textContent = event.name;
+            document.getElementById('eventDetailTitle').textContent = event.name;
+            document.getElementById('eventDetailSubtitle').textContent = event.description || 'Detalhes do evento';
+            currentView = 'detail';
+            selectedEvent = event;
+            updateLiveStreamButton(true, event.id);
+            loadEventDetails(event);
+            
+            // Mostrar navegação do evento na sidebar
+            const eventNavSection = document.getElementById('eventNavSection');
+            const eventNavTitle = document.getElementById('eventNavTitle');
+            if (eventNavSection && eventNavTitle) {
+                eventNavSection.style.display = 'block';
+                eventNavTitle.textContent = event.name.substring(0, 20) + (event.name.length > 20 ? '...' : '');
+                
+                // Configurar URLs com eventId
+                setupEventNavigation(event);
+            }
+        }
+        
+        // Configurar navegação contextual do evento
+        function setupEventNavigation(event) {
+            const baseUrl = window.location.origin;
+            const eventId = event.id;
+            
+            // Sidebar - Detecção
+            const detectionBtn = document.getElementById('detectionNavBtn');
+            if (detectionBtn) {
+                detectionBtn.onclick = () => loadDeviceForDetection(eventId);
+            }
+            
+            // Sidebar - Classificações
+            const classificationsBtn = document.getElementById('classificationsNavBtn');
+            if (classificationsBtn) {
+                classificationsBtn.onclick = () => {
+                    window.location.href = `/classifications?event=${eventId}`;
+                };
+            }
+            
+            // Sidebar - Calibração
+            const calibrationBtn = document.getElementById('calibrationNavBtn');
+            if (calibrationBtn) {
+                calibrationBtn.onclick = () => {
+                    window.location.href = `/calibration?event=${eventId}`;
+                };
+            }
+            
+            // Sidebar - Live Stream
+            const liveStreamBtn = document.getElementById('liveStreamNavBtn');
+            if (liveStreamBtn) {
+                liveStreamBtn.onclick = toggleLiveStreamPanel;
+            }
+            
+            // Sidebar - Participantes
+            const participantsBtn = document.getElementById('participantsNavBtn');
+            if (participantsBtn) {
+                participantsBtn.onclick = () => {
+                    window.location.href = `/participants?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Sidebar - Dispositivos
+            const devicesBtn = document.getElementById('devicesNavBtn');
+            if (devicesBtn) {
+                devicesBtn.onclick = () => {
+                    window.location.href = `/devices?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Sidebar - Configurações
+            const configBtn = document.getElementById('configNavBtn');
+            if (configBtn) {
+                configBtn.onclick = () => {
+                    window.location.href = `/config?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Cards - Detecção
+            const detectionCard = document.getElementById('eventDetectionCard');
+            if (detectionCard) {
+                detectionCard.onclick = () => loadDeviceForDetection(eventId);
+            }
+            
+            // Cards - Classificações
+            const classificationsCard = document.getElementById('eventClassificationsCard');
+            if (classificationsCard) {
+                classificationsCard.onclick = () => {
+                    window.location.href = `/classifications?event=${eventId}`;
+                };
+            }
+            
+            // Cards - Calibração
+            const calibrationCard = document.getElementById('eventCalibrationCard');
+            if (calibrationCard) {
+                calibrationCard.onclick = () => {
+                    window.location.href = `/calibration?event=${eventId}`;
+                };
+            }
+            
+            // Cards - Live Stream
+            const liveStreamCard = document.getElementById('eventLiveStreamCard');
+            if (liveStreamCard) {
+                liveStreamCard.onclick = toggleLiveStreamPanel;
+            }
+            
+            // Cards - Participantes
+            const participantsCard = document.getElementById('eventParticipantsCard');
+            if (participantsCard) {
+                participantsCard.onclick = () => {
+                    window.location.href = `/participants?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Cards - Dispositivos
+            const devicesCard = document.getElementById('eventDevicesCard');
+            if (devicesCard) {
+                devicesCard.onclick = () => {
+                    window.location.href = `/devices?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Cards - Classificação por Escalão
+            const categoryRankingsCard = document.getElementById('eventCategoryRankingsCard');
+            if (categoryRankingsCard) {
+                categoryRankingsCard.onclick = () => {
+                    window.location.href = `/category-rankings?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+            
+            // Cards - Configurações
+            const configCard = document.getElementById('eventConfigCard');
+            if (configCard) {
+                configCard.onclick = () => {
+                    window.location.href = `/config?event=${eventId}&eventName=${encodeURIComponent(event.name)}`;
+                };
+            }
+        }
+        
+        // Carregar device para detecção
+        async function loadDeviceForDetection(eventId) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    showToast('Aguardando conexão...', 'warning');
+                    return;
+                }
+                
+                // Buscar devices do evento
+                const { data: devices, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('device_id')
+                    .eq('event_id', eventId)
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                const deviceId = devices && devices.length > 0 
+                    ? devices[0].device_id 
+                    : 'default-device';
+                
+                window.location.href = `/detection?event=${eventId}&device=${deviceId}`;
+                
+            } catch (error) {
+                console.error('Erro ao carregar device:', error);
+                // Usar device genérico
+                window.location.href = `/detection?event=${eventId}&device=default-device`;
+            }
+        }
+        
+        // Função para abrir/fechar Live Stream
+        function toggleLiveStreamPanel() {
+            const panel = document.getElementById('livestream-panel');
+            const isOpen = panel.style.right === '0px';
+            
+            if (!selectedEvent) {
+                showToast('Selecione um evento primeiro', 'warning');
+                return;
+            }
+            
+            if (isOpen) {
+                closeLiveStreamPanel();
+            } else {
+                openLiveStreamPanel();
+            }
+        }
+        
+        function openLiveStreamPanel() {
+            const panel = document.getElementById('livestream-panel');
+            panel.style.right = '0px';
+            
+            // Inicializar viewer se necessário
+            if (!liveStreamViewer && selectedEvent) {
+                console.log('🎥 Inicializando Live Stream para evento:', selectedEvent.id);
+                liveStreamViewer = new LiveStreamViewer();
+                liveStreamViewer.init(selectedEvent.id);
+            }
+        }
+        
+        function closeLiveStreamPanel() {
+            const panel = document.getElementById('livestream-panel');
+            panel.style.right = '-100%';
+        }
+        
+        // Atualizar estado (não precisa mais atualizar botões, eles aparecem contextualmente)
+        function updateLiveStreamButton(enabled, eventId = null) {
+            // Função mantida para compatibilidade, mas não faz nada
+            // Live Stream agora só aparece dentro do evento (contextual)
+        }
+        
+        // Mostrar gestão de dispositivos
+        async function showDevicesManagement(event) {
+            try {
+                // Carregar dispositivos do evento
+                const { data: devices, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('*')
+                    .eq('event_id', event.id);
+                
+                if (error) throw error;
+                
+                const devicesList = devices && devices.length > 0 
+                    ? devices.sort((a, b) => (a.checkpoint_order || 999) - (b.checkpoint_order || 999)).map(d => `
+                        <div style="padding: var(--spacing-3); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
+                            <div style="font-weight: 600; color: var(--text-primary);">📱 Checkpoint ${d.checkpoint_order || '?'}</div>
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">ID: ${d.device_id.substring(0, 20)}...</div>
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                ${d.checkpoint_order === 1 ? '🏁 Início/Meta' : `📍 Checkpoint Intermédio`}
+                            </div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                <a href="/detection?event=${event.id}&device=${d.device_id}&eventName=${encodeURIComponent(event.name)}" style="color: var(--primary);">🔗 Abrir Detecção</a>
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<div style="text-align: center; padding: var(--spacing-6); color: var(--text-secondary);">Nenhum dispositivo associado</div>';
+                
+                const content = document.getElementById('eventDetailContent');
+                content.innerHTML = `
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--spacing-5); margin-top: var(--spacing-5);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                            <h3 style="margin: 0; color: var(--text-primary);">📱 Dispositivos Associados</h3>
+                            <button class="btn btn-sm btn-primary" onclick="showAddDeviceModal('${event.id}')">
+                                + Adicionar Dispositivo
+                            </button>
+                        </div>
+                        
+                        <div id="devicesList">
+                            ${devicesList}
+                        </div>
+                        
+                        <div style="margin-top: var(--spacing-5); padding-top: var(--spacing-4); border-top: 1px solid var(--border-color);">
+                            <h4 style="margin: 0 0 var(--spacing-3) 0; color: var(--text-primary);">🔗 Link Rápido</h4>
+                            <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-2);">
+                                Use este link para adicionar dispositivos automaticamente:
+                            </p>
+                            <div style="display: flex; gap: var(--spacing-2);">
+                                <input type="text" readonly value="${window.location.origin}/detection?event=${event.id}&eventName=${encodeURIComponent(event.name)}" 
+                                    style="flex: 1; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary); font-size: var(--font-size-sm);" 
+                                    id="deviceLinkInput">
+                                <button class="btn btn-sm btn-secondary" onclick="copyDeviceLink()">
+                                    📋 Copiar
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="generateQRCode('${event.id}', '${event.name}')">
+                                    📱 QR Code
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Atualizar contador
+                const deviceCountLabel = document.getElementById('deviceCountLabel');
+                if (deviceCountLabel) {
+                    deviceCountLabel.textContent = `${devices.length} ${devices.length === 1 ? 'dispositivo' : 'dispositivos'}`;
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar dispositivos:', error);
+                showToast('Erro ao carregar dispositivos', 'error');
+            }
+        }
+        
+        // Copiar link do dispositivo
+        function copyDeviceLink() {
+            const input = document.getElementById('deviceLinkInput');
+            if (input) {
+                input.select();
+                document.execCommand('copy');
+                showToast('Link copiado!', 'success');
+            }
+        }
+        
+        // Gerar QR Code
+        function generateQRCode(eventId, eventName) {
+            const url = `${window.location.origin}/detection?event=${eventId}&eventName=${encodeURIComponent(eventName)}`;
+            showToast('Funcionalidade QR Code em desenvolvimento', 'info');
+            // TODO: Implementar geração de QR Code
+        }
+        
+        // Modal para adicionar dispositivo
+        function showAddDeviceModal(eventId) {
+            const deviceId = prompt('Digite o ID do dispositivo:');
+            if (!deviceId) return;
+            
+            addDevice(eventId, deviceId);
+        }
+        
+        // Adicionar dispositivo
+        async function addDevice(eventId, deviceId) {
+            try {
+                // Primeiro, garantir que o device existe na tabela devices
+                const { data: existingDevice } = await window.supabaseClient.supabase
+                    .from('devices')
+                    .select('id')
+                    .eq('id', deviceId)
+                    .single();
+                
+                // Se não existir, criar (UUID gerado automaticamente)
+                let finalDeviceId = deviceId;
+                
+                if (!existingDevice) {
+                    const { data: newDevice, error: deviceError } = await window.supabaseClient.supabase
+                        .from('devices')
+                        .insert([{
+                            device_name: deviceId,
+                            device_type: 'mobile',
+                            status: 'active'
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (deviceError) {
+                        throw deviceError;
+                    }
+                    
+                    finalDeviceId = newDevice.id; // UUID gerado
+                } else {
+                    finalDeviceId = existingDevice.id;
+                }
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .insert([{
+                        event_id: eventId,
+                        device_id: finalDeviceId,
+                        role: 'detector',
+                        checkpoint_order: 1
+                    }]);
+                
+                if (error) throw error;
+                
+                showToast('Dispositivo adicionado com sucesso!', 'success');
+                
+                // Recarregar dispositivos
+                if (selectedEvent) {
+                    showDevicesManagement(selectedEvent);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao adicionar dispositivo:', error);
+                showToast('Erro ao adicionar dispositivo', 'error');
+            }
+        }
+        
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} show`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ'}</div>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Carregar eventos
+        async function loadEvents() {
+            try {
+                // Aguardar Supabase estar pronto
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⏳ Aguardando Supabase...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Tentar novamente
+                    if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                        throw new Error('Supabase não disponível');
+                    }
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                renderEvents(data || []);
+                updateStats(data || []);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos:', error);
+                showToast('Erro ao carregar eventos. Tentando novamente...', 'error');
+                
+                // Retry após 2 segundos
+                setTimeout(loadEvents, 2000);
+            }
+        }
+        
+        // Renderizar eventos
+        function renderEvents(events) {
+            const grid = document.getElementById('eventsGrid');
+            
+            if (events.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏃</div>
+                        <h3 class="empty-state-title">Nenhum evento encontrado</h3>
+                        <p class="empty-state-message">Crie o seu primeiro evento para começar</p>
+                        <div class="empty-state-actions">
+                            <button class="btn btn-primary" onclick="document.getElementById('newEventBtn').click()">
+                                + Criar Primeiro Evento
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = events.map(event => `
+                <div class="event-card" onclick="selectEvent('${event.id}')" data-event-id="${event.id}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-4);">
+                        <div>
+                            <h3 style="font-size: var(--font-size-xl); font-weight: 600; margin: 0 0 var(--spacing-1) 0; color: var(--text-primary);">${event.name}</h3>
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Sem data'}</div>
+                        </div>
+                        <span class="badge ${event.is_active ? 'badge-active' : 'badge-finished'}">
+                            ${event.is_active ? 'Ativo' : 'Inativo'}
+                        </span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-3); margin-top: var(--spacing-4); padding-top: var(--spacing-4); border-top: 1px solid var(--border-color);">
+                        <div style="text-align: center;">
+                            <div style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--primary); line-height: 1; margin-bottom: var(--spacing-1);" id="devices-${event.id}">0</div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">Dispositivos</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--primary); line-height: 1; margin-bottom: var(--spacing-1);" id="detections-${event.id}">0</div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">Detecções</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--primary); line-height: 1; margin-bottom: var(--spacing-1);" id="participants-${event.id}">0</div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">Participantes</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Carregar estatísticas de cada evento
+            events.forEach(event => loadEventStats(event.id));
+        }
+        
+        // Selecionar evento
+        async function selectEvent(eventId) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    showToast('Aguardando conexão...', 'warning');
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (error) throw error;
+                
+                showEventDetail(data);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar evento:', error);
+                showToast('Erro ao carregar detalhes do evento', 'error');
+            }
+        }
+        
+        // Carregar detalhes do evento
+        async function loadEventDetails(event) {
+            // Atualizar navegação com evento selecionado
+            if (window.Navigation) {
+                window.Navigation.updateEvent(event.id, event.name);
+            }
+            
+            const content = document.getElementById('eventDetailContent');
+            content.innerHTML = `
+                <div class="grid-2" style="margin-top: var(--spacing-5);">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">ℹ️ Informações</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: flex; flex-direction: column; gap: var(--spacing-3);">
+                                <div><strong>Nome:</strong> ${event.name}</div>
+                                <div><strong>Data:</strong> ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}</div>
+                                <div><strong>Local:</strong> ${event.location || 'Não definido'}</div>
+                                <div><strong>Status:</strong> <span class="badge ${event.is_active ? 'badge-active' : 'badge-finished'}">${event.is_active ? 'Ativo' : 'Inativo'}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📊 Estatísticas</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="eventStatsDetail">Carregando...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Carregar stats de um evento
+        async function loadEventStats(eventId) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    return;
+                }
+                
+                const [devices, detections, participants] = await Promise.all([
+                    window.supabaseClient.supabase.from('event_devices').select('*').eq('event_id', eventId),
+                    window.supabaseClient.supabase.from('detections').select('*').eq('event_id', eventId),
+                    window.supabaseClient.supabase.from('participants').select('*').eq('event_id', eventId)
+                ]);
+                
+                const deviceEl = document.getElementById(`devices-${eventId}`);
+                const detectionEl = document.getElementById(`detections-${eventId}`);
+                const participantEl = document.getElementById(`participants-${eventId}`);
+                
+                if (deviceEl) deviceEl.textContent = devices.data?.length || 0;
+                if (detectionEl) detectionEl.textContent = detections.data?.length || 0;
+                if (participantEl) participantEl.textContent = participants.data?.length || 0;
+                
+            } catch (error) {
+                console.error('Erro ao carregar stats:', error);
+            }
+        }
+        
+        // Atualizar estatísticas gerais
+        async function updateStats(events) {
+            const totalEventsEl = document.getElementById('totalEvents');
+            if (totalEventsEl) {
+                totalEventsEl.textContent = events.filter(e => e.is_active).length;
+            }
+            
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    return;
+                }
+                
+                const [devices, detections] = await Promise.all([
+                    window.supabaseClient.supabase.from('devices').select('id'),
+                    window.supabaseClient.supabase.from('detections').select('id')
+                ]);
+                
+                document.getElementById('totalDevices').textContent = devices.data?.length || 0;
+                document.getElementById('totalDetections').textContent = detections.data?.length || 0;
+            } catch (error) {
+                console.error('Erro ao atualizar stats:', error);
+            }
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Menu toggle para mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                    
+                    // Criar/mostrar backdrop
+                    let backdrop = document.getElementById('sidebar-backdrop');
+                    if (!backdrop) {
+                        backdrop = document.createElement('div');
+                        backdrop.id = 'sidebar-backdrop';
+                        backdrop.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.5);
+                            z-index: ${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--z-modal')) - 1};
+                            opacity: 0;
+                            visibility: hidden;
+                            transition: all 0.3s ease;
+                        `;
+                        backdrop.onclick = () => {
+                            sidebar.classList.remove('active');
+                            backdrop.style.opacity = '0';
+                            backdrop.style.visibility = 'hidden';
+                        };
+                        document.body.appendChild(backdrop);
+                    }
+                    
+                    if (sidebar.classList.contains('active')) {
+                        backdrop.style.opacity = '1';
+                        backdrop.style.visibility = 'visible';
+                    } else {
+                        backdrop.style.opacity = '0';
+                        backdrop.style.visibility = 'hidden';
+                    }
+                });
+            }
+            
+            // Botão voltar
+            document.getElementById('backToEventsBtn')?.addEventListener('click', showEventsList);
+            
+            // Refresh
+            document.getElementById('refreshBtn')?.addEventListener('click', loadEvents);
+            
+            // Modal de Configuração
+            setupEventConfigModal();
+            
+            // Carregar dados iniciais
+            loadEvents();
+        });
+        
+        // =====================================================
+        // FUNÇÕES PARA MODAL DE CONFIGURAÇÃO
+        // =====================================================
+        
+        let currentConfigEvent = null;
+        
+        function setupEventConfigModal() {
+            // Botão de configuração
+            document.getElementById('configureEventBtn')?.addEventListener('click', openEventConfigModal);
+            document.getElementById('resetEventBtn')?.addEventListener('click', resetCurrentEvent);
+            
+            // Botões do modal
+            document.getElementById('closeEventConfigModal')?.addEventListener('click', closeEventConfigModal);
+            document.getElementById('cancelEventConfig')?.addEventListener('click', closeEventConfigModal);
+            document.getElementById('saveEventConfig')?.addEventListener('click', saveEventConfig);
+            
+            // Fechar modal clicando fora
+            document.getElementById('eventConfigModal')?.addEventListener('click', (e) => {
+                if (e.target.id === 'eventConfigModal') {
+                    closeEventConfigModal();
+                }
+            });
+        }
+        
+        async function openEventConfigModal() {
+            if (!selectedEvent) {
+                showToast('Nenhum evento selecionado', 'error');
+                return;
+            }
+            
+            currentConfigEvent = selectedEvent;
+            
+            // Atualizar título do modal
+            document.getElementById('eventConfigTitle').textContent = `Configuração: ${selectedEvent.name}`;
+            
+            // Carregar dados do evento
+            loadEventConfigData(selectedEvent);
+            
+            // Carregar modalidades e categorias
+            await loadModalitiesForConfig();
+            await loadCategoriesForConfig();
+            
+            // Mostrar modal
+            document.getElementById('eventConfigModal').style.display = 'flex';
+        }
+        
+        function closeEventConfigModal() {
+            document.getElementById('eventConfigModal').style.display = 'none';
+            currentConfigEvent = null;
+        }
+        
+        function loadEventConfigData(event) {
+            // Preencher campos básicos
+            document.getElementById('configEventName').value = event.name || '';
+            document.getElementById('configEventType').value = event.event_type || 'running';
+            document.getElementById('configEventDistance').value = event.distance_km || '';
+            document.getElementById('configEventDate').value = event.event_date ? event.event_date.split('T')[0] : '';
+            document.getElementById('configHasCategories').value = event.has_categories ? 'true' : 'false';
+            document.getElementById('configAutoStart').value = event.auto_start_enabled ? 'true' : 'false';
+        }
+        
+        async function loadModalitiesForConfig() {
+            try {
+                const { data: modalities, error } = await window.supabaseClient.supabase
+                    .from('event_modalities')
+                    .select('*')
+                    .eq('is_active', true);
+                
+                if (error) throw error;
+                
+                renderModalitiesConfig(modalities || []);
+            } catch (error) {
+                console.error('Erro ao carregar modalidades:', error);
+                showToast('Erro ao carregar modalidades', 'error');
+            }
+        }
+        
+        async function loadCategoriesForConfig() {
+            try {
+                const { data: categories, error } = await window.supabaseClient.supabase
+                    .from('age_categories')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('sort_order');
+                
+                if (error) throw error;
+                
+                renderCategoriesConfig(categories || []);
+            } catch (error) {
+                console.error('Erro ao carregar categorias:', error);
+                showToast('Erro ao carregar categorias', 'error');
+            }
+        }
+        
+        function renderModalitiesConfig(modalities) {
+            const container = document.getElementById('modalitiesConfig');
+            if (!container) return;
+            
+            let html = '';
+            modalities.forEach(modality => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" 
+                               id="modality_${modality.id}" 
+                               value="${modality.id}"
+                               data-modality='${JSON.stringify(modality)}'>
+                        <label for="modality_${modality.id}">
+                            <span class="category-icon">${modality.icon}</span>
+                            <div class="category-info">
+                                <div class="category-name">${modality.name}</div>
+                                <div class="category-details">${modality.description || ''}</div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function renderCategoriesConfig(categories) {
+            const container = document.getElementById('categoriesConfig');
+            if (!container) return;
+            
+            let html = '';
+            categories.forEach(category => {
+                const genderText = category.gender === 'M' ? 'Masculino' : 
+                                 category.gender === 'F' ? 'Feminino' : 'Misto';
+                
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" 
+                               id="category_${category.id}" 
+                               value="${category.id}"
+                               data-category='${JSON.stringify(category)}'>
+                        <label for="category_${category.id}">
+                            <span class="category-icon">${category.icon}</span>
+                            <div class="category-info">
+                                <div class="category-name">${category.name}</div>
+                                <div class="category-details">${genderText} • ${category.min_age}-${category.max_age} anos</div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        async function resetCurrentEvent() {
+            if (!selectedEvent) {
+                showToast('Nenhum evento selecionado', 'error');
+                return;
+            }
+            
+            const confirmMessage = `⚠️ ATENÇÃO! Esta ação irá APAGAR PERMANENTEMENTE:
+
+• Todas as detecções deste evento
+• Todas as classificações
+• Todas as imagens do buffer
+• Todo o histórico de dados
+
+Esta ação NÃO PODE SER DESFEITA!
+
+Tem certeza que deseja resetar o evento "${selectedEvent.name}"?`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Confirmação dupla
+            const finalConfirm = prompt('Digite "RESETAR" (em maiúsculas) para confirmar:');
+            if (finalConfirm !== 'RESETAR') {
+                showToast('Reset cancelado', 'info');
+                return;
+            }
+            
+            try {
+                showToast('Iniciando reset do evento...', 'info');
+                
+                // 1. Apagar classificações
+                const { error: classError } = await window.supabaseClient.supabase
+                    .from('classifications')
+                    .delete()
+                    .eq('event_id', selectedEvent.id);
+                
+                if (classError) throw new Error('Erro ao apagar classificações');
+                
+                // 2. Apagar detecções
+                const { error: detError } = await window.supabaseClient.supabase
+                    .from('detections')
+                    .delete()
+                    .eq('event_id', selectedEvent.id);
+                
+                if (detError) throw new Error('Erro ao apagar detecções');
+                
+                // 3. Apagar buffer de imagens
+                const { error: bufferError } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .delete()
+                    .eq('event_id', selectedEvent.id);
+                
+                // Não falhar se buffer não existir
+                if (bufferError) {
+                    console.log('⚠️ Erro ao apagar buffer (pode não existir)');
+                }
+                
+                // 4. Resetar status do evento
+                const { error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .update({ 
+                        status: 'active',
+                        event_started_at: null,
+                        event_finished_at: null,
+                        is_active: false
+                    })
+                    .eq('id', selectedEvent.id);
+                
+                if (eventError) {
+                    console.error('Erro ao resetar status:', eventError);
+                }
+                
+                showToast('✅ Evento resetado com sucesso!', 'success');
+                
+                // Recarregar dados
+                setTimeout(() => {
+                    loadEventDetails(selectedEvent);
+                }, 1500);
+                
+            } catch (error) {
+                console.error('❌ Erro ao resetar evento:', error);
+                showToast(`Erro ao resetar evento: ${error.message}`, 'error');
+            }
+        }
+        
+        async function saveEventConfig() {
+            if (!currentConfigEvent) {
+                showToast('Nenhum evento selecionado', 'error');
+                return;
+            }
+            
+            try {
+                // Salvar dados básicos do evento
+                const eventData = {
+                    name: document.getElementById('configEventName').value,
+                    event_type: document.getElementById('configEventType').value,
+                    distance_km: parseFloat(document.getElementById('configEventDistance').value) || null,
+                    event_date: document.getElementById('configEventDate').value ? new Date(document.getElementById('configEventDate').value).toISOString() : null,
+                    has_categories: document.getElementById('configHasCategories').value === 'true',
+                    auto_start_enabled: document.getElementById('configAutoStart').value === 'true',
+                    updated_at: new Date().toISOString()
+                };
+                
+                const { error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .update(eventData)
+                    .eq('id', currentConfigEvent.id);
+                
+                if (eventError) throw eventError;
+                
+                // Salvar configurações de modalidades
+                await saveModalityConfigurations(currentConfigEvent.id);
+                
+                // Salvar configurações de categorias
+                await saveCategoryConfigurations(currentConfigEvent.id);
+                
+                showToast('Configuração salva com sucesso!', 'success');
+                closeEventConfigModal();
+                
+                // Recarregar dados do evento
+                await selectEvent(currentConfigEvent.id);
+                
+            } catch (error) {
+                console.error('Erro ao salvar configuração:', error);
+                showToast('Erro ao salvar configuração', 'error');
+            }
+        }
+        
+        async function saveModalityConfigurations(eventId) {
+            // Get all checked modalities
+            const checkedModalities = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]:checked');
+            
+            // Delete existing configurations
+            await window.supabaseClient.supabase
+                .from('event_modality_config')
+                .delete()
+                .eq('event_id', eventId);
+            
+            // Insert new configurations
+            if (checkedModalities.length > 0) {
+                const configs = Array.from(checkedModalities).map(checkbox => ({
+                    event_id: eventId,
+                    modality_id: checkbox.value,
+                    is_enabled: true
+                }));
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_modality_config')
+                    .insert(configs);
+                
+                if (error) throw error;
+            }
+        }
+        
+        async function saveCategoryConfigurations(eventId) {
+            // Get all checked categories
+            const checkedCategories = document.querySelectorAll('#categoriesConfig input[type="checkbox"]:checked');
+            
+            // Delete existing configurations
+            await window.supabaseClient.supabase
+                .from('event_category_config')
+                .delete()
+                .eq('event_id', eventId);
+            
+            // Insert new configurations
+            if (checkedCategories.length > 0) {
+                const configs = Array.from(checkedCategories).map(checkbox => ({
+                    event_id: eventId,
+                    age_category_id: checkbox.value,
+                    is_enabled: true
+                }));
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_category_config')
+                    .insert(configs);
+                
+                if (error) throw error;
+            }
+        }
+    </script>
+</body>
+</html>
+

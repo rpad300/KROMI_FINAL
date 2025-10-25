@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Processador de Imagens</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+        <link rel="stylesheet" href="kromi-layout-fixes.css">
+        <script src="kromi-sidebar-toggle.js"></script>
+    
+    <style>
+        /* Image Processor specific styles */
+        .processor-grid {
+            display: grid;
+            gap: var(--spacing-5);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .status-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .status-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            padding: var(--spacing-2) var(--spacing-3);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .status-offline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        
+        .status-processing {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .processing-queue {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .queue-header {
+            background: var(--bg-primary);
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .queue-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .queue-actions {
+            display: flex;
+            gap: var(--spacing-2);
+        }
+        
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+            transition: background var(--transition-base);
+        }
+        
+        .queue-item:hover {
+            background: var(--bg-primary);
+        }
+        
+        .queue-item:last-child {
+            border-bottom: none;
+        }
+        
+        .queue-item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-base);
+            object-fit: cover;
+            background: var(--bg-primary);
+        }
+        
+        .queue-item-info {
+            flex: 1;
+        }
+        
+        .queue-item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .queue-item-details {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .queue-item-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: var(--radius-sm);
+            transition: width 0.3s ease;
+        }
+        
+        .controls {
+            display: flex;
+            gap: var(--spacing-3);
+            margin-bottom: var(--spacing-6);
+            flex-wrap: wrap;
+        }
+        
+        .log-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .log-header {
+            background: var(--bg-primary);
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .log-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .log-content {
+            padding: var(--spacing-4);
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: var(--font-size-sm);
+            background: var(--bg-primary);
+        }
+        
+        .log-entry {
+            margin-bottom: var(--spacing-2);
+            padding: var(--spacing-1) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-timestamp {
+            color: var(--text-tertiary);
+            margin-right: var(--spacing-2);
+        }
+        
+        .log-level {
+            font-weight: 600;
+            margin-right: var(--spacing-2);
+        }
+        
+        .log-level-info { color: var(--info); }
+        .log-level-success { color: var(--success); }
+        .log-level-warning { color: var(--warning); }
+        .log-level-error { color: var(--danger); }
+        
+        .log-message {
+            color: var(--text-primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-12);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+        }
+        
+        .empty-state p {
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .queue-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .queue-item-image {
+                width: 80px;
+                height: 80px;
+            }
+        }
+        
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    🤖 Processador
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+            
+            <!-- System Info Panel -->
+            <div style="padding: var(--spacing-4); border-top: 1px solid var(--border-color);">
+                <div class="nav-category">Backend Processor</div>
+                <div style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <div style="color: var(--success); font-weight: 600; margin-bottom: var(--spacing-2);">
+                        🟢 Ativo (Node.js)
+                    </div>
+                    <div>Intervalo: 10s</div>
+                    <div>Batch: 5 imagens</div>
+                    <div>IA: Gemini 2.0</div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    🤖 Monitor de Processamento
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <div style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-full); font-size: var(--font-size-sm); border: 1px solid var(--success);">
+                    🤖 Backend Ativo
+                </div>
+                <button class="btn btn-sm btn-secondary" id="clearQueue">
+                    <i>🗑️</i> Limpar Buffer
+                </button>
+                <button class="btn btn-sm btn-primary" id="startProcessor" style="display: none;">
+                    <i>ℹ️</i> Info
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Info Section -->
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--info); border-radius: var(--radius-lg); padding: var(--spacing-4); margin-bottom: var(--spacing-5);">
+                    <h3 style="margin: 0 0 var(--spacing-2) 0; color: var(--info);">ℹ️ Como Funciona</h3>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.6;">
+                        O processamento acontece <strong>automaticamente no backend Node.js</strong> (background-processor.js). 
+                        Esta página apenas <strong>monitora</strong> o que está a acontecer em tempo real.
+                        O backend processa imagens do buffer a cada <strong>10 segundos</strong>, independente desta página estar aberta.
+                    </p>
+                </div>
+                
+                <!-- Status Card -->
+                <div class="processor-grid">
+                    <div class="status-card">
+                        <div class="status-header">
+                            <h3 class="status-title">📊 Estatísticas do Buffer</h3>
+                            <div class="status-indicator status-online" id="statusIndicator">
+                                <div class="status-dot online"></div>
+                                <span>Monitorando</span>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalProcessed">0</div>
+                                <div class="stat-label">Processadas</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="queueLength">0</div>
+                                <div class="stat-label">Na Fila</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="processingRate">0</div>
+                                <div class="stat-label">Imagens/min</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="avgProcessingTime">0</div>
+                                <div class="stat-label">Tempo Médio (s)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="controls">
+                    <button class="btn btn-primary" id="addToQueue">
+                        <i>➕</i> Adicionar à Fila
+                    </button>
+                    <button class="btn btn-secondary" id="processBatch">
+                        <i>📦</i> Processar Lote
+                    </button>
+                    <button class="btn btn-secondary" id="exportResults">
+                        <i>📤</i> Exportar Resultados
+                    </button>
+                    <button class="btn btn-secondary" id="viewHistory">
+                        <i>📋</i> Ver Histórico
+                    </button>
+                </div>
+                
+                <!-- Processing Queue -->
+                <div class="processing-queue" id="processingQueue" style="display: none;">
+                    <div class="queue-header">
+                        <h3 class="queue-title">📋 Fila de Processamento</h3>
+                        <div class="queue-actions">
+                            <button class="btn btn-sm btn-secondary" id="refreshQueue">
+                                <i>🔄</i> Atualizar
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="clearAllQueue">
+                                <i>🗑️</i> Limpar Tudo
+                            </button>
+                        </div>
+                    </div>
+                    <div id="queueItems">
+                        <!-- Queue items will be added here -->
+                    </div>
+                </div>
+                
+                <!-- Processing Log -->
+                <div class="log-container">
+                    <div class="log-header">
+                        <h3 class="log-title">📝 Log de Processamento</h3>
+                        <div class="queue-actions">
+                            <button class="btn btn-sm btn-secondary" id="clearLog">
+                                <i>🗑️</i> Limpar Log
+                            </button>
+                            <button class="btn btn-sm btn-secondary" id="exportLog">
+                                <i>📤</i> Exportar Log
+                            </button>
+                        </div>
+                    </div>
+                    <div class="log-content" id="logContent">
+                        <div class="log-entry">
+                            <span class="log-timestamp">[12:34:56]</span>
+                            <span class="log-level log-level-info">[INFO]</span>
+                            <span class="log-message">Processador de imagens iniciado</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-timestamp">[12:34:57]</span>
+                            <span class="log-level log-level-success">[SUCCESS]</span>
+                            <span class="log-message">Sistema pronto para processamento</span>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/events'">
+                <i>🏃</i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/detection'">
+                <i>📱</i>
+                <span>Detecção</span>
+            </button>
+            <button class="nav-btn active">
+                <i>🤖</i>
+                <span>Processador</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="supabase.js"></script>
+    <script src="navigation.js"></script>
+    
+    <!-- Image Processor Logic -->
+    <script>
+        // Global variables
+        let processorStatus = 'offline'; // offline, online, processing, paused
+        let isRunning = false;
+        let autoMode = true;
+        let processInterval = null;
+        let isProcessingBuffer = false;
+        let stats = {
+            queueLength: 0,
+            processingCount: 0,
+            completedCount: 0,
+            totalProcessed: 0,
+            avgProcessingTime: 0,
+            processingTimes: []
+        };
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Supabase first
+            if (window.supabaseClient) {
+                await window.supabaseClient.init();
+            }
+            
+            // Initialize navigation
+            if (window.Navigation) {
+                window.Navigation.init('processor');
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Start system monitoring
+            startSystemMonitoring();
+            
+            // Load initial data (apenas monitoramento)
+            await loadProcessorData();
+            
+            // A página apenas MONITORA - processamento acontece no backend Node.js
+            addLogEntry('info', '📊 Modo Monitoramento - Backend Node.js processa automaticamente');
+            addLogEntry('success', '🤖 Backend ativo - Processa buffer a cada 10 segundos');
+            addLogEntry('info', 'ℹ️ Esta interface apenas visualiza o que está a acontecer');
+            
+            // Atualizar controles para mostrar backend ativo
+            updateControls();
+            updateStatusIndicator('online');
+        });
+        
+        function setupEventListeners() {
+            // Processor controls (verificar se existem)
+            const startBtn = document.getElementById('startProcessor');
+            const pauseBtn = document.getElementById('pauseProcessor');
+            const stopBtn = document.getElementById('stopProcessor');
+            const clearBtn = document.getElementById('clearQueue');
+            
+            if (startBtn) startBtn.addEventListener('click', startProcessor);
+            if (pauseBtn) pauseBtn.addEventListener('click', pauseProcessor);
+            if (stopBtn) stopBtn.addEventListener('click', stopProcessor);
+            if (clearBtn) clearBtn.addEventListener('click', clearQueue);
+            
+            // Queue management
+            const addBtn = document.getElementById('addToQueue');
+            const batchBtn = document.getElementById('processBatch');
+            const exportBtn = document.getElementById('exportResults');
+            const historyBtn = document.getElementById('viewHistory');
+            const refreshBtn = document.getElementById('refreshQueue');
+            const clearAllBtn = document.getElementById('clearAllQueue');
+            
+            if (addBtn) addBtn.addEventListener('click', addToQueue);
+            if (batchBtn) batchBtn.addEventListener('click', processBatch);
+            if (exportBtn) exportBtn.addEventListener('click', exportResults);
+            if (historyBtn) historyBtn.addEventListener('click', viewHistory);
+            if (refreshBtn) refreshBtn.addEventListener('click', refreshQueue);
+            if (clearAllBtn) clearAllBtn.addEventListener('click', clearAllQueue);
+            
+            // Log management
+            const clearLogBtn = document.getElementById('clearLog');
+            const exportLogBtn = document.getElementById('exportLog');
+            
+            if (clearLogBtn) clearLogBtn.addEventListener('click', clearLog);
+            if (exportLogBtn) exportLogBtn.addEventListener('click', exportLog);
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+        }
+        
+        function startProcessor() {
+            addLogEntry('info', 'ℹ️ O processamento acontece automaticamente no backend Node.js');
+            addLogEntry('success', '✅ Backend está sempre ativo processando o buffer');
+            addLogEntry('info', '📊 Esta página apenas MONITORA o processamento');
+            showSuccess('Backend processa automaticamente - Esta página apenas monitora');
+        }
+        
+        function pauseProcessor() {
+            addLogEntry('warning', '⚠️ Não é possível pausar - processamento é no backend');
+            showError('O processador backend não pode ser pausado pela interface');
+        }
+        
+        function stopProcessor() {
+            addLogEntry('warning', '⚠️ Não é possível parar - processamento é no backend');
+            showError('O processador backend roda continuamente no servidor Node.js');
+        }
+        
+        function updateStatusIndicator(status) {
+            const indicator = document.getElementById('statusIndicator');
+            processorStatus = status || processorStatus;
+            
+            const dot = indicator.querySelector('.status-dot');
+            const text = indicator.querySelector('span');
+            
+            // Remove all status classes
+            if (indicator) indicator.className = 'status-indicator';
+            if (dot) dot.className = 'status-dot';
+            
+            switch (status || processorStatus) {
+                case 'online':
+                    indicator.classList.add('status-online');
+                    dot.classList.add('online');
+                    text.textContent = 'Online';
+                    break;
+                case 'processing':
+                    indicator.classList.add('status-processing');
+                    dot.classList.add('online');
+                    text.textContent = 'Processando';
+                    break;
+                case 'paused':
+                    indicator.classList.add('status-warning');
+                    dot.classList.add('warning');
+                    text.textContent = 'Pausado';
+                    break;
+                case 'offline':
+                default:
+                    indicator.classList.add('status-offline');
+                    dot.classList.add('offline');
+                    text.textContent = 'Offline';
+                    break;
+            }
+        }
+        
+        // A página NÃO processa - apenas monitora o backend
+        
+        function updateControls() {
+            const startBtn = document.getElementById('startProcessor');
+            const pauseBtn = document.getElementById('pauseProcessor');
+            const stopBtn = document.getElementById('stopProcessor');
+            
+            // Desabilitar controles - processamento é no backend
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<i>🤖</i> Backend Ativo';
+                startBtn.style.opacity = '0.6';
+            }
+            if (pauseBtn) {
+                pauseBtn.style.display = 'none';
+            }
+            if (stopBtn) {
+                stopBtn.style.display = 'none';
+            }
+        }
+        
+        function addToQueue() {
+            // Create file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const queueItem = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        status: 'pending',
+                        progress: 0,
+                        addedAt: new Date()
+                    };
+                    
+                    processingQueue.push(queueItem);
+                });
+                
+                updateQueueDisplay();
+                updateStats();
+                addLogEntry('info', `${files.length} imagem(ns) adicionada(s) à fila`);
+            };
+            input.click();
+        }
+        
+        function processBatch() {
+            if (processingQueue.length === 0) {
+                showError('Fila vazia');
+                return;
+            }
+            
+            if (processorStatus === 'offline') {
+                showError('Inicie o processador primeiro');
+                return;
+            }
+            
+            addLogEntry('info', `Iniciando processamento de ${processingQueue.length} imagem(ns)`);
+            processNextItem();
+        }
+        
+        function processNextItem() {
+            if (processorStatus !== 'online' && processorStatus !== 'processing') {
+                return;
+            }
+            
+            const nextItem = processingQueue.find(item => item.status === 'pending');
+            if (!nextItem) {
+                processorStatus = 'online';
+                updateStatusIndicator();
+                updateControls();
+                addLogEntry('success', 'Fila de processamento concluída');
+                return;
+            }
+            
+            processorStatus = 'processing';
+            updateStatusIndicator();
+            updateControls();
+            
+            // Simulate processing
+            nextItem.status = 'processing';
+            updateQueueDisplay();
+            
+            const processingTime = Math.random() * 3000 + 1000; // 1-4 seconds
+            let progress = 0;
+            
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    
+                    // Mark as completed
+                    nextItem.status = 'completed';
+                    nextItem.progress = 100;
+                    processedCount++;
+                    
+                    // Update stats
+                    avgProcessingTime = (avgProcessingTime + processingTime) / 2;
+                    processingRate = processedCount / ((Date.now() - startTime) / 60000); // per minute
+                    
+                    updateQueueDisplay();
+                    updateStats();
+                    addLogEntry('success', `Imagem "${nextItem.name}" processada com sucesso`);
+                    
+                    // Process next item
+                    setTimeout(() => {
+                        processNextItem();
+                    }, 500);
+                } else {
+                    nextItem.progress = progress;
+                    updateQueueDisplay();
+                }
+            }, 200);
+        }
+        
+        function updateQueueDisplay() {
+            const container = document.getElementById('queueItems');
+            const queueContainer = document.getElementById('processingQueue');
+            
+            if (processingQueue.length === 0) {
+                queueContainer.style.display = 'none';
+                return;
+            }
+            
+            queueContainer.style.display = 'block';
+            container.innerHTML = '';
+            
+            processingQueue.forEach(item => {
+                const queueItem = document.createElement('div');
+                queueItem.className = 'queue-item';
+                
+                queueItem.innerHTML = `
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzMzMzIi8+CjxwYXRoIGQ9Ik0yMCAyMEg0MFY0MEgyMFYyMFoiIGZpbGw9IiM2NjY2NjYiLz4KPHN2Zz4K" class="queue-item-image" alt="Image">
+                    <div class="queue-item-info">
+                        <div class="queue-item-name">${item.name}</div>
+                        <div class="queue-item-details">
+                            ${(item.size / 1024 / 1024).toFixed(2)} MB • ${item.type} • ${item.addedAt.toLocaleTimeString()}
+                        </div>
+                    </div>
+                    <div class="queue-item-status">
+                        ${item.status === 'processing' ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${item.progress}%;"></div>
+                            </div>
+                            <span class="badge badge-active">Processando</span>
+                        ` : item.status === 'completed' ? `
+                            <span class="badge badge-success">Concluído</span>
+                        ` : `
+                            <span class="badge badge-secondary">Pendente</span>
+                        `}
+                    </div>
+                `;
+                
+                container.appendChild(queueItem);
+            });
+        }
+        
+        function updateStats() {
+            if (document.getElementById('totalProcessed')) {
+                document.getElementById('totalProcessed').textContent = stats.totalProcessed || stats.completedCount || 0;
+            }
+            if (document.getElementById('queueLength')) {
+                document.getElementById('queueLength').textContent = stats.queueLength || 0;
+            }
+            if (document.getElementById('processingRate')) {
+                const rate = stats.processingTimes.length > 0 ? 
+                    (60000 / (stats.processingTimes.reduce((a, b) => a + b, 0) / stats.processingTimes.length)).toFixed(1) : 0;
+                document.getElementById('processingRate').textContent = rate;
+            }
+            if (document.getElementById('avgProcessingTime')) {
+                const avg = stats.processingTimes.length > 0 ?
+                    (stats.processingTimes.reduce((a, b) => a + b, 0) / stats.processingTimes.length / 1000).toFixed(2) : 0;
+                document.getElementById('avgProcessingTime').textContent = avg;
+            }
+        }
+        
+        async function clearQueue() {
+            if (!confirm('Tem certeza que deseja descartar TODAS as imagens pendentes?')) {
+                return;
+            }
+            
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    addLogEntry('error', 'Supabase não conectado');
+                    return;
+                }
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .update({ status: 'discarded' })
+                    .eq('status', 'pending');
+                
+                if (error) throw error;
+                
+                addLogEntry('warning', 'Todas as imagens pendentes foram descartadas');
+                showSuccess('Fila limpa');
+                await loadBufferStats();
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                addLogEntry('error', 'Erro ao limpar fila');
+            }
+        }
+        
+        function clearAllQueue() {
+            if (confirm('Tem certeza que deseja limpar toda a fila?')) {
+                processingQueue = [];
+                updateQueueDisplay();
+                updateStats();
+                addLogEntry('warning', 'Toda a fila foi limpa');
+                showSuccess('Fila completamente limpa');
+            }
+        }
+        
+        function refreshQueue() {
+            updateQueueDisplay();
+            updateStats();
+            addLogEntry('info', 'Fila atualizada');
+        }
+        
+        function exportResults() {
+            if (processedCount === 0) {
+                showError('Nenhum resultado para exportar');
+                return;
+            }
+            
+            const results = processingQueue.filter(item => item.status === 'completed');
+            const csvData = [
+                ['Nome', 'Tamanho', 'Tipo', 'Status', 'Processado em'],
+                ...results.map(item => [
+                    item.name,
+                    `${(item.size / 1024 / 1024).toFixed(2)} MB`,
+                    item.type,
+                    item.status,
+                    item.addedAt.toLocaleString()
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `resultados_processamento_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Resultados exportados');
+        }
+        
+        function viewHistory() {
+            showSuccess('Histórico de processamento (funcionalidade em desenvolvimento)');
+        }
+        
+        function clearLog() {
+            if (confirm('Tem certeza que deseja limpar o log?')) {
+                document.getElementById('logContent').innerHTML = '';
+                addLogEntry('info', 'Log limpo');
+            }
+        }
+        
+        function exportLog() {
+            const logContent = document.getElementById('logContent').textContent;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `log_processamento_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Log exportado');
+        }
+        
+        function addLogEntry(level, message) {
+            const logContent = document.getElementById('logContent');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-level log-level-${level}">[${level.toUpperCase()}]</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        function startSystemMonitoring() {
+            // Não precisa - removido do HTML
+            console.log('📊 System monitoring desabilitado (Backend Processor mode)');
+        }
+        
+        async function loadProcessorData() {
+            if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                console.log('Aguardando Supabase...');
+                setTimeout(loadProcessorData, 1000);
+                return;
+            }
+            
+            await loadBufferStats();
+            
+            // Atualizar a cada 5 segundos
+            setInterval(loadBufferStats, 5000);
+        }
+        
+        async function loadBufferStats() {
+            try {
+                // Buscar estatísticas do buffer
+                const { data: bufferStats, error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .select('status, captured_at, processed_at')
+                    .order('captured_at', { ascending: false })
+                    .limit(1000);
+                
+                if (error) throw error;
+                
+                const stats = bufferStats || [];
+                
+                // Calcular estatísticas
+                const pending = stats.filter(s => s.status === 'pending').length;
+                const processing = stats.filter(s => s.status === 'processing').length;
+                const processed = stats.filter(s => s.status === 'processed').length;
+                const discarded = stats.filter(s => s.status === 'discarded').length;
+                
+                // Calcular tempo médio baseado em captured_at e processed_at
+                const processingTimes = stats
+                    .filter(s => s.processed_at && s.captured_at)
+                    .map(s => {
+                        const captured = new Date(s.captured_at);
+                        const processed = new Date(s.processed_at);
+                        return (processed - captured) / 1000; // segundos
+                    });
+                
+                const avgTime = processingTimes.length > 0
+                    ? (processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length).toFixed(2)
+                    : 0;
+                
+                // Atualizar UI
+                document.getElementById('totalProcessed').textContent = processed;
+                document.getElementById('queueLength').textContent = pending;
+                document.getElementById('avgProcessingTime').textContent = avgTime;
+                
+                // Calcular taxa (últimos 5 minutos)
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                const recentProcessed = stats.filter(s => 
+                    s.status === 'processed' && 
+                    new Date(s.captured_at) > fiveMinutesAgo
+                ).length;
+                const rate = Math.round(recentProcessed / 5);
+                document.getElementById('processingRate').textContent = rate;
+                
+                // Atualizar status
+                if (processing > 0) {
+                    updateStatusIndicator('processing');
+                } else if (pending > 0) {
+                    updateStatusIndicator('online');
+                } else {
+                    updateStatusIndicator('offline');
+                }
+                
+                // Carregar imagens da fila
+                await loadBufferQueue();
+                
+            } catch (error) {
+                console.error('Erro ao carregar stats:', error);
+                addLogEntry('error', 'Erro ao carregar estatísticas do buffer');
+            }
+        }
+        
+        async function loadBufferQueue() {
+            try {
+                const { data: pendingImages, error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .select('*')
+                    .eq('status', 'pending')
+                    .order('captured_at', { ascending: true })
+                    .limit(20);
+                
+                if (error) throw error;
+                
+                const queueContainer = document.getElementById('queueItems');
+                const queueSection = document.getElementById('processingQueue');
+                
+                if (!pendingImages || pendingImages.length === 0) {
+                    queueSection.style.display = 'none';
+                    return;
+                }
+                
+                queueSection.style.display = 'block';
+                
+                queueContainer.innerHTML = pendingImages.map((img, index) => `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
+                        <div style="font-weight: 600; color: var(--primary);">#${index + 1}</div>
+                        <img src="${img.display_image || img.image_data}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-base);">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: var(--text-primary);">Capturada às ${new Date(img.captured_at).toLocaleTimeString('pt-PT')}</div>
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                Device: ${img.device_id?.substring(0, 12) || 'N/A'}... • 
+                                Session: ${img.session_id?.substring(0, 8) || 'N/A'}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <button class="btn btn-sm btn-primary" onclick="processImage('${img.id}')">
+                                <i>⚡</i> Processar
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="discardImage('${img.id}')">
+                                <i>🗑️</i> Descartar
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Erro ao carregar fila:', error);
+            }
+        }
+        
+        async function processImage(imageId) {
+            addLog(`Processando imagem ${imageId}...`, 'info');
+            // O backend processor fará o trabalho automaticamente
+            await loadBufferStats();
+        }
+        
+        async function discardImage(imageId) {
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .update({ status: 'discarded' })
+                    .eq('id', imageId);
+                
+                if (error) throw error;
+                
+                addLog('Imagem descartada', 'success');
+                await loadBufferStats();
+                
+            } catch (error) {
+                console.error('Erro ao descartar:', error);
+                addLog('Erro ao descartar imagem', 'error');
+            }
+        }
+        
+        function saveProcessorData() {
+            const data = {
+                processedCount,
+                processingRate,
+                avgProcessingTime,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('visionkrono_processor_data', JSON.stringify(data));
+        }
+        
+        function showSuccess(message) {
+            showToast(message, 'success');
+        }
+        
+        function showError(message) {
+            showToast(message, 'error');
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+        
+        // Save data periodically
+        setInterval(saveProcessorData, 30000); // Every 30 seconds
+        
+        // Initialize start time for rate calculation
+        const startTime = Date.now();
+    </script>
+    
+    <style>
+        /* Layout adaptations */
+        .layout-with-sidebar {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+        }
+        
+        /* Mobile */
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                z-index: var(--z-modal);
+                box-shadow: var(--shadow-2xl);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            #menuToggle {
+                display: flex !important;
+            }
+            
+            .main #mainContent {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
+</body>
+</html>

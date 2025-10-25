@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Detecção - VisionKrono</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .debug-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
+        .status.loading {
+            background: rgba(255, 165, 0, 0.2);
+            border: 1px solid #ffa500;
+        }
+        
+        .status.success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+        }
+        
+        .status.error {
+            background: rgba(255, 59, 48, 0.2);
+            border: 1px solid #ff3b30;
+        }
+        
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #00ff88;
+            color: black;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #logs {
+            background: #222;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Detecção Mobile</h1>
+    
+    <div class="debug-section">
+        <h2>📱 Parâmetros da URL</h2>
+        <div id="urlParams">Carregando...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🔧 Status de Inicialização</h2>
+        <div id="initStatus">
+            <div class="status loading">⏳ Aguardando início...</div>
+        </div>
+        <button onclick="startDebugInit()">🚀 Iniciar Debug</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📊 Supabase</h2>
+        <div id="supabaseStatus">Não testado</div>
+        <button onclick="testSupabase()">🧪 Testar Supabase</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>⚙️ Configurações</h2>
+        <div id="configStatus">Não carregadas</div>
+        <button onclick="testConfigs()">📋 Testar Configurações</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📹 Câmera</h2>
+        <div id="cameraStatus">Não testada</div>
+        <button onclick="testCamera()">📸 Testar Câmera</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📋 Logs Detalhados</h2>
+        <div id="logs"></div>
+        <button onclick="clearLogs()">🧹 Limpar</button>
+    </div>
+    
+    <script src="supabase.js"></script>
+    <script>
+        let logs = [];
+        let supabaseClient = null;
+        let eventId = null;
+        let deviceId = null;
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            logs.push(logMessage);
+            
+            const logsDiv = document.getElementById('logs');
+            logsDiv.textContent = logs.slice(-50).join('\n'); // Últimas 50 linhas
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            
+            console.log(logMessage);
+        }
+        
+        function clearLogs() {
+            logs = [];
+            document.getElementById('logs').textContent = '';
+        }
+        
+        function showUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            eventId = urlParams.get('event');
+            deviceId = urlParams.get('device');
+            
+            document.getElementById('urlParams').innerHTML = `
+                <strong>Event ID:</strong> ${eventId || 'Não especificado'}<br>
+                <strong>Device ID:</strong> ${deviceId || 'Não especificado'}
+            `;
+            
+            log('📋 Parâmetros URL carregados');
+            log(`Event: ${eventId}`);
+            log(`Device: ${deviceId}`);
+        }
+        
+        async function startDebugInit() {
+            const statusDiv = document.getElementById('initStatus');
+            
+            try {
+                statusDiv.innerHTML = '<div class="status loading">⏳ Passo 1: Inicializando Supabase...</div>';
+                log('🚀 Iniciando debug da inicialização');
+                
+                supabaseClient = new SupabaseClient();
+                const connected = await supabaseClient.init();
+                
+                statusDiv.innerHTML = `<div class="status ${connected ? 'success' : 'error'}">📊 Supabase: ${connected ? 'CONECTADO' : 'FALHOU'}</div>`;
+                log(`📊 Supabase: ${connected ? 'CONECTADO' : 'FALHOU'}`);
+                
+                if (connected) {
+                    statusDiv.innerHTML += '<div class="status loading">⏳ Passo 2: Carregando configurações...</div>';
+                    await testConfigs();
+                    
+                    statusDiv.innerHTML += '<div class="status success">✅ Inicialização completa</div>';
+                    log('🎉 Debug da inicialização completo');
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML += `<div class="status error">❌ Erro: ${error.message}</div>`;
+                log(`❌ Erro na inicialização: ${error.message}`);
+            }
+        }
+        
+        async function testSupabase() {
+            const statusDiv = document.getElementById('supabaseStatus');
+            
+            try {
+                log('🧪 Testando conexão Supabase...');
+                statusDiv.innerHTML = '<div class="status loading">⏳ Conectando...</div>';
+                
+                if (!supabaseClient) {
+                    supabaseClient = new SupabaseClient();
+                }
+                
+                const connected = await supabaseClient.init();
+                
+                if (connected) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Conectado com sucesso</div>';
+                    log('✅ Supabase conectado');
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ Falha na conexão</div>';
+                    log('❌ Falha na conexão Supabase');
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+                log(`❌ Erro Supabase: ${error.message}`);
+            }
+        }
+        
+        async function testConfigs() {
+            const statusDiv = document.getElementById('configStatus');
+            
+            try {
+                log('📋 Testando carregamento de configurações...');
+                statusDiv.innerHTML = '<div class="status loading">⏳ Carregando...</div>';
+                
+                if (!supabaseClient || !supabaseClient.isConnected) {
+                    statusDiv.innerHTML = '<div class="status error">❌ Supabase não conectado</div>';
+                    return;
+                }
+                
+                if (!eventId) {
+                    statusDiv.innerHTML = '<div class="status error">❌ Event ID não especificado</div>';
+                    return;
+                }
+                
+                // Testar carregamento de configurações do evento
+                log(`🔍 Carregando configurações do evento: ${eventId}`);
+                
+                const { data: configs, error } = await supabaseClient.supabase
+                    .from('event_configurations')
+                    .select('config_type, config_data')
+                    .eq('event_id', eventId);
+                
+                if (error) {
+                    statusDiv.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+                    log(`❌ Erro ao carregar configurações: ${error.message}`);
+                    return;
+                }
+                
+                log(`📊 ${configs?.length || 0} configurações encontradas`);
+                
+                let statusHtml = `<div class="status success">✅ ${configs?.length || 0} configurações carregadas</div>`;
+                
+                configs?.forEach(config => {
+                    statusHtml += `<div style="margin: 5px 0; font-size: 12px;">• ${config.config_type}</div>`;
+                    log(`📋 ${config.config_type}: ${JSON.stringify(config.config_data).substring(0, 100)}...`);
+                });
+                
+                statusDiv.innerHTML = statusHtml;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+                log(`❌ Erro ao testar configurações: ${error.message}`);
+            }
+        }
+        
+        async function testCamera() {
+            const statusDiv = document.getElementById('cameraStatus');
+            
+            try {
+                log('📹 Testando acesso à câmera...');
+                statusDiv.innerHTML = '<div class="status loading">⏳ Solicitando acesso...</div>';
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                
+                statusDiv.innerHTML = '<div class="status success">✅ Câmera acessível</div>';
+                log('✅ Câmera funcionando');
+                
+                // Parar stream
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Erro: ${error.message}</div>`;
+                log(`❌ Erro na câmera: ${error.message}`);
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            showUrlParams();
+            log('🚀 Debug page carregada');
+        });
+    </script>
+</body>
+</html>

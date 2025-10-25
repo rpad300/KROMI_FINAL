@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão da Base de Dados - VisionKrono</title>
+    <link rel="stylesheet" href="events.css">
+    <style>
+        .management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .table-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .table-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #999;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-danger {
+            background: rgba(255, 59, 48, 0.2);
+            border: 1px solid #ff3b30;
+            color: #ff3b30;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(255, 59, 48, 0.3);
+        }
+        
+        .btn-warning {
+            background: rgba(255, 165, 0, 0.2);
+            border: 1px solid #ffa500;
+            color: #ffa500;
+        }
+        
+        .btn-warning:hover {
+            background: rgba(255, 165, 0, 0.3);
+        }
+        
+        .event-selector {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .event-selector h3 {
+            margin-bottom: 10px;
+            color: #00ff88;
+        }
+        
+        .event-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .log-area {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .log-entry.success {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+        }
+        
+        .log-entry.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+        }
+        
+        .log-entry.info {
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a1a;
+            border: 1px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-content h3 {
+            color: #00ff88;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        
+        .modal-content p {
+            color: #fff;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>🗄️ Gestão da Base de Dados</h1>
+            <p>Gerir tabelas, limpar dados e monitorar o sistema</p>
+        </div>
+        
+        <!-- Seletor de Evento -->
+        <div class="event-selector">
+            <h3>📅 Selecionar Evento</h3>
+            <select id="eventSelector" class="form-control">
+                <option value="">-- Selecionar Evento --</option>
+            </select>
+            <div class="event-buttons">
+                <button id="loadEventDataBtn" class="btn primary">📊 Carregar Dados do Evento</button>
+                <button id="loadAllDataBtn" class="btn secondary">🌐 Carregar Todos os Dados</button>
+            </div>
+        </div>
+        
+        <!-- Grid de Gestão das Tabelas -->
+        <div class="management-grid">
+            <!-- Tabela Detections -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">🎯 Detecções</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="detectionsTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="detectionsToday">0</div>
+                        <div class="stat-label">Hoje</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearDetectionsBtn" class="btn danger">🗑️ Limpar Detecções</button>
+                    <button id="exportDetectionsBtn" class="btn secondary">📄 Exportar</button>
+                </div>
+            </div>
+            
+            <!-- Tabela Image Buffer -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">📷 Buffer de Imagens</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="bufferTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="bufferPending">0</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearBufferBtn" class="btn danger">🗑️ Limpar Buffer</button>
+                    <button id="clearProcessedBtn" class="btn warning">🧹 Limpar Processadas</button>
+                </div>
+            </div>
+            
+            <!-- Tabela Events -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">📅 Eventos</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="eventsTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="eventsActive">0</div>
+                        <div class="stat-label">Ativos</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearEventsBtn" class="btn danger">🗑️ Limpar Eventos</button>
+                    <button id="exportEventsBtn" class="btn secondary">📄 Exportar</button>
+                </div>
+            </div>
+            
+            <!-- Tabela Devices -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">📱 Dispositivos</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="devicesTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="devicesActive">0</div>
+                        <div class="stat-label">Ativos</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearDevicesBtn" class="btn danger">🗑️ Limpar Dispositivos</button>
+                    <button id="exportDevicesBtn" class="btn secondary">📄 Exportar</button>
+                </div>
+            </div>
+            
+            <!-- Tabela Images -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">🖼️ Imagens</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="imagesTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="imagesProof">0</div>
+                        <div class="stat-label">Provas</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearImagesBtn" class="btn danger">🗑️ Limpar Imagens</button>
+                    <button id="clearOldImagesBtn" class="btn warning">🧹 Limpar Antigas</button>
+                </div>
+            </div>
+            
+            <!-- Tabela Configurations -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">⚙️ Configurações</div>
+                </div>
+                <div class="table-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="configsTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="configsEvent">0</div>
+                        <div class="stat-label">Eventos</div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button id="clearConfigsBtn" class="btn danger">🗑️ Limpar Configurações</button>
+                    <button id="exportConfigsBtn" class="btn secondary">📄 Exportar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ações Globais -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-title">🌐 Ações Globais</div>
+            </div>
+            <div class="table-actions">
+                <button id="clearAllBtn" class="btn danger">💥 Limpar TUDO</button>
+                <button id="clearOldDataBtn" class="btn warning">🧹 Limpar Dados Antigos</button>
+                <button id="exportAllBtn" class="btn primary">📦 Exportar Tudo</button>
+                <button id="refreshStatsBtn" class="btn secondary">🔄 Atualizar Estatísticas</button>
+            </div>
+        </div>
+        
+        <!-- Log de Operações -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-title">📝 Log de Operações</div>
+                <button id="clearLogBtn" class="btn secondary">🧹 Limpar Log</button>
+            </div>
+            <div id="logArea" class="log-area">
+                <div class="log-entry info">Sistema de gestão da base de dados iniciado</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Confirmar Ação</h3>
+            <p id="confirmationMessage"></p>
+            <div class="modal-actions">
+                <button id="confirmBtn" class="btn danger">Confirmar</button>
+                <button id="cancelBtn" class="btn secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="supabase.js"></script>
+    <script src="database-management.js"></script>
+</body>
+</html>

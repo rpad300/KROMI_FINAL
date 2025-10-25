@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Perfil de Utilizador</title>
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <style>
+        /* KROMI Design System Variables */
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-light: #ffffff;
+            --bg-dark: #000000;
+            --card-light: #f8fafc;
+            --card-dark: #1a1a1a;
+            --text-light: #1f2937;
+            --text-dark: #ffffff;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --muted: #6b7280;
+            --accent: #22d3ee;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --bg-secondary: var(--card-dark);
+            --text-primary: var(--text-dark);
+            --text-secondary: #a0a0a0;
+            --border-color: var(--border-dark);
+            --card: var(--card-dark);
+            --text: var(--text-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --bg-secondary: var(--card-light);
+            --text-primary: var(--text-light);
+            --text-secondary: #6b7280;
+            --border-color: var(--border-light);
+            --card: var(--card-light);
+            --text: var(--text-light);
+        }
+
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            content: '🌙';
+            left: 26px;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background: var(--primary);
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .profile-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .profile-header p {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        /* Avatar section */
+        .avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .avatar-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
+            object-fit: cover;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: var(--text-secondary);
+        }
+
+        .avatar-upload {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            border: 3px solid var(--bg-primary);
+        }
+
+        .avatar-upload:hover {
+            background: var(--primary-dark);
+        }
+
+        .avatar-input {
+            display: none;
+        }
+
+        /* Form sections */
+        .form-sections {
+            display: grid;
+            gap: 24px;
+        }
+
+        .form-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Form grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .form-grid-full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Phone input with country code */
+        .phone-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        .country-code {
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .phone-number {
+            flex: 1;
+        }
+
+        /* Social media inputs */
+        .social-input {
+            position: relative;
+        }
+
+        .social-prefix {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .social-input .form-input {
+            padding-left: 45px;
+        }
+
+        /* Clothing sizes */
+        .size-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        /* Consent checkboxes */
+        .consent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .consent-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .consent-checkbox {
+            margin-top: 2px;
+        }
+
+        .consent-content {
+            flex: 1;
+        }
+
+        .consent-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .consent-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Action buttons */
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        /* Status indicators */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-verified {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+
+            .size-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Success/Error messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .message-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .message-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        .message.hidden {
+            display: none;
+        }
+
+        /* Field validation */
+        .form-input.error,
+        .form-select.error {
+            border-color: var(--danger);
+        }
+
+        .field-error {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Tabs for different sections */
+        .profile-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-button:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="#" class="logo">
+                <div class="logo-icon">K</div>
+                <div>
+                    <div style="font-weight: 700; font-size: 18px;">KROMI</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Perfil de Utilizador</div>
+                </div>
+            </a>
+            <div class="header-actions">
+                <div class="theme-toggle" id="themeToggle"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <h1>Meu Perfil</h1>
+            <p>Gerencie suas informações pessoais e preferências</p>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="successMessage" class="message message-success hidden">
+            <i class="fas fa-check-circle"></i>
+            <span>Perfil atualizado com sucesso!</span>
+        </div>
+
+        <div id="errorMessage" class="message message-error hidden">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Erro ao atualizar perfil. Tente novamente.</span>
+        </div>
+
+        <!-- Avatar Section -->
+        <div class="avatar-section">
+            <div class="avatar-container">
+                <div class="avatar" id="avatarPreview">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="avatar-upload" onclick="document.getElementById('avatarInput').click()">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <input type="file" id="avatarInput" class="avatar-input" accept="image/*">
+            </div>
+            <div>
+                <span class="status-badge status-verified">
+                    <i class="fas fa-check-circle"></i>
+                    Email Verificado
+                </span>
+            </div>
+        </div>
+
+        <!-- Profile Tabs -->
+        <div class="profile-tabs">
+            <button class="tab-button active" onclick="switchTab('personal')">
+                <i class="fas fa-user"></i> Pessoal
+            </button>
+            <button class="tab-button" onclick="switchTab('contact')">
+                <i class="fas fa-address-card"></i> Contacto
+            </button>
+            <button class="tab-button" onclick="switchTab('social')">
+                <i class="fas fa-share-alt"></i> Redes Sociais
+            </button>
+            <button class="tab-button" onclick="switchTab('preferences')">
+                <i class="fas fa-cog"></i> Preferências
+            </button>
+            <button class="tab-button" onclick="switchTab('documents')">
+                <i class="fas fa-id-card"></i> Documentos
+            </button>
+            <button class="tab-button" onclick="switchTab('privacy')">
+                <i class="fas fa-shield-alt"></i> Privacidade
+            </button>
+        </div>
+
+        <!-- Form -->
+        <form id="profileForm">
+            <!-- Personal Information Tab -->
+            <div id="personal" class="tab-content active">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Informações Pessoais</div>
+                            <div class="section-description">Dados básicos do seu perfil</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="fullName">Nome Completo *</label>
+                            <input type="text" id="fullName" name="fullName" class="form-input" required value="João Silva Santos">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email *</label>
+                            <input type="email" id="email" name="email" class="form-input" required value="joao@exemplo.com" readonly>
+                            <div class="form-help">O email não pode ser alterado após a criação da conta</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="dateOfBirth">Data de Nascimento</label>
+                            <input type="date" id="dateOfBirth" name="dateOfBirth" class="form-input" value="1990-05-15">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="gender">Género</label>
+                            <select id="gender" name="gender" class="form-select">
+                                <option value="">Selecionar...</option>
+                                <option value="M" selected>Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="O">Outro</option>
+                                <option value="N">Prefiro não dizer</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="nationality">Nacionalidade</label>
+                            <select id="nationality" name="nationality" class="form-select">
+                                <option value="">Selecionar...</option>
+                                <option value="PT" selected>Portuguesa</option>
+                                <option value="BR">Brasileira</option>
+                                <option value="ES">Espanhola</option>
+                                <option value="FR">Francesa</option>
+                                <option value="UK">Britânica</option>
+                                <option value="US">Americana</option>
+                                <option value="OTHER">Outra</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="organization">Organização/Empresa</label>
+                            <input type="text" id="organization" name="organization" class="form-input" value="KROMI Technologies">
+                        </div>
+
+                        <div class="form-group form-grid-full">
+                            <label class="form-label" for="bio">Biografia</label>
+                            <textarea id="bio" name="bio" class="form-textarea" placeholder="Conte-nos um pouco sobre você...">Desenvolvedor apaixonado por tecnologia e desportos. Participo regularmente em eventos de corrida e ciclismo.</textarea>
+                            <div class="form-help">Máximo 500 caracteres</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information Tab -->
+            <div id="contact" class="tab-content">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-address-card"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Informações de Contacto</div>
+                            <div class="section-description">Telefone, morada e detalhes de contacto</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="phone">Telefone</label>
+                            <div class="phone-input">
+                                <select id="phoneCountryCode" name="phoneCountryCode" class="form-select country-code">
+                                    <option value="+351" selected>🇵🇹 +351</option>
+                                    <option value="+55">🇧🇷 +55</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+44">🇬🇧 +44</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                </select>
+                                <input type="tel" id="phone" name="phone" class="form-input phone-number" value="912345678">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="whatsapp">WhatsApp</label>
+                            <div class="phone-input">
+                                <select id="whatsappCountryCode" name="whatsappCountryCode" class="form-select country-code">
+                                    <option value="+351" selected>🇵🇹 +351</option>
+                                    <option value="+55">🇧🇷 +55</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+44">🇬🇧 +44</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                </select>
+                                <input type="tel" id="whatsapp" name="whatsapp" class="form-input phone-number" value="912345678">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="addressLine1">Morada (Linha 1) *</label>
+                            <input type="text" id="addressLine1" name="addressLine1" class="form-input" required value="Rua das Flores, 123">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="addressLine2">Morada (Linha 2)</label>
+                            <input type="text" id="addressLine2" name="addressLine2" class="form-input" value="2º Esquerdo">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="city">Cidade *</label>
+                            <input type="text" id="city" name="city" class="form-input" required value="Lisboa">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="postalCode">Código Postal *</label>
+                            <input type="text" id="postalCode" name="postalCode" class="form-input" required value="1000-001">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="country">País *</label>
+                            <select id="country" name="country" class="form-select" required>
+                                <option value="">Selecionar...</option>
+                                <option value="PT" selected>Portugal</option>
+                                <option value="BR">Brasil</option>
+                                <option value="ES">Espanha</option>
+                                <option value="FR">França</option>
+                                <option value="UK">Reino Unido</option>
+                                <option value="US">Estados Unidos</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="addressFormatted">Morada Formatada</label>
+                            <input type="text" id="addressFormatted" name="addressFormatted" class="form-input" readonly value="Rua das Flores, 123, 2º Esquerdo, 1000-001 Lisboa, Portugal">
+                            <div class="form-help">Preenchido automaticamente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Media Tab -->
+            <div id="social" class="tab-content">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-share-alt"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Redes Sociais</div>
+                            <div class="section-description">Links para os seus perfis nas redes sociais</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="xHandle">X (Twitter)</label>
+                            <div class="social-input">
+                                <div class="social-prefix">@</div>
+                                <input type="text" id="xHandle" name="xHandle" class="form-input" value="joaosilva">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="instagramHandle">Instagram</label>
+                            <div class="social-input">
+                                <div class="social-prefix">@</div>
+                                <input type="text" id="instagramHandle" name="instagramHandle" class="form-input" value="joaosilva">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="facebookUrl">Facebook</label>
+                            <input type="url" id="facebookUrl" name="facebookUrl" class="form-input" value="https://facebook.com/joaosilva" placeholder="https://facebook.com/seuusuario">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="linkedInUrl">LinkedIn</label>
+                            <input type="url" id="linkedInUrl" name="linkedInUrl" class="form-input" value="https://linkedin.com/in/joaosilva" placeholder="https://linkedin.com/in/seuusuario">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="tiktokHandle">TikTok</label>
+                            <div class="social-input">
+                                <div class="social-prefix">@</div>
+                                <input type="text" id="tiktokHandle" name="tiktokHandle" class="form-input" value="">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="discordHandle">Discord</label>
+                            <input type="text" id="discordHandle" name="discordHandle" class="form-input" value="joaosilva#1234" placeholder="username#1234">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences Tab -->
+            <div id="preferences" class="tab-content">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Preferências</div>
+                            <div class="section-description">Idioma, tema e tamanhos de vestuário</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="preferredLanguage">Idioma Preferido</label>
+                            <select id="preferredLanguage" name="preferredLanguage" class="form-select">
+                                <option value="pt" selected>Português</option>
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="themePreference">Tema</label>
+                            <select id="themePreference" name="themePreference" class="form-select">
+                                <option value="auto">Automático</option>
+                                <option value="light">Claro</option>
+                                <option value="dark" selected>Escuro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group form-grid-full">
+                            <label class="form-label">Tamanhos de Vestuário</label>
+                            <div class="size-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="clothingSizeTop">Camisola</label>
+                                    <select id="clothingSizeTop" name="clothingSizeTop" class="form-select">
+                                        <option value="">Selecionar...</option>
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M" selected>M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="clothingSizeBottom">Calças</label>
+                                    <select id="clothingSizeBottom" name="clothingSizeBottom" class="form-select">
+                                        <option value="">Selecionar...</option>
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M" selected>M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="shoeSize">Sapatos (EU)</label>
+                                    <select id="shoeSize" name="shoeSize" class="form-select">
+                                        <option value="">Selecionar...</option>
+                                        <option value="35">35</option>
+                                        <option value="36">36</option>
+                                        <option value="37">37</option>
+                                        <option value="38">38</option>
+                                        <option value="39">39</option>
+                                        <option value="40">40</option>
+                                        <option value="41">41</option>
+                                        <option value="42" selected>42</option>
+                                        <option value="43">43</option>
+                                        <option value="44">44</option>
+                                        <option value="45">45</option>
+                                        <option value="46">46</option>
+                                        <option value="47">47</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group form-grid-full">
+                            <label class="form-label" for="tags">Tags de Interesse</label>
+                            <input type="text" id="tags" name="tags" class="form-input" value="corrida, ciclismo, tecnologia, programação" placeholder="corrida, ciclismo, tecnologia...">
+                            <div class="form-help">Separe as tags com vírgulas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Tab -->
+            <div id="documents" class="tab-content">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Documentos</div>
+                            <div class="section-description">Documentos de identificação e informações fiscais</div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="nationalId">Cartão de Cidadão / BI</label>
+                            <input type="text" id="nationalId" name="nationalId" class="form-input" value="12345678 9 ZZ0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="passportNumber">Número do Passaporte</label>
+                            <input type="text" id="passportNumber" name="passportNumber" class="form-input" value="P123456789">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="taxNumber">Número de Contribuinte</label>
+                            <input type="text" id="taxNumber" name="taxNumber" class="form-input" value="123456789">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="accessPin">PIN de Acesso</label>
+                            <input type="password" id="accessPin" name="accessPin" class="form-input" placeholder="Digite um PIN de 4-6 dígitos">
+                            <div class="form-help">PIN numérico para acesso rápido à plataforma</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Tab -->
+            <div id="privacy" class="tab-content">
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <div class="section-title">Privacidade e Consentimentos</div>
+                            <div class="section-description">Gerencie suas preferências de comunicação e privacidade</div>
+                        </div>
+                    </div>
+
+                    <div class="consent-list">
+                        <div class="consent-item">
+                            <input type="checkbox" id="consentEmailOptIn" name="consentEmailOptIn" class="consent-checkbox" checked>
+                            <div class="consent-content">
+                                <div class="consent-title">Comunicações por Email</div>
+                                <div class="consent-description">Autorizo o envio de emails informativos, newsletters e notificações sobre eventos e atualizações da plataforma.</div>
+                            </div>
+                        </div>
+
+                        <div class="consent-item">
+                            <input type="checkbox" id="consentSmsOptIn" name="consentSmsOptIn" class="consent-checkbox">
+                            <div class="consent-content">
+                                <div class="consent-title">Comunicações por SMS</div>
+                                <div class="consent-description">Autorizo o envio de mensagens SMS para notificações urgentes, códigos de verificação e atualizações importantes.</div>
+                            </div>
+                        </div>
+
+                        <div class="consent-item">
+                            <input type="checkbox" id="consentWhatsAppOptIn" name="consentWhatsAppOptIn" class="consent-checkbox" checked>
+                            <div class="consent-content">
+                                <div class="consent-title">Comunicações por WhatsApp</div>
+                                <div class="consent-description">Autorizo o envio de mensagens WhatsApp para notificações de eventos, resultados e comunicações relacionadas com a minha participação.</div>
+                            </div>
+                        </div>
+
+                        <div class="consent-item">
+                            <input type="checkbox" id="marketingOptIn" name="marketingOptIn" class="consent-checkbox">
+                            <div class="consent-content">
+                                <div class="consent-title">Marketing e Promoções</div>
+                                <div class="consent-description">Autorizo o uso dos meus dados para fins de marketing, incluindo promoções, ofertas especiais e comunicações comerciais de parceiros.</div>
+                            </div>
+                        </div>
+
+                        <div class="consent-item">
+                            <input type="checkbox" id="dataProcessingConsent" name="dataProcessingConsent" class="consent-checkbox" checked required>
+                            <div class="consent-content">
+                                <div class="consent-title">Processamento de Dados Pessoais *</div>
+                                <div class="consent-description">Consinto o processamento dos meus dados pessoais de acordo com a Política de Privacidade da KROMI, incluindo para fins de participação em eventos e gestão da minha conta.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                    <i class="fas fa-undo"></i>
+                    Cancelar Alterações
+                </button>
+                <button type="submit" class="btn btn-primary" id="saveButton">
+                    <i class="fas fa-save"></i>
+                    Guardar Perfil
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Tab switching functionality
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+
+            // Add active class to clicked tab button
+            event.target.classList.add('active');
+        }
+
+        // Avatar upload functionality
+        function initializeAvatarUpload() {
+            const avatarInput = document.getElementById('avatarInput');
+            const avatarPreview = document.getElementById('avatarPreview');
+
+            avatarInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Form validation
+        function validateForm() {
+            const form = document.getElementById('profileForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                const fieldError = field.parentNode.querySelector('.field-error');
+                
+                if (!field.value.trim()) {
+                    field.classList.add('error');
+                    if (!fieldError) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'field-error';
+                        errorDiv.textContent = 'Este campo é obrigatório';
+                        field.parentNode.appendChild(errorDiv);
+                    }
+                    isValid = false;
+                } else {
+                    field.classList.remove('error');
+                    if (fieldError) {
+                        fieldError.remove();
+                    }
+                }
+            });
+
+            // Email validation
+            const emailField = document.getElementById('email');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailField.value && !emailRegex.test(emailField.value)) {
+                emailField.classList.add('error');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Auto-format phone numbers
+        function formatPhoneNumber(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            // Apply formatting based on country
+            const countryCode = input.closest('.phone-input')?.querySelector('.country-code')?.value;
+            
+            if (countryCode === '+351') {
+                // Portuguese format: 9XX XXX XXX
+                if (value.length >= 3) {
+                    value = value.substring(0, 3) + ' ' + value.substring(3);
+                }
+                if (value.length >= 7) {
+                    value = value.substring(0, 7) + ' ' + value.substring(7);
+                }
+            }
+            
+            input.value = value;
+        }
+
+        // Auto-update formatted address
+        function updateFormattedAddress() {
+            const addressLine1 = document.getElementById('addressLine1').value;
+            const addressLine2 = document.getElementById('addressLine2').value;
+            const city = document.getElementById('city').value;
+            const postalCode = document.getElementById('postalCode').value;
+            const country = document.getElementById('country').selectedOptions[0]?.text || '';
+
+            let formatted = addressLine1;
+            if (addressLine2) formatted += ', ' + addressLine2;
+            if (postalCode) formatted += ', ' + postalCode;
+            if (city) formatted += ' ' + city;
+            if (country) formatted += ', ' + country;
+
+            document.getElementById('addressFormatted').value = formatted;
+        }
+
+        // Form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                showMessage('Por favor, corrija os erros no formulário.', 'error');
+                return;
+            }
+
+            const saveButton = document.getElementById('saveButton');
+            const originalText = saveButton.innerHTML;
+            
+            // Show loading state
+            saveButton.innerHTML = '<span class="spinner"></span> Guardando...';
+            saveButton.disabled = true;
+
+            try {
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Show success message
+                showMessage('Perfil atualizado com sucesso!', 'success');
+                
+                // Update last saved time (you can add this to the UI)
+                localStorage.setItem('profileLastSaved', new Date().toISOString());
+                
+            } catch (error) {
+                showMessage('Erro ao guardar perfil. Tente novamente.', 'error');
+            } finally {
+                // Restore button
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }
+        }
+
+        // Show messages
+        function showMessage(message, type) {
+            const messageEl = document.getElementById(type === 'success' ? 'successMessage' : 'errorMessage');
+            const otherMessageEl = document.getElementById(type === 'success' ? 'errorMessage' : 'successMessage');
+            
+            // Hide other message
+            otherMessageEl.classList.add('hidden');
+            
+            // Update and show message
+            messageEl.querySelector('span').textContent = message;
+            messageEl.classList.remove('hidden');
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 5000);
+            
+            // Scroll to top to show message
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Reset form
+        function resetForm() {
+            if (confirm('Tem a certeza que deseja cancelar todas as alterações?')) {
+                document.getElementById('profileForm').reset();
+                
+                // Reset avatar
+                document.getElementById('avatarPreview').innerHTML = '<i class="fas fa-user"></i>';
+                
+                // Clear validation errors
+                document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+                document.querySelectorAll('.field-error').forEach(el => el.remove());
+                
+                showMessage('Alterações canceladas.', 'success');
+            }
+        }
+
+        // Auto-save functionality (optional)
+        function enableAutoSave() {
+            const form = document.getElementById('profileForm');
+            let autoSaveTimeout;
+
+            form.addEventListener('input', function() {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    // Save to localStorage as draft
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData);
+                    localStorage.setItem('profileDraft', JSON.stringify(data));
+                }, 1000);
+            });
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            initializeAvatarUpload();
+            enableAutoSave();
+
+            // Event listeners
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            document.getElementById('profileForm').addEventListener('submit', handleFormSubmit);
+
+            // Phone number formatting
+            document.querySelectorAll('.phone-number').forEach(input => {
+                input.addEventListener('input', () => formatPhoneNumber(input));
+            });
+
+            // Address auto-update
+            ['addressLine1', 'addressLine2', 'city', 'postalCode', 'country'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateFormattedAddress);
+            });
+
+            // Load draft data if exists
+            const savedDraft = localStorage.getItem('profileDraft');
+            if (savedDraft) {
+                try {
+                    const data = JSON.parse(savedDraft);
+                    Object.keys(data).forEach(key => {
+                        const field = document.getElementById(key);
+                        if (field) {
+                            if (field.type === 'checkbox') {
+                                field.checked = data[key] === 'on';
+                            } else {
+                                field.value = data[key];
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error loading draft data:', e);
+                }
+            }
+
+            // Update formatted address on load
+            updateFormattedAddress();
+        });
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDhh2IDY5p49uSAw9qtfdwTbAVRjOEmKargiq0po1o5t5P%2BBKmgpfV8426uxyji6moEGgsyJFE76Ek%2BOrxzXtPNC5e7ryL4H1iHxBAzKo%2FM8e3j7s7E4Ngauluj6ZBIEZqtyR4ohg2ECPJhcJL5xmZGRCTs3gzMVHeg9bDdsc%2Bmc3swt2rjl5grSy6KbbjrGDhplc296jNUvNdrE5phQK4B2sHDmSf5EuJiNbP80kH%2Bl44KfJJX7WY2W1f2Q4XmwvIdY3AVi3Bz5PMu%2Ft9CFJjB274bBrNaNC9R9%2FVdTOjUEGz16x4DP4fXDxER77nlgLZv7jPHhn%2FRSe1PeE45UXpGnPv3YN8rZqdD1Ss8U16muGMcImM5jMciJv%2FV02pDHMwtnzDEwQXHMjd4a74lqmklOID5ISGK%2BvvWFmGv5vBrV9%2FKijoSGf8zv1Z4LI96l1JOYmq03fB2FTEDU5FXlv%2FANaKARd8XCSAq%2Fjqkfomz9MHeZsYr0Z9hC27V6HpsvCnKx0U74OG0fVCeeYm3%2FYKug%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDhh2IDY5p49uSAw9qtfdwTbAVRjOEmKargiq0po1o5t5P+BKmgpfV8426uxyji6moEGgsyJFE76Ek+OrxzXtPNC5e7ryL4H1iHxBAzKo/M8e3j7s7E4Ngauluj6ZBIEZqtyR4ohg2ECPJhcJL5xmZGRCTs3gzMVHeg9bDdsc+mc3swt2rjl5grSy6KbbjrGDhplc296jNUvNdrE5phQK4B2sHDmSf5EuJiNbP80kH+l44KfJJX7WY2W1f2Q4XmwvIdY3AVi3Bz5PMu/t9CFJjB274bBrNaNC9R9/VdTOjUEGz16x4DP4fXDxER77nlgLZv7jPHhn/RSe1PeE45UXpGnPv3YN8rZqdD1Ss8U16muGMcImM5jMciJv/V02pDHMwtnzDEwQXHMjd4a74lqmklOID5ISGK+vvWFmGv5vBrV9/KijoSGf8zv1Z4LI96l1JOYmq03fB2FTEDU5FXlv/ANaKARd8XCSAq/jqkfomz9MHeZsYr0Z9hC27V6HpsvCnKx0U74OG0fVCeeYm3/YKug=";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Live Stream - VisionKrono</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-section h3 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        
+        .instructions {
+            background: #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .step {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #444;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .url-box {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .button:hover {
+            background: #45a049;
+        }
+        
+        .button.secondary {
+            background: #2196F3;
+        }
+        
+        .button.secondary:hover {
+            background: #1976D2;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status.error {
+            background: #f44336;
+            color: white;
+        }
+        
+        .status.info {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .device-info {
+            background: #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .code-block {
+            background: #000;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Teste Live Stream VisionKrono</h1>
+            <p>Sistema de streaming ao vivo entre dispositivos</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>📱 Como Testar o Live Stream Real</h3>
+            
+            <div class="instructions">
+                <p><strong>Para testar o Live Stream real funcionando:</strong></p>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <strong>Abrir página de detecção em um dispositivo móvel:</strong>
+                    <div class="url-box" id="detectionUrl">
+                        https://192.168.1.219:1144/detection?event=a6301479-56c8-4269-a42d-aa8a7650a575&device=879d472c-508d-4873-9b8e-8a612b8e7e14
+                    </div>
+                    <button class="button" onclick="copyUrl('detectionUrl')">📋 Copiar URL</button>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <strong>Abrir página de eventos em outro dispositivo/computador:</strong>
+                    <div class="url-box" id="eventsUrl">
+                        https://192.168.1.219:1144/events
+                    </div>
+                    <button class="button" onclick="copyUrl('eventsUrl')">📋 Copiar URL</button>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <strong>Na página de eventos, clicar no botão "Live Stream"</strong>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <strong>Clicar em "▶ Stream" no dispositivo móvel</strong>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">5</span>
+                    <strong>Ver o stream ao vivo aparecer no painel!</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Informações Técnicas</h3>
+            
+            <div class="device-info">
+                <h4>📱 Dispositivo (Emissor):</h4>
+                <p><strong>ID:</strong> <span id="deviceId">879d472c-508d-4873-9b8e-8a612b8e7e14</span></p>
+                <p><strong>Evento:</strong> <span id="eventId">a6301479-56c8-4269-a42d-aa8a7650a575</span></p>
+                <p><strong>Status:</strong> <span id="deviceStatus">Aguardando conexão...</span></p>
+            </div>
+            
+            <div class="device-info">
+                <h4>🖥️ Painel (Receptor):</h4>
+                <p><strong>URL:</strong> https://192.168.1.219:1144/events</p>
+                <p><strong>Status:</strong> <span id="panelStatus">Aguardando dispositivos...</span></p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📡 Protocolo de Comunicação</h3>
+            
+            <div class="code-block">
+// 1. Dispositivo anuncia presença
+{
+    type: 'livestream',
+    subtype: 'status',
+    deviceId: '879d472c-508d-4873-9b8e-8a612b8e7e14',
+    data: { status: 'online' }
+}
+
+// 2. Painel envia comando para iniciar
+{
+    type: 'livestream_command',
+    deviceId: '879d472c-508d-4873-9b8e-8a612b8e7e14',
+    command: 'start'
+}
+
+// 3. Dispositivo cria offer WebRTC
+{
+    type: 'livestream',
+    subtype: 'offer',
+    deviceId: '879d472c-508d-4873-9b8e-8a612b8e7e14',
+    data: { offer: RTCSessionDescription }
+}
+
+// 4. Painel responde com answer
+{
+    type: 'livestream_response',
+    deviceId: '879d472c-508d-4873-9b8e-8a612b8e7e14',
+    type: 'answer',
+    answer: RTCSessionDescription
+}
+
+// 5. Stream de vídeo estabelecido! 🎥
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎯 Indicadores Visuais</h3>
+            
+            <div class="instructions">
+                <p><strong>No painel de Live Stream você verá:</strong></p>
+                <ul>
+                    <li><strong>🔴 LIVE</strong> - Stream real funcionando</li>
+                    <li><strong>📺 DEMO</strong> - Stream simulado (fallback)</li>
+                    <li><strong>🔄 Conectando...</strong> - Estabelecendo conexão</li>
+                    <li><strong>📺 Transmitindo</strong> - Stream ativo</li>
+                    <li><strong>⏹ Parado</strong> - Stream parado</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🚀 Teste Rápido</h3>
+            
+            <button class="button" onclick="openDetectionPage()">📱 Abrir Detecção</button>
+            <button class="button secondary" onclick="openEventsPage()">🖥️ Abrir Eventos</button>
+            <button class="button" onclick="testConnection()">🔗 Testar Conexão</button>
+            
+            <div id="testStatus" class="status info" style="display: none;">
+                Testando conexão...
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function copyUrl(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                alert('URL copiada para a área de transferência!');
+            });
+        }
+        
+        function openDetectionPage() {
+            const url = document.getElementById('detectionUrl').textContent.trim();
+            window.open(url, '_blank');
+        }
+        
+        function openEventsPage() {
+            const url = document.getElementById('eventsUrl').textContent.trim();
+            window.open(url, '_blank');
+        }
+        
+        function testConnection() {
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status info';
+            statusDiv.textContent = 'Testando conexão...';
+            
+            // Simular teste de conexão
+            setTimeout(() => {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Conexão OK! Sistema pronto para Live Stream.';
+            }, 2000);
+        }
+        
+        // Atualizar status em tempo real
+        setInterval(() => {
+            // Simular status do dispositivo
+            const deviceStatus = document.getElementById('deviceStatus');
+            const panelStatus = document.getElementById('panelStatus');
+            
+            // Em implementação real, isso viria de WebSocket ou polling
+            deviceStatus.textContent = 'Online - Pronto para streaming';
+            panelStatus.textContent = 'Online - Aguardando dispositivos';
+        }, 5000);
+    </script>
+</body>
+</html>

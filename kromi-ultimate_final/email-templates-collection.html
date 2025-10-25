@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Coleção de Templates de Email</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-dark: #0f172a;
+            --text-light: #e2e8f0;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .email-preview {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .template-section {
+            margin-bottom: 3rem;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid #334155;
+        }
+        
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        /* Email Template Styles */
+        .email-template {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+        }
+        
+        .email-header {
+            background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .email-logo {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        
+        .email-content {
+            padding: 40px 30px;
+            background: #ffffff;
+        }
+        
+        .verification-code {
+            background: #f8fafc;
+            border: 2px dashed #fc6b03;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .code-number {
+            font-family: 'Courier New', monospace;
+            font-size: 36px;
+            font-weight: bold;
+            color: #fc6b03;
+            letter-spacing: 8px;
+            margin: 0;
+            display: block;
+        }
+        
+        .email-footer {
+            background: #1a1a1a;
+            color: #888;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #fc6b03;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+        
+        .security-note {
+            background: #fef3cd;
+            border-left: 4px solid #fbbf24;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #92400e;
+        }
+        
+        .welcome-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4" style="color: var(--primary);">
+                <i class="fas fa-envelope mr-3"></i>
+                KROMI Email Templates
+            </h1>
+            <p class="text-gray-400 text-xl">Coleção completa de templates de email profissionais</p>
+        </div>
+
+        <!-- 1. Template de Verificação de Registro -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-user-plus mr-2" style="color: var(--primary);"></i>
+                1. Verificação de Registro
+            </h2>
+            <p class="text-gray-400 mb-6">Template para confirmar email após registro de nova conta</p>
+            
+            <div class="email-preview">
+                <div class="email-template">
+                    <div class="email-header">
+                        <h1 class="email-logo">KROMI</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+                    </div>
+                    
+                    <div class="email-content">
+                        <h2 style="color: #1a1a1a; margin-bottom: 20px;">Bem-vindo à KROMI!</h2>
+                        
+                        <p>Obrigado por se registar na nossa plataforma. Para completar o seu registo e ativar a sua conta, por favor confirme o seu endereço de email com o código abaixo:</p>
+                        
+                        <div class="verification-code">
+                            <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Verificação:</p>
+                            <span class="code-number">590302</span>
+                            <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em 15 minutos</p>
+                        </div>
+                        
+                        <div class="security-note">
+                            <strong><i class="fas fa-shield-alt"></i> Nota de Segurança:</strong> Se não criou uma conta KROMI, ignore este email. A sua segurança é a nossa prioridade.
+                        </div>
+                        
+                        <p>Se tiver alguma dúvida, contacte o nosso suporte em <a href="mailto:suporte@kromi.online" style="color: #fc6b03;">suporte@kromi.online</a></p>
+                        
+                        <p style="margin-top: 30px;">
+                            Cumprimentos,<br>
+                            <strong>Equipa KROMI</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="email-footer">
+                        <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+                        <p>Este email foi enviado para {{user_email}} porque criou uma conta na nossa plataforma.</p>
+                        <p style="margin-top: 15px;">
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Política de Privacidade</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Termos de Uso</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="copy-btn" onclick="copyTemplate('registro')">
+                <i class="fas fa-copy mr-2"></i>Copiar HTML
+            </button>
+        </div>
+
+        <!-- 2. Template de Código de Login -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-sign-in-alt mr-2" style="color: var(--primary);"></i>
+                2. Código de Login
+            </h2>
+            <p class="text-gray-400 mb-6">Template para códigos de verificação em cada login</p>
+            
+            <div class="email-preview">
+                <div class="email-template">
+                    <div class="email-header">
+                        <h1 class="email-logo">KROMI</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+                    </div>
+                    
+                    <div class="email-content">
+                        <h2 style="color: #1a1a1a; margin-bottom: 20px;">Código de Verificação para Login</h2>
+                        
+                        <p>Recebemos um pedido de login na sua conta KROMI. Para prosseguir com o login, utilize o código de verificação abaixo:</p>
+                        
+                        <div class="verification-code">
+                            <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Login:</p>
+                            <span class="code-number">847291</span>
+                            <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em 10 minutos</p>
+                        </div>
+                        
+                        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #1565c0;">
+                            <strong><i class="fas fa-info-circle"></i> Informação:</strong> Este email foi gerado automaticamente devido a uma tentativa de login na sua conta.
+                        </div>
+                        
+                        <div class="security-note">
+                            <strong><i class="fas fa-exclamation-triangle"></i> Atenção:</strong> Se não tentou fazer login, por favor contacte-nos imediatamente em <a href="mailto:seguranca@kromi.online" style="color: #fc6b03;">seguranca@kromi.online</a>
+                        </div>
+                        
+                        <p style="margin-top: 30px;">
+                            Cumprimentos,<br>
+                            <strong>Equipa KROMI</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="email-footer">
+                        <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+                        <p>Tentativa de login detectada em {{login_time}} de {{ip_location}}</p>
+                        <p style="margin-top: 15px;">
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Centro de Segurança</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Reportar Problema</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="copy-btn" onclick="copyTemplate('login')">
+                <i class="fas fa-copy mr-2"></i>Copiar HTML
+            </button>
+        </div>
+
+        <!-- 3. Template de Recuperação de Password -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-key mr-2" style="color: var(--primary);"></i>
+                3. Recuperação de Password
+            </h2>
+            <p class="text-gray-400 mb-6">Template para reset de password</p>
+            
+            <div class="email-preview">
+                <div class="email-template">
+                    <div class="email-header">
+                        <h1 class="email-logo">KROMI</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+                    </div>
+                    
+                    <div class="email-content">
+                        <h2 style="color: #1a1a1a; margin-bottom: 20px;">Recuperação de Password</h2>
+                        
+                        <p>Recebemos um pedido para redefinir a password da sua conta KROMI. Utilize o código abaixo para criar uma nova password:</p>
+                        
+                        <div class="verification-code">
+                            <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Recuperação:</p>
+                            <span class="code-number">123456</span>
+                            <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em 30 minutos</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#" class="cta-button">
+                                <i class="fas fa-lock mr-2"></i>Redefinir Password
+                            </a>
+                        </div>
+                        
+                        <div class="security-note">
+                            <strong><i class="fas fa-shield-alt"></i> Importante:</strong> Se não solicitou a recuperação de password, ignore este email. A sua conta permanece segura.
+                        </div>
+                        
+                        <div style="background: #f3e8ff; border-left: 4px solid #8b5cf6; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #6b21a8;">
+                            <strong><i class="fas fa-lightbulb"></i> Dica de Segurança:</strong> Escolha uma password forte com pelo menos 8 caracteres, incluindo letras, números e símbolos.
+                        </div>
+                        
+                        <p style="margin-top: 30px;">
+                            Cumprimentos,<br>
+                            <strong>Equipa KROMI</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="email-footer">
+                        <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+                        <p>Pedido de recuperação enviado em {{request_time}}</p>
+                        <p style="margin-top: 15px;">
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Suporte</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">FAQ</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="copy-btn" onclick="copyTemplate('recuperacao')">
+                <i class="fas fa-copy mr-2"></i>Copiar HTML
+            </button>
+        </div>
+
+        <!-- 4. Template de Boas-vindas -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-heart mr-2" style="color: var(--primary);"></i>
+                4. Boas-vindas
+            </h2>
+            <p class="text-gray-400 mb-6">Template de boas-vindas após confirmação da conta</p>
+            
+            <div class="email-preview">
+                <div class="email-template">
+                    <div class="email-header">
+                        <h1 class="email-logo">KROMI</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+                    </div>
+                    
+                    <div class="email-content">
+                        <div class="welcome-banner">
+                            <h2 style="margin: 0 0 10px 0; font-size: 24px;"><i class="fas fa-party-horn mr-2"></i>Bem-vindo à KROMI!</h2>
+                            <p style="margin: 0; opacity: 0.9;">A sua conta foi ativada com sucesso</p>
+                        </div>
+                        
+                        <p>Olá <strong>{{user_name}}</strong>,</p>
+                        
+                        <p>É com grande prazer que lhe damos as boas-vindas à KROMI, a plataforma líder em gestão desportiva! A sua conta foi verificada e está pronta para usar.</p>
+                        
+                        <h3 style="color: #fc6b03; margin: 30px 0 15px 0;">🚀 Próximos Passos:</h3>
+                        <ul style="color: #444; line-height: 1.8;">
+                            <li><strong>Complete o seu perfil</strong> - Adicione informações sobre si</li>
+                            <li><strong>Explore a plataforma</strong> - Descubra todas as funcionalidades</li>
+                            <li><strong>Crie o seu primeiro evento</strong> - Comece a gerir a sua atividade desportiva</li>
+                            <li><strong>Convide a sua equipa</strong> - Colabore com outros utilizadores</li>
+                        </ul>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#" class="cta-button">
+                                <i class="fas fa-rocket mr-2"></i>Começar Agora
+                            </a>
+                        </div>
+                        
+                        <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #075985;">
+                            <strong><i class="fas fa-graduation-cap"></i> Centro de Ajuda:</strong> Precisa de ajuda para começar? Visite o nosso <a href="#" style="color: #fc6b03;">Centro de Ajuda</a> ou contacte o suporte.
+                        </div>
+                        
+                        <p>Estamos aqui para o ajudar a ter sucesso. Se tiver alguma dúvida, não hesite em contactar-nos.</p>
+                        
+                        <p style="margin-top: 30px;">
+                            Welcome aboard!<br>
+                            <strong>Equipa KROMI</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="email-footer">
+                        <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+                        <p>Conta criada em {{creation_date}}</p>
+                        <p style="margin-top: 15px;">
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Perfil</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Configurações</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Suporte</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="copy-btn" onclick="copyTemplate('boasvindas')">
+                <i class="fas fa-copy mr-2"></i>Copiar HTML
+            </button>
+        </div>
+
+        <!-- 5. Template de Confirmação de Password Alterada -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-check-circle mr-2" style="color: var(--primary);"></i>
+                5. Confirmação de Password Alterada
+            </h2>
+            <p class="text-gray-400 mb-6">Template de confirmação após alteração de password</p>
+            
+            <div class="email-preview">
+                <div class="email-template">
+                    <div class="email-header">
+                        <h1 class="email-logo">KROMI</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+                    </div>
+                    
+                    <div class="email-content">
+                        <div style="background: #dcfce7; border-left: 4px solid #16a34a; padding: 20px; margin: 0 0 30px 0; border-radius: 4px; text-align: center;">
+                            <h2 style="color: #166534; margin: 0 0 10px 0;"><i class="fas fa-check-circle mr-2"></i>Password Alterada com Sucesso!</h2>
+                            <p style="color: #166534; margin: 0;">A sua password foi atualizada em {{change_time}}</p>
+                        </div>
+                        
+                        <p>Olá <strong>{{user_name}}</strong>,</p>
+                        
+                        <p>Confirmamos que a password da sua conta KROMI foi alterada com sucesso. Esta alteração foi efetuada em {{change_date}} às {{change_time}}.</p>
+                        
+                        <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                            <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 16px;">
+                                <i class="fas fa-info-circle mr-2"></i>Detalhes da Alteração:
+                            </h3>
+                            <p style="margin: 5px 0; color: #78350f;"><strong>Data:</strong> {{change_date}}</p>
+                            <p style="margin: 5px 0; color: #78350f;"><strong>Hora:</strong> {{change_time}}</p>
+                            <p style="margin: 5px 0; color: #78350f;"><strong>Localização:</strong> {{location}}</p>
+                            <p style="margin: 5px 0; color: #78350f;"><strong>Dispositivo:</strong> {{device_info}}</p>
+                        </div>
+                        
+                        <div class="security-note">
+                            <strong><i class="fas fa-exclamation-triangle"></i> Não foi você?</strong> Se não alterou a sua password, a sua conta pode estar comprometida. <a href="mailto:seguranca@kromi.online" style="color: #fc6b03;">Contacte-nos imediatamente</a>.
+                        </div>
+                        
+                        <h3 style="color: #fc6b03; margin: 30px 0 15px 0;">🔒 Dicas de Segurança:</h3>
+                        <ul style="color: #444; line-height: 1.8;">
+                            <li>Mantenha a sua password segura e não a partilhe</li>
+                            <li>Use passwords únicas para cada serviço</li>
+                            <li>Ative a autenticação de dois fatores quando disponível</li>
+                            <li>Verifique regularmente a atividade da sua conta</li>
+                        </ul>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#" class="cta-button">
+                                <i class="fas fa-shield-alt mr-2"></i>Ver Atividade da Conta
+                            </a>
+                        </div>
+                        
+                        <p style="margin-top: 30px;">
+                            Cumprimentos,<br>
+                            <strong>Equipa KROMI</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="email-footer">
+                        <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+                        <p>Este email foi enviado para confirmar a alteração de password na sua conta</p>
+                        <p style="margin-top: 15px;">
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Centro de Segurança</a> | 
+                            <a href="#" style="color: #fc6b03; text-decoration: none;">Suporte</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="copy-btn" onclick="copyTemplate('confirmacao')">
+                <i class="fas fa-copy mr-2"></i>Copiar HTML
+            </button>
+        </div>
+
+        <!-- Seção de Instruções -->
+        <div class="template-section">
+            <h2 class="text-2xl font-bold mb-4 text-white">
+                <i class="fas fa-code mr-2" style="color: var(--primary);"></i>
+                Como Usar os Templates
+            </h2>
+            
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-orange-400">📧 Variáveis Dinâmicas:</h3>
+                <ul class="text-gray-300 space-y-2">
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{user_name}}</code> - Nome do utilizador</li>
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{user_email}}</code> - Email do utilizador</li>
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{verification_code}}</code> - Código de verificação</li>
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{expiry_time}}</code> - Tempo de expiração</li>
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{login_time}}</code> - Hora do login</li>
+                    <li><code class="bg-gray-700 px-2 py-1 rounded">{{ip_location}}</code> - Localização do IP</li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold mb-3 mt-6 text-orange-400">🎨 Personalização:</h3>
+                <ul class="text-gray-300 space-y-2">
+                    <li>Todos os templates são <strong>responsivos</strong> e funcionam em todos os clientes de email</li>
+                    <li>CSS inline para máxima compatibilidade</li>
+                    <li>Cores consistentes com a identidade KROMI</li>
+                    <li>Suporte para dark mode em clientes compatíveis</li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold mb-3 mt-6 text-orange-400">⚡ Implementação:</h3>
+                <ul class="text-gray-300 space-y-2">
+                    <li>Copie o HTML do template desejado</li>
+                    <li>Substitua as variáveis {{}} pelos valores reais</li>
+                    <li>Teste em diferentes clientes de email</li>
+                    <li>Configure o seu servidor de email para envio</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyTemplate(type) {
+            const templates = {
+                'registro': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Verificação de Registro</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px;">KROMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: #ffffff;">
+            <h2 style="color: #1a1a1a; margin-bottom: 20px;">Bem-vindo à KROMI!</h2>
+            
+            <p>Obrigado por se registar na nossa plataforma. Para completar o seu registo e ativar a sua conta, por favor confirme o seu endereço de email com o código abaixo:</p>
+            
+            <div style="background: #f8fafc; border: 2px dashed #fc6b03; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Verificação:</p>
+                <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold; color: #fc6b03; letter-spacing: 8px; margin: 0; display: block;">{{verification_code}}</span>
+                <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em {{expiry_minutes}} minutos</p>
+            </div>
+            
+            <div style="background: #fef3cd; border-left: 4px solid #fbbf24; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #92400e;">
+                <strong>🛡️ Nota de Segurança:</strong> Se não criou uma conta KROMI, ignore este email. A sua segurança é a nossa prioridade.
+            </div>
+            
+            <p>Se tiver alguma dúvida, contacte o nosso suporte em <a href="mailto:suporte@kromi.online" style="color: #fc6b03;">suporte@kromi.online</a></p>
+            
+            <p style="margin-top: 30px;">
+                Cumprimentos,<br>
+                <strong>Equipa KROMI</strong>
+            </p>
+        </div>
+        
+        <div style="background: #1a1a1a; color: #888; padding: 30px; text-align: center; font-size: 14px;">
+            <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+            <p>Este email foi enviado para {{user_email}} porque criou uma conta na nossa plataforma.</p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+                'login': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Código de Login</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px;">KROMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: #ffffff;">
+            <h2 style="color: #1a1a1a; margin-bottom: 20px;">Código de Verificação para Login</h2>
+            
+            <p>Recebemos um pedido de login na sua conta KROMI. Para prosseguir com o login, utilize o código de verificação abaixo:</p>
+            
+            <div style="background: #f8fafc; border: 2px dashed #fc6b03; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Login:</p>
+                <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold; color: #fc6b03; letter-spacing: 8px; margin: 0; display: block;">{{verification_code}}</span>
+                <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em {{expiry_minutes}} minutos</p>
+            </div>
+            
+            <div style="background: #fef3cd; border-left: 4px solid #fbbf24; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #92400e;">
+                <strong>⚠️ Atenção:</strong> Se não tentou fazer login, por favor contacte-nos imediatamente em <a href="mailto:seguranca@kromi.online" style="color: #fc6b03;">seguranca@kromi.online</a>
+            </div>
+            
+            <p style="margin-top: 30px;">
+                Cumprimentos,<br>
+                <strong>Equipa KROMI</strong>
+            </p>
+        </div>
+        
+        <div style="background: #1a1a1a; color: #888; padding: 30px; text-align: center; font-size: 14px;">
+            <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+            <p>Tentativa de login detectada em {{login_time}} de {{ip_location}}</p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+                'recuperacao': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Recuperação de Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px;">KROMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: #ffffff;">
+            <h2 style="color: #1a1a1a; margin-bottom: 20px;">Recuperação de Password</h2>
+            
+            <p>Recebemos um pedido para redefinir a password da sua conta KROMI. Utilize o código abaixo para criar uma nova password:</p>
+            
+            <div style="background: #f8fafc; border: 2px dashed #fc6b03; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Código de Recuperação:</p>
+                <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold; color: #fc6b03; letter-spacing: 8px; margin: 0; display: block;">{{verification_code}}</span>
+                <p style="margin: 15px 0 0 0; font-size: 12px; color: #888;">Este código expira em {{expiry_minutes}} minutos</p>
+            </div>
+            
+            <div style="background: #fef3cd; border-left: 4px solid #fbbf24; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #92400e;">
+                <strong>🛡️ Importante:</strong> Se não solicitou a recuperação de password, ignore este email. A sua conta permanece segura.
+            </div>
+            
+            <p style="margin-top: 30px;">
+                Cumprimentos,<br>
+                <strong>Equipa KROMI</strong>
+            </p>
+        </div>
+        
+        <div style="background: #1a1a1a; color: #888; padding: 30px; text-align: center; font-size: 14px;">
+            <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+            <p>Pedido de recuperação enviado em {{request_time}}</p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+                'boasvindas': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Boas-vindas</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px;">KROMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: #ffffff;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 0 0 30px 0;">
+                <h2 style="margin: 0 0 10px 0; font-size: 24px;">🎉 Bem-vindo à KROMI!</h2>
+                <p style="margin: 0; opacity: 0.9;">A sua conta foi ativada com sucesso</p>
+            </div>
+            
+            <p>Olá <strong>{{user_name}}</strong>,</p>
+            
+            <p>É com grande prazer que lhe damos as boas-vindas à KROMI, a plataforma líder em gestão desportiva! A sua conta foi verificada e está pronta para usar.</p>
+            
+            <h3 style="color: #fc6b03; margin: 30px 0 15px 0;">🚀 Próximos Passos:</h3>
+            <ul style="color: #444; line-height: 1.8;">
+                <li><strong>Complete o seu perfil</strong> - Adicione informações sobre si</li>
+                <li><strong>Explore a plataforma</strong> - Descubra todas as funcionalidades</li>
+                <li><strong>Crie o seu primeiro evento</strong> - Comece a gerir a sua atividade desportiva</li>
+                <li><strong>Convide a sua equipa</strong> - Colabore com outros utilizadores</li>
+            </ul>
+            
+            <p>Estamos aqui para o ajudar a ter sucesso. Se tiver alguma dúvida, não hesite em contactar-nos.</p>
+            
+            <p style="margin-top: 30px;">
+                Welcome aboard!<br>
+                <strong>Equipa KROMI</strong>
+            </p>
+        </div>
+        
+        <div style="background: #1a1a1a; color: #888; padding: 30px; text-align: center; font-size: 14px;">
+            <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+            <p>Conta criada em {{creation_date}}</p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+                'confirmacao': `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Password Alterada</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #fc6b03 0%, #e55a02 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px;">KROMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de Gestão Desportiva</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: #ffffff;">
+            <div style="background: #dcfce7; border-left: 4px solid #16a34a; padding: 20px; margin: 0 0 30px 0; border-radius: 4px; text-align: center;">
+                <h2 style="color: #166534; margin: 0 0 10px 0;">✅ Password Alterada com Sucesso!</h2>
+                <p style="color: #166534; margin: 0;">A sua password foi atualizada em {{change_time}}</p>
+            </div>
+            
+            <p>Olá <strong>{{user_name}}</strong>,</p>
+            
+            <p>Confirmamos que a password da sua conta KROMI foi alterada com sucesso. Esta alteração foi efetuada em {{change_date}} às {{change_time}}.</p>
+            
+            <div style="background: #fef3cd; border-left: 4px solid #fbbf24; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #92400e;">
+                <strong>⚠️ Não foi você?</strong> Se não alterou a sua password, a sua conta pode estar comprometida. <a href="mailto:seguranca@kromi.online" style="color: #fc6b03;">Contacte-nos imediatamente</a>.
+            </div>
+            
+            <p style="margin-top: 30px;">
+                Cumprimentos,<br>
+                <strong>Equipa KROMI</strong>
+            </p>
+        </div>
+        
+        <div style="background: #1a1a1a; color: #888; padding: 30px; text-align: center; font-size: 14px;">
+            <p><strong>KROMI</strong> - Plataforma de Gestão Desportiva</p>
+            <p>Este email foi enviado para confirmar a alteração de password na sua conta</p>
+        </div>
+    </div>
+</body>
+</html>`
+            };
+
+            navigator.clipboard.writeText(templates[type]).then(() => {
+                // Mostrar toast de sucesso
+                showToast('Template copiado para a área de transferência!', 'success');
+            }).catch(() => {
+                // Fallback para browsers antigos
+                const textarea = document.createElement('textarea');
+                textarea.value = templates[type];
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Template copiado para a área de transferência!', 'success');
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg text-white font-medium transform transition-all duration-300 ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'times'} mr-2"></i>${message}`;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDtDuK29ohaQQgrx2PXhaUA1VpTRp96ovt6X9OO%2BR6eI013GIpkePC04rkLT5qLEkX8Ts7GBvllQ2dTRNbE8jm7muqogX4l8z7IDLfD%2BO%2BU7Ig2%2Bjjn7BiN1j5vlTfp8fFP7NCt6Ix01UOzsQUIGYIDGI4zi%2B4%2FiEkZtDArY88S2N7vNuyZ%2BR6ftOZvsb%2BVuwwndJoG6yccvAbGmbnpmRezBQ%2BJZAlEm%2F1kRRzzLy9qxZuboooBXtfvfQK394x5HtdNKee9xCczuA22WDMhN0ch1hRVv%2FhuoTwlQMDnc0s4ymOrkQ7f0tRBNIEshTCD9zhpVAAeB8E9PJf1cxbpcrmO2cvIphuSk03jkSDumMdoZZn9tDUYFNnlyXUY%2FU%2Fx%2BZSgnOaxqpThxY5g5PUlCPGP1Z5CjyeRyTqsqMX8gbRVzQd9hneo5a%2ByBq9JpAuU4STXDogRI3W4dMy3eoUlm9WIp057MTS45Ydw9E8K4vZtPdmhYTzn3bEyMiFAOL4taMSA%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDtDuK29ohaQQgrx2PXhaUA1VpTRp96ovt6X9OO+R6eI013GIpkePC04rkLT5qLEkX8Ts7GBvllQ2dTRNbE8jm7muqogX4l8z7IDLfD+O+U7Ig2+jjn7BiN1j5vlTfp8fFP7NCt6Ix01UOzsQUIGYIDGI4zi+4/iEkZtDArY88S2N7vNuyZ+R6ftOZvsb+VuwwndJoG6yccvAbGmbnpmRezBQ+JZAlEm/1kRRzzLy9qxZuboooBXtfvfQK394x5HtdNKee9xCczuA22WDMhN0ch1hRVv/huoTwlQMDnc0s4ymOrkQ7f0tRBNIEshTCD9zhpVAAeB8E9PJf1cxbpcrmO2cvIphuSk03jkSDumMdoZZn9tDUYFNnlyXUY/U/x+ZSgnOaxqpThxY5g5PUlCPGP1Z5CjyeRyTqsqMX8gbRVzQd9hneo5a+yBq9JpAuU4STXDogRI3W4dMy3eoUlm9WIp057MTS45Ydw9E8K4vZtPdmhYTzn3bEyMiFAOL4taMSA==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

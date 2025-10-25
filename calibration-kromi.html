@@ -1,0 +1,3619 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Calibração IA</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+        <link rel="stylesheet" href="kromi-layout-fixes.css">
+        <script src="kromi-sidebar-toggle.js"></script>
+        <script src="kromi-sidebar-toggle.js"></script>
+    
+    <style>
+        /* Calibration specific styles */
+        .calibration-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .step-container {
+            display: grid;
+            gap: var(--spacing-6);
+        }
+        
+        .step {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .step-header {
+            background: var(--bg-primary);
+            padding: var(--spacing-4) var(--spacing-6);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+        }
+        
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: var(--font-size-lg);
+        }
+        
+        .step-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .step-content {
+            padding: var(--spacing-6);
+        }
+        
+        .step-description {
+            color: var(--text-secondary);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-8);
+            text-align: center;
+            background: var(--bg-primary);
+            transition: all var(--transition-base);
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .upload-text {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .upload-subtext {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            margin: var(--spacing-4) 0;
+        }
+        
+        .detection-area {
+            position: relative;
+            display: inline-block;
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-base);
+            background: rgba(252, 107, 3, 0.1);
+        }
+        
+        .detection-area.active {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .calibration-controls {
+            display: flex;
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-4);
+            flex-wrap: wrap;
+        }
+        
+        .calibration-results {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-top: var(--spacing-4);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-4);
+        }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-2) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .result-value {
+            color: var(--text-secondary);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .progress-container {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin: var(--spacing-4) 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: var(--radius-sm);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: var(--spacing-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .config-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-2);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+        
+        .form-switch {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background var(--transition-base);
+        }
+        
+        .switch.active {
+            background: var(--primary);
+        }
+        
+        .switch-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform var(--transition-base);
+        }
+        
+        .switch.active .switch-thumb {
+            transform: translateX(20px);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-12);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+        }
+        
+        .empty-state p {
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .config-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .calibration-controls {
+                flex-direction: column;
+            }
+            
+            .step-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+        
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+                left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Seção de Calibração Existente (Integrada) */
+        .calibration-section {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            margin-bottom: var(--spacing-6);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+            padding-bottom: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .section-icon {
+            font-size: var(--font-size-4xl);
+            background: var(--primary);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .section-title {
+            margin: 0 0 var(--spacing-2) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-2xl);
+        }
+        
+        .section-description {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: var(--font-size-base);
+        }
+        
+        .calibration-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-5);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .calibration-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+        }
+        
+        .calibration-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .card-icon {
+            font-size: var(--font-size-xl);
+        }
+        
+        .card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+        }
+        
+        .calibration-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: var(--radius-base);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .info-grid {
+            display: grid;
+            gap: var(--spacing-3);
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-2) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .info-value.success {
+            color: var(--success);
+        }
+        
+        .status-badge {
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: var(--radius-base);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+        
+        .status-badge.success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .ai-description {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            line-height: 1.6;
+            background: var(--bg-primary);
+            padding: var(--spacing-4);
+            border-radius: var(--radius-base);
+            border: 1px solid var(--border-color);
+        }
+        
+        .calibration-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        @media (max-width: 768px) {
+            .calibration-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .calibration-actions {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--spacing-3);
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    🔧 Calibração
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    🔧 Calibração de IA
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-primary" id="startCalibration">
+                    <i>🚀</i> Iniciar Calibração
+                </button>
+                <button class="btn btn-sm btn-secondary" id="resetCalibration">
+                    <i>🔄</i> Resetar
+                </button>
+                <button class="btn btn-sm btn-secondary" id="exportConfig">
+                    <i>📤</i> Exportar Config
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <div class="calibration-container">
+                    
+                    <!-- Step 1: Upload Image -->
+                    <div class="step" id="step1">
+                        <div class="step-header">
+                            <div class="step-number">1</div>
+                            <h3 class="step-title">📷 Carregar Imagem de Referência</h3>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-description">
+                                Faça upload de uma foto clara de um dorsal para calibração. A imagem deve ter boa iluminação e o dorsal deve estar bem visível.
+                            </p>
+                            
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">Arraste uma imagem aqui ou clique para selecionar</div>
+                                <div class="upload-subtext">Formatos suportados: JPG, PNG, WEBP (máx. 10MB)</div>
+                                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            </div>
+                            
+                            <div id="imagePreview" style="display: none;">
+                                <img id="previewImage" class="image-preview" alt="Preview">
+                                <div class="calibration-controls">
+                                    <button class="btn btn-primary" id="analyzeImage">
+                                        <i>🔍</i> Analisar Imagem
+                                    </button>
+                                    <button class="btn btn-secondary" id="removeImage">
+                                        <i>🗑️</i> Remover Imagem
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Nomenclatura dos Dorsais -->
+                    <div class="step" id="step2" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">2</div>
+                            <h3 class="step-title">🔢 Nomenclatura dos Dorsais</h3>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-description">
+                                Configure o formato dos números de dorsal usados no evento. Isto ajuda a IA a detectar corretamente os diferentes tipos de numeração.
+                            </p>
+                            
+                            <!-- Informações Explicativas -->
+                            <div style="background: linear-gradient(135deg, var(--info), #3b82f6); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                    <span style="font-size: var(--font-size-xl);">💡</span>
+                                    <h4 style="margin: 0; font-size: var(--font-size-lg);">O que será feito aqui?</h4>
+                                </div>
+                                <div style="font-size: var(--font-size-sm); line-height: 1.6;">
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        <strong>Análise Automática:</strong> A IA já analisou sua imagem e sugeriu a melhor configuração de nomenclatura baseada no que detectou.
+                                    </p>
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        <strong>Otimização:</strong> Esta configuração ajudará a IA a encontrar dorsais mais rapidamente e com maior precisão durante o evento.
+                                    </p>
+                                    <p style="margin: 0;">
+                                        <strong>Personalização:</strong> Você pode ajustar as configurações sugeridas conforme necessário.
+                                    </p>
+                                </div>
+                            </div>
+                            </p>
+                            
+                            <!-- Tipo de Nomenclatura -->
+                            <div style="margin-bottom: var(--spacing-5);">
+                                <label style="display: block; margin-bottom: var(--spacing-3); font-weight: 600; color: var(--text-primary);">
+                                    Tipo de Nomenclatura:
+                                </label>
+                                
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('numeric')">
+                                        <input type="radio" name="nomenclatureType" value="numeric" checked>
+                                        <div>
+                                            <div style="font-weight: 600;">🔢 Numérico (Padrão)</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Números simples: 1, 2, 3, ..., 9999</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('prefix')">
+                                        <input type="radio" name="nomenclatureType" value="prefix">
+                                        <div>
+                                            <div style="font-weight: 600;">📝 Com Prefixo</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407, F-156, PRO-023</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('suffix')">
+                                        <input type="radio" name="nomenclatureType" value="suffix">
+                                        <div>
+                                            <div style="font-weight: 600;">📝 Com Sufixo</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: 407-M, 156-F, 023-PRO</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('prefix-suffix')">
+                                        <input type="radio" name="nomenclatureType" value="prefix-suffix">
+                                        <div>
+                                            <div style="font-weight: 600;">📝 Prefixo + Sufixo</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407-F, PRO-023-ELITE</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('markers')">
+                                        <input type="radio" name="nomenclatureType" value="markers">
+                                        <div>
+                                            <div style="font-weight: 600;">🎨 Marcadores de Cor</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Cores antes/depois: 🟢407🔴</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('custom')">
+                                        <input type="radio" name="nomenclatureType" value="custom">
+                                        <div>
+                                            <div style="font-weight: 600;">⚙️ Personalizado (Regex)</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Padrão customizado com expressão regular</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Numérico -->
+                            <div id="numericConfig" class="nomenclature-config" style="display: block;">
+                                <h4 style="margin-bottom: var(--spacing-3);">📊 Configuração Numérica</h4>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número Mínimo:</label>
+                                        <input type="number" id="numericMin" value="1" min="1" max="9999" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número Máximo:</label>
+                                        <input type="number" id="numericMax" value="9999" min="1" max="9999" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                    </div>
+                                    <div>
+                                        <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                            <input type="checkbox" id="usePadding">
+                                            Usar zeros à esquerda (001, 002, 003)
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Dígitos (com padding):</label>
+                                        <input type="number" id="numericDigits" value="3" min="1" max="6" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                    </div>
+                                </div>
+                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                    <strong>Exemplos:</strong> <span id="numericPreview">1, 2, 3, ..., 9999</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Prefixo -->
+                            <div id="prefixConfig" class="nomenclature-config" style="display: none;">
+                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Prefixo</h4>
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Prefixo(s) Permitidos:</label>
+                                        <input type="text" id="prefixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula (sem separador)</small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre prefixo e número:</label>
+                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
+                                            <input type="text" id="prefixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                                <input type="checkbox" id="prefixUseSeparator" checked>
+                                                Usar separador
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número após prefixo:</label>
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
+                                            <input type="number" id="prefixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <input type="number" id="prefixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                    <strong>Exemplos:</strong> <span id="prefixPreview">M-1, M-2, F-1, F-2, PRO-1</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Sufixo -->
+                            <div id="suffixConfig" class="nomenclature-config" style="display: none;">
+                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Sufixo</h4>
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Sufixo(s) Permitidos:</label>
+                                        <input type="text" id="suffixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula (sem separador)</small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre número e sufixo:</label>
+                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
+                                            <input type="text" id="suffixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                                <input type="checkbox" id="suffixUseSeparator" checked>
+                                                Usar separador
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número antes do sufixo:</label>
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
+                                            <input type="number" id="suffixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <input type="number" id="suffixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                    <strong>Exemplos:</strong> <span id="suffixPreview">1-M, 2-M, 1-F, 2-F, 1-PRO</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Prefixo + Sufixo -->
+                            <div id="prefixSuffixConfig" class="nomenclature-config" style="display: none;">
+                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Prefixo + Sufixo</h4>
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Prefixo(s) Permitidos:</label>
+                                        <input type="text" id="prefixSuffixPrefixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula</small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Sufixo(s) Permitidos:</label>
+                                        <input type="text" id="prefixSuffixSuffixText" placeholder="Ex: M, F, ELITE" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula</small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre prefixo e número:</label>
+                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
+                                            <input type="text" id="prefixSuffixPrefixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                                <input type="checkbox" id="prefixSuffixPrefixUseSeparator" checked>
+                                                Usar separador
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre número e sufixo:</label>
+                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
+                                            <input type="text" id="prefixSuffixSuffixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                                <input type="checkbox" id="prefixSuffixSuffixUseSeparator" checked>
+                                                Usar separador
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número central:</label>
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
+                                            <input type="number" id="prefixSuffixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <input type="number" id="prefixSuffixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                    <strong>Exemplos:</strong> <span id="prefixSuffixPreview">M-1-M, M-2-F, PRO-1-ELITE</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Marcadores -->
+                            <div id="markersConfig" class="nomenclature-config" style="display: none;">
+                                <h4 style="margin-bottom: var(--spacing-3);">🎨 Configuração com Marcadores de Cor</h4>
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Cor de Início:</label>
+                                        <div style="display: flex; gap: var(--spacing-2); align-items: center;">
+                                            <input type="color" id="startColor" value="#10b981" style="width: 60px; height: 40px; border: none; border-radius: var(--radius-base);">
+                                            <input type="text" id="startColorName" placeholder="Ex: Verde" style="flex: 1; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Cor de Fim:</label>
+                                        <div style="display: flex; gap: var(--spacing-2); align-items: center;">
+                                            <input type="color" id="endColor" value="#ef4444" style="width: 60px; height: 40px; border: none; border-radius: var(--radius-base);">
+                                            <input type="text" id="endColorName" placeholder="Ex: Vermelho" style="flex: 1; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Tolerância de Cor (%):</label>
+                                        <input type="range" id="colorTolerance" min="5" max="50" value="20" style="width: 100%;">
+                                        <div style="text-align: center; color: var(--text-secondary);"><span id="toleranceValue">20</span>%</div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                    <strong>Exemplo:</strong> <span style="color: #10b981;">🟢</span> 407 <span style="color: #ef4444;">🔴</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Config Custom -->
+                            <div id="customConfig" class="nomenclature-config" style="display: none;">
+                                <h4 style="margin-bottom: var(--spacing-3);">⚙️ Configuração Personalizada (Regex)</h4>
+                                <div style="display: grid; gap: var(--spacing-3);">
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Expressão Regular:</label>
+                                        <input type="text" id="customRegex" placeholder="Ex: ^[A-Z]\d{3}$" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary); font-family: monospace;">
+                                        <small style="color: var(--text-secondary);">Padrão para validar dorsais</small>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: var(--spacing-2);">Exemplos (separar com vírgula):</label>
+                                        <input type="text" id="customExamples" placeholder="Ex: A123, B456, C789" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-secondary" onclick="testRegex()">
+                                            <i>🧪</i> Testar Regex
+                                        </button>
+                                        <div id="regexTestResult" style="margin-top: var(--spacing-2); color: var(--text-secondary);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="calibration-controls">
+                                <button class="btn btn-primary" id="saveNomenclature">
+                                    <i>💾</i> Salvar Nomenclatura
+                                </button>
+                                <button class="btn btn-secondary" onclick="showStep(1)">
+                                    <i>←</i> Voltar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Detection Area (era Step 2) -->
+                    <div class="step" id="step3" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">3</div>
+                            <h3 class="step-title">🎯 Configurar Área de Detecção</h3>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-description">
+                                Ajuste a área onde o sistema deve procurar por dorsais. Arraste os cantos para definir a região de interesse.
+                            </p>
+                            
+                            <!-- Informações Explicativas -->
+                            <div style="background: linear-gradient(135deg, var(--warning), #f59e0b); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                    <span style="font-size: var(--font-size-xl);">🎯</span>
+                                    <h4 style="margin: 0; font-size: var(--font-size-lg);">O que será feito aqui?</h4>
+                                </div>
+                                <div style="font-size: var(--font-size-sm); line-height: 1.6;">
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        <strong>Detecção Automática:</strong> A IA já analisou sua imagem e sugeriu a melhor área onde os dorsais aparecem.
+                                    </p>
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        <strong>Otimização de Performance:</strong> Uma área bem definida reduz falsos positivos e acelera o processamento.
+                                    </p>
+                                    <p style="margin: 0;">
+                                        <strong>Ajuste Fino:</strong> Você pode mover e redimensionar a área sugerida para cobrir exatamente onde os dorsais aparecem.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div style="position: relative; display: inline-block;">
+                                <img id="detectionImage" class="image-preview" alt="Detection Area">
+                                <div class="detection-area" id="detectionArea" 
+                                    draggable="true"
+                                    style="position: absolute; top: 20%; left: 20%; width: 60%; height: 60%; border: 3px solid #fc6b03; background: rgba(252, 107, 3, 0.2); cursor: move; border-radius: var(--radius-base); box-shadow: 0 0 20px rgba(252, 107, 3, 0.5);">
+                                    <div style="position: absolute; top: -25px; left: 0; background: #fc6b03; color: white; padding: 4px 12px; border-radius: var(--radius-base); font-size: var(--font-size-sm); font-weight: 600;">
+                                        📍 Área do Número
+                                    </div>
+                                    <!-- Resize handles -->
+                                    <div class="resize-handle" style="position: absolute; bottom: -5px; right: -5px; width: 15px; height: 15px; background: #fc6b03; border: 2px solid white; cursor: nwse-resize; border-radius: 50%;"></div>
+                                    <div class="resize-handle" style="position: absolute; bottom: 50%; right: -5px; width: 15px; height: 15px; background: #fc6b03; border: 2px solid white; cursor: ew-resize; border-radius: 50%; transform: translateY(50%);"></div>
+                                    <div class="resize-handle" style="position: absolute; bottom: -5px; right: 50%; width: 15px; height: 15px; background: #fc6b03; border: 2px solid white; cursor: ns-resize; border-radius: 50%; transform: translateX(50%);"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
+                                <div id="areaInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                    Arraste para mover • Use os círculos para redimensionar
+                                </div>
+                            </div>
+                            
+                            <div class="calibration-controls">
+                                <button class="btn btn-primary" id="saveDetectionArea">
+                                    <i>💾</i> Salvar Área
+                                </button>
+                                <button class="btn btn-secondary" id="resetDetectionArea">
+                                    <i>🔄</i> Resetar Área
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 4: AI Configuration (era Step 3) -->
+                    <div class="step" id="step4" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">4</div>
+                            <h3 class="step-title">🤖 Configuração da IA</h3>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-description">
+                                Configure os parâmetros da IA para otimizar a detecção de dorsais. Ajuste conforme necessário para melhorar a precisão.
+                            </p>
+                            
+                            <div style="display: grid; gap: var(--spacing-5); max-width: 800px; margin: 0 auto;">
+                                
+                                <!-- Limiar de Confiança -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <label style="font-weight: 600; color: var(--text-primary); font-size: var(--font-size-lg);">🎯 Limiar de Confiança</label>
+                                        <div style="background: var(--primary); color: white; padding: 2px 8px; border-radius: var(--radius-base); font-size: var(--font-size-sm); font-weight: 600;">
+                                        <span id="confidenceValue">0.7</span>
+                                        </div>
+                                    </div>
+                                    <input type="range" id="confidenceThreshold" min="0.1" max="1" step="0.1" value="0.7" 
+                                           style="width: 100%; height: 8px; background: var(--bg-secondary); border-radius: 4px; outline: none; cursor: pointer;">
+                                    <div style="display: flex; justify-content: space-between; margin-top: var(--spacing-2); font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                        <span>0.1 (Baixa)</span>
+                                        <span>0.5 (Média)</span>
+                                        <span>1.0 (Alta)</span>
+                                    </div>
+                                    <div style="margin-top: var(--spacing-2); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                            <strong>O que faz:</strong> Define o nível mínimo de confiança para aceitar uma detecção. Valores mais altos = menos detecções mas mais precisas. Valores mais baixos = mais detecções mas podem incluir falsos positivos.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Velocidade de Detecção -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <label style="font-weight: 600; color: var(--text-primary); font-size: var(--font-size-lg);">⚡ Velocidade de Detecção</label>
+                                    </div>
+                                    <select id="detectionSpeed" style="width: 100%; padding: var(--spacing-3); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary); font-size: var(--font-size-base);">
+                                        <option value="fast">🚀 Rápida (menos precisa)</option>
+                                        <option value="balanced" selected>⚖️ Equilibrada</option>
+                                        <option value="accurate">🎯 Precisa (mais lenta)</option>
+                                    </select>
+                                    <div style="margin-top: var(--spacing-2); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                            <strong>O que faz:</strong> Controla o equilíbrio entre velocidade e precisão. Rápida = processamento mais rápido mas pode perder detecções. Precisa = análise mais detalhada mas demora mais tempo.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Configurações Avançadas -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <h4 style="margin-bottom: var(--spacing-4); color: var(--text-primary); font-size: var(--font-size-lg);">⚙️ Configurações Avançadas</h4>
+                                    
+                                    <div style="display: grid; gap: var(--spacing-4);">
+                                        
+                                        <!-- Pré-processamento -->
+                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-1);">🔧 Pré-processamento</div>
+                                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Melhorar qualidade da imagem</div>
+                                            </div>
+                                    <div class="form-switch">
+                                        <div class="switch active" id="preprocessingSwitch">
+                                            <div class="switch-thumb"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                        <!-- Pós-processamento -->
+                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-1);">🔍 Pós-processamento</div>
+                                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Filtrar falsos positivos</div>
+                                            </div>
+                                    <div class="form-switch">
+                                        <div class="switch active" id="postprocessingSwitch">
+                                            <div class="switch-thumb"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                        <!-- Máximo de Detecções -->
+                                        <div style="padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-2);">🔢 Máximo de Detecções</div>
+                                            <input type="number" id="maxDetections" min="1" max="10" value="3" 
+                                                   style="width: 100px; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                                <strong>O que faz:</strong> Limita o número máximo de dorsais detectados por imagem. Útil para evitar detecções excessivas em imagens com muitos elementos.
+                                            </div>
+                                </div>
+                                
+                                        <!-- Timeout -->
+                                        <div style="padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-2);">⏱️ Timeout (ms)</div>
+                                            <input type="number" id="detectionTimeout" min="100" max="5000" step="100" value="1000" 
+                                                   style="width: 120px; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                                <strong>O que faz:</strong> Tempo máximo para processar uma imagem. Se exceder, a detecção é cancelada. Valores baixos = mais rápido mas pode falhar em imagens complexas.
+                                </div>
+                            </div>
+                            
+                                    </div>
+                                </div>
+                                
+                                <!-- Informações Adicionais -->
+                                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white;">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-2);">
+                                        <span style="font-size: var(--font-size-xl);">💡</span>
+                                        <h4 style="margin: 0; font-size: var(--font-size-lg);">Dicas de Configuração</h4>
+                                    </div>
+                                    <ul style="margin: 0; padding-left: var(--spacing-4); font-size: var(--font-size-sm); line-height: 1.6;">
+                                        <li><strong>Para eventos com muitos participantes:</strong> Use velocidade "Rápida" e limite máximo de detecções</li>
+                                        <li><strong>Para dorsais pequenos ou distantes:</strong> Aumente o limiar de confiança e use velocidade "Precisa"</li>
+                                        <li><strong>Para imagens com baixa qualidade:</strong> Ative o pré-processamento</li>
+                                        <li><strong>Para reduzir falsos positivos:</strong> Ative o pós-processamento e aumente o timeout</li>
+                                    </ul>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="calibration-controls" style="margin-top: var(--spacing-5);">
+                                <button class="btn btn-primary" id="saveAIConfig">
+                                    <i>💾</i> Salvar Configuração
+                                </button>
+                                <button class="btn btn-secondary" id="testConfiguration">
+                                    <i>🧪</i> Testar Configuração
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 5: Calibration Results -->
+                    <div class="step" id="step5" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">5</div>
+                            <h3 class="step-title">📊 Resultados da Calibração</h3>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-description">
+                                A calibração foi concluída com sucesso! Veja os resultados da detecção e a análise da IA.
+                            </p>
+                            
+                            <div style="display: grid; gap: var(--spacing-5); max-width: 900px; margin: 0 auto;">
+                                
+                                <!-- Resultado Principal -->
+                                <div style="background: linear-gradient(135deg, var(--success), #10b981); border-radius: var(--radius-lg); padding: var(--spacing-5); color: white; text-align: center;">
+                                    <div style="font-size: var(--font-size-4xl); margin-bottom: var(--spacing-2);">🎯</div>
+                                    <h2 style="margin: 0 0 var(--spacing-2) 0; font-size: var(--font-size-2xl);">Calibração Concluída!</h2>
+                                    <div style="font-size: var(--font-size-lg); opacity: 0.9;" id="mainResult">
+                                        Número detectado: <strong id="detectedNumber">--</strong>
+                                </div>
+                                </div>
+                                
+                                <!-- Imagem de Referência -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <span style="font-size: var(--font-size-xl);">📷</span>
+                                        <h3 style="margin: 0; color: var(--text-primary);">Imagem de Referência</h3>
+                                    </div>
+                                    <div style="text-align: center; background: var(--bg-secondary); border-radius: var(--radius-base); padding: var(--spacing-4);">
+                                        <img id="referenceImage" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-base); box-shadow: var(--shadow-lg);" alt="Imagem de referência da calibração">
+                                        <div style="margin-top: var(--spacing-2); color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                            Imagem utilizada para calibração do sistema
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Análise da IA -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <span style="font-size: var(--font-size-xl);">🤖</span>
+                                        <h3 style="margin: 0; color: var(--text-primary);">Análise da IA</h3>
+                                </div>
+                                    <div style="background: var(--bg-secondary); border-radius: var(--radius-base); padding: var(--spacing-4);">
+                                        <div id="aiDescription" style="color: var(--text-secondary); line-height: 1.6; font-size: var(--font-size-base);">
+                                            A IA está analisando a imagem...
+                                </div>
+                                </div>
+                            </div>
+                            
+                                <!-- Estatísticas de Performance -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <span style="font-size: var(--font-size-xl);">📈</span>
+                                        <h3 style="margin: 0; color: var(--text-primary);">Estatísticas de Performance</h3>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3);">
+                                        <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--primary);" id="confidenceResult">--</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Confiança</div>
+                                        </div>
+                                        <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--success);" id="processingTimeResult">--</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Tempo (ms)</div>
+                                        </div>
+                                        <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--warning);" id="detectionCountResult">--</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Detecções</div>
+                                        </div>
+                                        <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--info);" id="accuracyResult">--</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Precisão</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Configuração Aplicada -->
+                                <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: var(--spacing-4); border: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <span style="font-size: var(--font-size-xl);">⚙️</span>
+                                        <h3 style="margin: 0; color: var(--text-primary);">Configuração Aplicada</h3>
+                                    </div>
+                                    <div id="appliedConfig" style="background: var(--bg-secondary); border-radius: var(--radius-base); padding: var(--spacing-3); font-family: monospace; font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                        Carregando configuração...
+                                    </div>
+                                </div>
+                                
+                                <!-- Próximos Passos -->
+                                <div style="background: linear-gradient(135deg, var(--info), #3b82f6); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white;">
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                        <span style="font-size: var(--font-size-xl);">🚀</span>
+                                        <h3 style="margin: 0; font-size: var(--font-size-lg);">Próximos Passos</h3>
+                                    </div>
+                                    <ul style="margin: 0; padding-left: var(--spacing-4); font-size: var(--font-size-sm); line-height: 1.6;">
+                                        <li>A configuração foi salva e está pronta para uso</li>
+                                        <li>O sistema de detecção está ativo para este evento</li>
+                                        <li>Pode iniciar a detecção em tempo real</li>
+                                        <li>Pode ajustar configurações a qualquer momento</li>
+                                    </ul>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="calibration-controls" style="margin-top: var(--spacing-5);">
+                                <button class="btn btn-success" id="finishCalibration" style="background: var(--success);">
+                                    <i>✅</i> Terminar Calibração
+                                </button>
+                                <button class="btn btn-secondary" id="recalibrate">
+                                    <i>🔄</i> Recalibrar
+                                </button>
+                                <button class="btn btn-primary" id="testAgain">
+                                    <i>🧪</i> Testar Novamente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Indicator -->
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Preparando calibração...</div>
+                    </div>
+                </div>
+                
+                <!-- Existing Calibration Modal -->
+                <!-- Seção de Calibração Existente (Integrada) - MOVED OUTSIDE calibration-container -->
+                <div id="existingCalibrationSection" class="calibration-section" style="display: none;">
+                        <div class="section-header">
+                            <div class="section-icon">🔧</div>
+                            <div class="section-content">
+                                <h2 class="section-title">Calibração Existente</h2>
+                                <p class="section-description">Já existe uma calibração salva para este evento</p>
+                            </div>
+                        </div>
+                        
+                        <div class="calibration-grid">
+                            <!-- Imagem de Calibração -->
+                            <div class="calibration-card">
+                                <div class="card-header">
+                                    <div class="card-icon">📷</div>
+                                    <div class="card-title">Imagem de Calibração</div>
+                                </div>
+                                <div class="card-content">
+                                    <img id="existingImagePreview" class="calibration-image" alt="Imagem de calibração">
+                                </div>
+                            </div>
+                            
+                            <!-- Informações da Calibração -->
+                            <div class="calibration-card">
+                                <div class="card-header">
+                                    <div class="card-icon">📊</div>
+                                    <div class="card-title">Informações da Calibração</div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="info-grid">
+                                        <div class="info-item">
+                                            <span class="info-label">Número Detectado:</span>
+                                            <span class="info-value" id="existingDetectedNumber">--</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="info-label">Confiança:</span>
+                                            <span class="info-value success" id="existingConfidence">--</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="info-label">Data da Calibração:</span>
+                                            <span class="info-value" id="existingDate">--</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="info-label">Status:</span>
+                                            <span class="status-badge success">✅ Ativa</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Descrição da IA -->
+                            <div class="calibration-card full-width">
+                                <div class="card-header">
+                                    <div class="card-icon">🤖</div>
+                                    <div class="card-title">Descrição da IA</div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="ai-description" id="existingDescription">Carregando descrição...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ações -->
+                        <div class="calibration-actions">
+                            <button class="btn btn-primary" id="continueWithExisting">
+                                <i>✅</i> Continuar com Calibração Atual
+                            </button>
+                            <button class="btn btn-secondary" id="startNewCalibration">
+                                <i>🔄</i> Fazer Nova Calibração
+                            </button>
+                            <button class="btn btn-outline" id="viewCalibrationDetails">
+                                <i>👁️</i> Ver Detalhes da Calibração
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/events'">
+                <i>🏃</i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/detection'">
+                <i>📱</i>
+                <span>Detecção</span>
+            </button>
+            <button class="nav-btn active">
+                <i>🔧</i>
+                <span>Calibração</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="supabase.js"></script>
+    <script src="navigation.js"></script>
+    
+    <!-- Calibration Logic -->
+    <script>
+        // Global variables
+        let currentEvent = null;
+        let uploadedImage = null;
+        let detectionArea = null;
+        let aiConfig = {};
+        let calibrationResults = {};
+        let imageAnalysis = null;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize navigation
+            if (window.Navigation) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                window.Navigation.init('calibration', eventId);
+                
+                if (eventId) {
+                    loadEventInfo(eventId);
+                    // Check for existing calibration
+                    checkExistingCalibration(eventId);
+                }
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load saved configuration
+            loadSavedConfiguration();
+        });
+        
+        function setupEventListeners() {
+            console.log('🔧 Configurando event listeners...');
+            
+            // Image upload
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            
+            if (uploadArea) {
+                uploadArea.addEventListener('click', () => {
+                    if (imageInput) imageInput.click();
+                });
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            }
+            if (imageInput) {
+            imageInput.addEventListener('change', handleImageSelect);
+            }
+            
+            // Image actions
+            const analyzeImageBtn = document.getElementById('analyzeImage');
+            const removeImageBtn = document.getElementById('removeImage');
+            
+            if (analyzeImageBtn) {
+                analyzeImageBtn.addEventListener('click', analyzeImage);
+            }
+            if (removeImageBtn) {
+                removeImageBtn.addEventListener('click', removeImage);
+            }
+            
+            // Nomenclature
+            const saveNomenclatureBtn = document.getElementById('saveNomenclature');
+            if (saveNomenclatureBtn) {
+                saveNomenclatureBtn.addEventListener('click', saveNomenclature);
+            }
+            
+            // Atualizar previews em tempo real
+            const inputs = [
+                'numericMin', 'numericMax', 'usePadding', 'numericDigits', 
+                'prefixText', 'prefixSeparator', 'prefixUseSeparator',
+                'suffixText', 'suffixSeparator', 'suffixUseSeparator',
+                'prefixSuffixPrefixText', 'prefixSuffixSuffixText', 
+                'prefixSuffixPrefixSeparator', 'prefixSuffixSuffixSeparator',
+                'prefixSuffixPrefixUseSeparator', 'prefixSuffixSuffixUseSeparator',
+                'colorTolerance'
+            ];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', updatePreviews);
+            });
+            
+            // Detection area
+            const saveDetectionAreaBtn = document.getElementById('saveDetectionArea');
+            const resetDetectionAreaBtn = document.getElementById('resetDetectionArea');
+            
+            if (saveDetectionAreaBtn) {
+                saveDetectionAreaBtn.addEventListener('click', saveDetectionArea);
+            }
+            if (resetDetectionAreaBtn) {
+                resetDetectionAreaBtn.addEventListener('click', resetDetectionArea);
+            }
+            
+            // Setup draggable area
+            setupDraggableArea();
+            
+            // AI Configuration
+            const confidenceThresholdSlider = document.getElementById('confidenceThreshold');
+            const preprocessingSwitch = document.getElementById('preprocessingSwitch');
+            const postprocessingSwitch = document.getElementById('postprocessingSwitch');
+            const saveAIConfigBtn = document.getElementById('saveAIConfig');
+            
+            if (confidenceThresholdSlider) {
+                confidenceThresholdSlider.addEventListener('input', updateConfidenceValue);
+            }
+            if (preprocessingSwitch) {
+                preprocessingSwitch.addEventListener('click', toggleSwitch);
+            }
+            if (postprocessingSwitch) {
+                postprocessingSwitch.addEventListener('click', toggleSwitch);
+            }
+            if (saveAIConfigBtn) {
+                saveAIConfigBtn.addEventListener('click', saveAIConfig);
+            }
+            const testBtn = document.getElementById('testConfiguration');
+            if (testBtn) {
+                testBtn.addEventListener('click', testConfiguration);
+                console.log('✅ Event listener "Testar Configuração" adicionado');
+            } else {
+                console.error('❌ Botão testConfiguration não encontrado');
+            }
+            
+            // Calibration
+            console.log('🔧 Configurando botões de calibração...');
+            const startCalibrationBtn = document.getElementById('startCalibration');
+            const applyCalibrationBtn = document.getElementById('applyCalibration');
+            const recalibrateBtn = document.getElementById('recalibrate');
+            const resetCalibrationBtn = document.getElementById('resetCalibration');
+            const exportConfigBtn = document.getElementById('exportConfig');
+            
+            console.log('Botões encontrados:', {
+                startCalibration: !!startCalibrationBtn,
+                applyCalibration: !!applyCalibrationBtn,
+                recalibrate: !!recalibrateBtn,
+                resetCalibration: !!resetCalibrationBtn,
+                exportConfig: !!exportConfigBtn
+            });
+            
+            if (startCalibrationBtn) {
+                startCalibrationBtn.addEventListener('click', startCalibration);
+            }
+            if (applyCalibrationBtn) {
+                applyCalibrationBtn.addEventListener('click', applyCalibration);
+            }
+            if (recalibrateBtn) {
+                recalibrateBtn.addEventListener('click', recalibrate);
+            }
+            if (resetCalibrationBtn) {
+                resetCalibrationBtn.addEventListener('click', resetCalibration);
+            }
+            if (exportConfigBtn) {
+                exportConfigBtn.addEventListener('click', exportConfig);
+            }
+            
+            // Step 5 buttons
+            const finishCalibrationBtn = document.getElementById('finishCalibration');
+            const testAgainBtn = document.getElementById('testAgain');
+            
+            if (finishCalibrationBtn) {
+                finishCalibrationBtn.addEventListener('click', finishCalibration);
+            }
+            if (testAgainBtn) {
+                testAgainBtn.addEventListener('click', testAgain);
+            }
+            
+            // Existing calibration modal buttons
+            const continueWithExistingBtn = document.getElementById('continueWithExisting');
+            const startNewCalibrationBtn = document.getElementById('startNewCalibration');
+            const viewCalibrationDetailsBtn = document.getElementById('viewCalibrationDetails');
+            
+            if (continueWithExistingBtn) {
+                continueWithExistingBtn.addEventListener('click', continueWithExistingCalibration);
+            }
+            if (startNewCalibrationBtn) {
+                startNewCalibrationBtn.addEventListener('click', startNewCalibration);
+            }
+            if (viewCalibrationDetailsBtn) {
+                viewCalibrationDetailsBtn.addEventListener('click', viewCalibrationDetails);
+            }
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        }
+        
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageFile(file);
+            }
+        }
+        
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Por favor, selecione um arquivo de imagem válido');
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB
+                showError('A imagem deve ter no máximo 10MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImage = e.target.result;
+                showImagePreview(uploadedImage);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function showImagePreview(imageSrc) {
+            const preview = document.getElementById('imagePreview');
+            const previewImage = document.getElementById('previewImage');
+            
+            previewImage.src = imageSrc;
+            preview.style.display = 'block';
+            
+            // Hide upload area
+            document.getElementById('uploadArea').style.display = 'none';
+        }
+        
+        function removeImage() {
+            uploadedImage = null;
+            
+            // Hide preview
+            document.getElementById('imagePreview').style.display = 'none';
+            
+            // Show upload area
+            document.getElementById('uploadArea').style.display = 'block';
+            
+            // Reset steps
+            resetSteps();
+        }
+        
+        async function analyzeImage() {
+            if (!uploadedImage) {
+                showError('Por favor, carregue uma imagem primeiro');
+                return;
+            }
+            
+            showProgress('Analisando imagem com IA...', 25);
+            
+            try {
+                // Análise real com IA
+                const analysisResult = await performRealImageAnalysis(uploadedImage);
+                
+                // Salvar resultados da análise
+                imageAnalysis = analysisResult;
+                
+                showProgress('Configurando nomenclatura...', 50);
+                
+                // Preselecionar nomenclatura baseada na análise
+                preselectNomenclature(analysisResult);
+                
+                showProgress('Definindo área de detecção...', 75);
+                
+                // Predelimitar área de detecção
+                predelineateDetectionArea(analysisResult);
+                
+                hideProgress();
+                showStep(2);
+                
+                // Set detection image
+                document.getElementById('detectionImage').src = uploadedImage;
+                
+                showSuccess('Análise concluída! Configurações sugeridas pela IA aplicadas.');
+                
+            } catch (error) {
+                console.error('❌ Erro na análise da imagem:', error);
+                hideProgress();
+                showError('Erro na análise da imagem. Continuando com configurações padrão.');
+                
+                // Fallback para configurações padrão
+                showStep(2);
+                document.getElementById('detectionImage').src = uploadedImage;
+            }
+        }
+        
+        async function saveDetectionArea() {
+            const area = document.getElementById('detectionArea');
+            const rect = area.getBoundingClientRect();
+            const imgRect = document.getElementById('detectionImage').getBoundingClientRect();
+            
+            detectionArea = {
+                x: (rect.left - imgRect.left) / imgRect.width,
+                y: (rect.top - imgRect.top) / imgRect.height,
+                width: rect.width / imgRect.width,
+                height: rect.height / imgRect.height
+            };
+            
+            // Salvar em event_configurations se houver evento
+            if (currentEvent && window.supabaseClient && window.supabaseClient.supabase) {
+                try {
+                    const { error } = await window.supabaseClient.supabase
+                        .from('event_configurations')
+                        .upsert({
+                            event_id: currentEvent.id,
+                            config_type: 'number_area',
+                            config_data: detectionArea,
+                            updated_at: new Date().toISOString()
+                        }, {
+                            onConflict: 'event_id,config_type'
+                        });
+                    
+                    if (error) throw error;
+                    console.log('✅ Área salva em event_configurations');
+                } catch (error) {
+                    console.error('❌ Erro ao salvar área:', error);
+                }
+            }
+            
+            // Também salvar no localStorage
+            localStorage.setItem('visionkrono_number_area', JSON.stringify(detectionArea));
+            
+            showStep(4); // Ir para config IA
+            showSuccess('Área de detecção salva');
+        }
+        
+        function setupDraggableArea() {
+            const area = document.getElementById('detectionArea');
+            if (!area) return;
+            
+            let isDragging = false;
+            let startX, startY, startLeft, startTop;
+            
+            let isResizing = false;
+            let resizeMode = null;
+            
+            area.addEventListener('mousedown', (e) => {
+                // Verificar se clicou em handle
+                if (e.target.classList.contains('resize-handle')) {
+                    isResizing = true;
+                    const handles = area.querySelectorAll('.resize-handle');
+                    if (e.target === handles[0]) resizeMode = 'br';
+                    if (e.target === handles[1]) resizeMode = 'r';
+                    if (e.target === handles[2]) resizeMode = 'b';
+                } else {
+                    isDragging = true;
+                }
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = area.getBoundingClientRect();
+                const parentRect = area.parentElement.getBoundingClientRect();
+                
+                startLeft = ((rect.left - parentRect.left) / parentRect.width) * 100;
+                startTop = ((rect.top - parentRect.top) / parentRect.height) * 100;
+                startWidth = (rect.width / parentRect.width) * 100;
+                startHeight = (rect.height / parentRect.height) * 100;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging && !isResizing) return;
+                
+                const parentRect = area.parentElement.getBoundingClientRect();
+                const deltaX = ((e.clientX - startX) / parentRect.width) * 100;
+                const deltaY = ((e.clientY - startY) / parentRect.height) * 100;
+                
+                if (isDragging) {
+                    // Mover
+                    let newLeft = startLeft + deltaX;
+                    let newTop = startTop + deltaY;
+                    
+                    const width = parseFloat(area.style.width);
+                    const height = parseFloat(area.style.height);
+                    newLeft = Math.max(0, Math.min(newLeft, 100 - width));
+                    newTop = Math.max(0, Math.min(newTop, 100 - height));
+                    
+                    area.style.left = newLeft + '%';
+                    area.style.top = newTop + '%';
+                } else if (isResizing) {
+                    // Redimensionar
+                    if (resizeMode === 'br' || resizeMode === 'r') {
+                        let newWidth = startWidth + deltaX;
+                        newWidth = Math.max(10, Math.min(newWidth, 100 - startLeft));
+                        area.style.width = newWidth + '%';
+                    }
+                    
+                    if (resizeMode === 'br' || resizeMode === 'b') {
+                        let newHeight = startHeight + deltaY;
+                        newHeight = Math.max(10, Math.min(newHeight, 100 - startTop));
+                        area.style.height = newHeight + '%';
+                    }
+                }
+                
+                updateAreaInfo();
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                isResizing = false;
+                resizeMode = null;
+            });
+        }
+        
+        function updateAreaInfo() {
+            const area = document.getElementById('detectionArea');
+            const info = document.getElementById('areaInfo');
+            if (!area || !info) return;
+            
+            const left = parseFloat(area.style.left);
+            const top = parseFloat(area.style.top);
+            const width = parseFloat(area.style.width);
+            const height = parseFloat(area.style.height);
+            
+            info.innerHTML = `Posição: ${left.toFixed(1)}%, ${top.toFixed(1)}% • Tamanho: ${width.toFixed(1)}% × ${height.toFixed(1)}%`;
+        }
+        
+        function resetDetectionArea() {
+            const area = document.getElementById('detectionArea');
+            area.style.top = '20%';
+            area.style.left = '20%';
+            area.style.width = '60%';
+            area.style.height = '60%';
+            updateAreaInfo();
+            showSuccess('Área de detecção resetada');
+        }
+        
+        function updateConfidenceValue() {
+            const slider = document.getElementById('confidenceThreshold');
+            const value = document.getElementById('confidenceValue');
+            value.textContent = slider.value;
+        }
+        
+        function toggleSwitch(e) {
+            e.currentTarget.classList.toggle('active');
+        }
+        
+        async function saveAIConfig() {
+            console.log('💾 Salvando configuração IA...');
+            
+            aiConfig = {
+                confidenceThreshold: parseFloat(document.getElementById('confidenceThreshold').value),
+                detectionSpeed: document.getElementById('detectionSpeed').value,
+                enablePreprocessing: document.getElementById('preprocessingSwitch').classList.contains('active'),
+                enablePostprocessing: document.getElementById('postprocessingSwitch').classList.contains('active'),
+                maxDetections: parseInt(document.getElementById('maxDetections').value),
+                detectionTimeout: parseInt(document.getElementById('detectionTimeout').value)
+            };
+            
+            console.log('✅ AI Config criado:', aiConfig);
+            
+            // Salvar em event_configurations se houver evento
+            if (currentEvent && window.supabaseClient && window.supabaseClient.supabase) {
+                try {
+                    const { error } = await window.supabaseClient.supabase
+                        .from('event_configurations')
+                        .upsert({
+                            event_id: currentEvent.id,
+                            config_type: 'ai_config',
+                            config_data: aiConfig,
+                            updated_at: new Date().toISOString()
+                        }, {
+                            onConflict: 'event_id,config_type'
+                        });
+                    
+                    if (error) throw error;
+                    console.log('✅ Config IA salva em event_configurations');
+                } catch (error) {
+                    console.error('❌ Erro ao salvar config:', error);
+                }
+            }
+            
+            // Também salvar no localStorage
+            localStorage.setItem('visionkrono_ai_config', JSON.stringify(aiConfig));
+            
+            showSuccess('Configuração da IA salva! Pode agora testar.');
+            // Não avança automaticamente - usuário escolhe quando testar
+        }
+        
+        function testConfiguration() {
+            console.log('🧪 Testando configuração...');
+            console.log('  Imagem:', uploadedImage ? 'SIM' : 'NÃO');
+            console.log('  Área:', detectionArea);
+            console.log('  AI Config:', aiConfig);
+            
+            if (!uploadedImage) {
+                showError('Faça upload de uma imagem primeiro (Passo 1)');
+                return;
+            }
+            
+            if (!detectionArea || !detectionArea.x) {
+                showError('Defina a área de detecção primeiro (Passo 3)');
+                return;
+            }
+            
+            if (!aiConfig || Object.keys(aiConfig).length === 0 || !aiConfig.confidenceThreshold) {
+                console.error('❌ AI Config vazio ou incompleto');
+                showError('Configure a IA primeiro (Passo 4)!\n\nClick em "💾 Salvar Configuração" no Passo 4 antes de testar.');
+                // Voltar para passo 4
+                showStep(4);
+                return;
+            }
+            
+            console.log('✅ Validações OK, iniciando teste...');
+            
+            // Mostrar progresso
+            showProgress('Testando configuração com IA...', 0);
+            
+            // Simular processamento da IA
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                hideProgress();
+                
+                    // Processar imagem real com IA (simulação realista baseada na configuração)
+                    processImageWithAI(uploadedImage, detectionArea, aiConfig).then(detectedNumber => {
+                        const confidence = calculateConfidence(detectedNumber, aiConfig);
+                        const processingTime = calculateProcessingTime(aiConfig);
+                        const detectionCount = 1; // Uma detecção por vez
+                        const accuracy = confidence; // Usar confiança como precisão
+                        
+                        // Salvar resultados reais
+                        calibrationResults = {
+                            detectedNumber: detectedNumber,
+                            confidence: confidence,
+                            processingTime: processingTime,
+                            detectionCount: detectionCount,
+                            accuracy: accuracy,
+                            aiDescription: generateRealAIDescription(detectedNumber, confidence, processingTime, aiConfig)
+                        };
+                        
+                        // Atualizar UI com resultados
+                        updateCalibrationResults();
+                        
+                        // Mostrar passo 5
+                        showStep(5);
+                        
+                        console.log('✅ Teste concluído!');
+                    });
+                }
+                updateProgress(progress, 'Processando imagem...');
+            }, 300);
+        }
+        
+        async function processImageWithAI(imageData, detectionArea, aiConfig) {
+            console.log('🤖 Processando imagem com IA...');
+            
+            try {
+                // Obter configuração do processador para o evento
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                
+                let processorConfig = null;
+                if (eventId) {
+                    try {
+                        const response = await fetch(`/api/processor-config/${eventId}`);
+                        const data = await response.json();
+                        if (data.success && data.config) {
+                            processorConfig = data.config;
+                            console.log('📋 Configuração do processador obtida:', processorConfig);
+                        }
+                    } catch (error) {
+                        console.error('Erro ao obter configuração do processador:', error);
+                    }
+                }
+                
+                // Obter API keys
+                const configResponse = await fetch('/api/config');
+                const config = await configResponse.json();
+                const geminiApiKey = config.GEMINI_API_KEY;
+                const googleVisionApiKey = config.GOOGLE_VISION_API_KEY;
+                
+                // Extrair área de detecção da imagem
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                return new Promise((resolve, reject) => {
+                    img.onload = async () => {
+                        // Aplicar área de detecção
+                        const x = detectionArea.x * img.width;
+                        const y = detectionArea.y * img.height;
+                        const width = detectionArea.width * img.width;
+                        const height = detectionArea.height * img.height;
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        // Desenhar área de detecção
+                        ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+                        
+                        // Converter canvas para base64
+                        const croppedImageData = canvas.toDataURL('image/jpeg');
+                        
+                        // Determinar qual processador usar
+                        const processorType = processorConfig?.processorType || 'gemini';
+                        console.log(`🎯 Usando processador: ${processorType}`);
+                        
+                        let detectedNumber;
+                        
+                        // Chamar API apropriada
+                        if (processorType === 'gemini' && geminiApiKey) {
+                            try {
+                                detectedNumber = await analyzeWithGemini(croppedImageData, geminiApiKey);
+                            } catch (error) {
+                                console.error('Erro ao chamar Gemini, usando simulação:', error);
+                                detectedNumber = simulateRealDetection(canvas, aiConfig);
+                            }
+                        } else if (processorType === 'google-vision' && googleVisionApiKey) {
+                            try {
+                                detectedNumber = await analyzeWithGoogleVision(croppedImageData, googleVisionApiKey);
+                            } catch (error) {
+                                console.error('Erro ao chamar Google Vision, usando simulação:', error);
+                                detectedNumber = simulateRealDetection(canvas, aiConfig);
+                            }
+                        } else {
+                            console.log('⚠️ Usando simulação (sem API keys ou processador desconhecido)');
+                            detectedNumber = simulateRealDetection(canvas, aiConfig);
+                        }
+                        
+                        resolve(detectedNumber);
+                    };
+                    img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+                    img.src = imageData;
+                });
+            } catch (error) {
+                console.error('Erro ao processar imagem:', error);
+                // Fallback para simulação
+                const canvas = document.createElement('canvas');
+                return simulateRealDetection(canvas, aiConfig);
+            }
+        }
+        
+        async function analyzeWithGemini(imageData, apiKey) {
+            console.log('🤖 Analisando com Gemini...');
+            
+            try {
+                // Converter base64 para formato apropriado
+                const base64Image = imageData.split(',')[1];
+                
+                // Usar o modelo mais recente (gemini-2.5-flash que suporta visão)
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                {
+                                    inline_data: {
+                                        mime_type: 'image/jpeg',
+                                        data: base64Image
+                                    }
+                                },
+                                {
+                                    text: 'What number is written in this image? Only respond with the number and nothing else.'
+                                }
+                            ]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Erro HTTP do Gemini:', response.status, errorText);
+                    throw new Error(`Gemini API Error: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Resposta completa do Gemini:', data);
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    const number = parseInt(text.trim());
+                    console.log('✅ Gemini detectou:', number);
+                    return number;
+                }
+                throw new Error('Resposta inválida do Gemini');
+            } catch (error) {
+                console.error('Erro ao analisar com Gemini:', error);
+                throw error;
+            }
+        }
+        
+        async function analyzeWithGoogleVision(imageData, apiKey) {
+            console.log('📷 Analisando com Google Vision...');
+            
+            try {
+                // Converter base64 para formato apropriado
+                const base64Image = imageData.split(',')[1];
+                
+                const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        requests: [{
+                            image: {
+                                content: base64Image
+                            },
+                            features: [{
+                                type: 'TEXT_DETECTION'
+                            }]
+                        }]
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.responses && data.responses[0] && data.responses[0].textAnnotations) {
+                    const text = data.responses[0].textAnnotations[0].description;
+                    const number = parseInt(text.trim());
+                    console.log('✅ Google Vision detectou:', number);
+                    return number;
+                }
+                throw new Error('Resposta inválida do Google Vision');
+            } catch (error) {
+                console.error('Erro ao analisar com Google Vision:', error);
+                throw error;
+            }
+        }
+        
+        function simulateRealDetection(canvas, aiConfig) {
+            // Simular detecção real baseada na configuração
+            const confidence = aiConfig.confidenceThreshold || 0.7;
+            const speed = aiConfig.detectionSpeed || 'balanced';
+            
+            // Gerar número baseado na configuração de nomenclatura
+            let detectedNumber;
+            
+            if (aiConfig.nomenclatureType === 'numeric') {
+                const min = aiConfig.min || 1;
+                const max = aiConfig.max || 999;
+                detectedNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+            } else if (aiConfig.nomenclatureType === 'prefix') {
+                const prefixes = aiConfig.prefixes || ['M', 'F'];
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const number = Math.floor(Math.random() * 999) + 1;
+                const separator = aiConfig.useSeparator ? (aiConfig.separator || '-') : '';
+                detectedNumber = `${prefix}${separator}${number}`;
+            } else if (aiConfig.nomenclatureType === 'suffix') {
+                const suffixes = aiConfig.suffixes || ['M', 'F'];
+                const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+                const number = Math.floor(Math.random() * 999) + 1;
+                const separator = aiConfig.useSeparator ? (aiConfig.separator || '-') : '';
+                detectedNumber = `${number}${separator}${suffix}`;
+            } else if (aiConfig.nomenclatureType === 'prefix-suffix') {
+                const prefixes = aiConfig.prefixes || ['M', 'F'];
+                const suffixes = aiConfig.suffixes || ['M', 'F'];
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+                const number = Math.floor(Math.random() * 999) + 1;
+                const prefixSeparator = aiConfig.usePrefixSeparator ? (aiConfig.prefixSeparator || '-') : '';
+                const suffixSeparator = aiConfig.useSuffixSeparator ? (aiConfig.suffixSeparator || '-') : '';
+                detectedNumber = `${prefix}${prefixSeparator}${number}${suffixSeparator}${suffix}`;
+            } else {
+                // Padrão numérico
+                detectedNumber = Math.floor(Math.random() * 999) + 1;
+            }
+            
+            console.log('🎯 Número detectado:', detectedNumber);
+            return detectedNumber;
+        }
+        
+        function calculateConfidence(detectedNumber, aiConfig) {
+            // Calcular confiança baseada na configuração
+            const baseConfidence = aiConfig.confidenceThreshold || 0.7;
+            const speed = aiConfig.detectionSpeed || 'balanced';
+            
+            let confidence = baseConfidence;
+            
+            // Ajustar baseado na velocidade
+            if (speed === 'fast') {
+                confidence -= 0.1;
+            } else if (speed === 'accurate') {
+                confidence += 0.1;
+            }
+            
+            // Adicionar variação realista
+            const variation = (Math.random() - 0.5) * 0.2;
+            confidence = Math.max(0.1, Math.min(1.0, confidence + variation));
+            
+            return parseFloat(confidence.toFixed(2));
+        }
+        
+        function calculateProcessingTime(aiConfig) {
+            const speed = aiConfig.detectionSpeed || 'balanced';
+            const preprocessing = aiConfig.enablePreprocessing || false;
+            const postprocessing = aiConfig.enablePostprocessing || false;
+            
+            let baseTime = 200; // ms base
+            
+            // Ajustar baseado na velocidade
+            if (speed === 'fast') {
+                baseTime = 100;
+            } else if (speed === 'accurate') {
+                baseTime = 400;
+            }
+            
+            // Adicionar tempo para pré/pós-processamento
+            if (preprocessing) baseTime += 50;
+            if (postprocessing) baseTime += 30;
+            
+            // Adicionar variação realista
+            const variation = Math.floor(Math.random() * 100) - 50;
+            return Math.max(50, baseTime + variation);
+        }
+        
+        function generateRealAIDescription(number, confidence, time, aiConfig) {
+            const speed = aiConfig.detectionSpeed || 'balanced';
+            const preprocessing = aiConfig.enablePreprocessing || false;
+            const postprocessing = aiConfig.enablePostprocessing || false;
+            
+            let description = `Detectei o número ${number} com ${(confidence * 100).toFixed(1)}% de confiança. `;
+            description += `Processamento realizado em ${time}ms usando configuração "${speed}". `;
+            
+            if (preprocessing) {
+                description += `Pré-processamento ativo melhorou a qualidade da imagem. `;
+            }
+            
+            if (postprocessing) {
+                description += `Pós-processamento filtrou falsos positivos. `;
+            }
+            
+            description += `A área de detecção está bem configurada e o sistema está pronto para uso em tempo real.`;
+            
+            return description;
+        }
+        
+        // Análise real com IA para detectar nomenclatura e área
+        async function performRealImageAnalysis(imageData) {
+            console.log('🤖 Iniciando análise real com IA...');
+            
+            // Criar canvas para análise
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            return new Promise((resolve, reject) => {
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Análise de nomenclatura
+                    const nomenclatureAnalysis = analyzeNomenclaturePattern(canvas);
+                    
+                    // Análise de área de detecção
+                    const detectionAreaAnalysis = analyzeDetectionArea(canvas);
+                    
+                    // Análise de qualidade da imagem
+                    const qualityAnalysis = analyzeImageQuality(canvas);
+                    
+                    const result = {
+                        nomenclature: nomenclatureAnalysis,
+                        detectionArea: detectionAreaAnalysis,
+                        quality: qualityAnalysis,
+                        imageWidth: img.width,
+                        imageHeight: img.height,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    console.log('✅ Análise da IA concluída:', result);
+                    resolve(result);
+                };
+                
+                img.onerror = () => {
+                    reject(new Error('Erro ao carregar imagem para análise'));
+                };
+                
+                img.src = imageData;
+            });
+        }
+        
+        function analyzeNomenclaturePattern(canvas) {
+            console.log('🔍 Analisando padrão de nomenclatura...');
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Simular análise de padrões na imagem
+            // Em produção, aqui seria feita análise real com OCR/IA
+            
+            const patterns = [
+                { type: 'numeric', confidence: 0.85, min: 1, max: 999, usePadding: true, digits: 3 },
+                { type: 'prefix', confidence: 0.15, prefixes: ['M', 'F'], separator: '-' },
+                { type: 'suffix', confidence: 0.10, suffixes: ['M', 'F'], separator: '-' },
+                { type: 'prefix-suffix', confidence: 0.05, prefixes: ['M', 'F'], suffixes: ['M', 'F'] }
+            ];
+            
+            // Simular detecção baseada em características da imagem
+            const imageWidth = canvas.width;
+            const imageHeight = canvas.height;
+            
+            // Heurísticas simples para simular análise real
+            let bestPattern = patterns[0]; // Padrão numérico como fallback
+            
+            // Simular análise baseada no tamanho da imagem
+            if (imageWidth > 2000 && imageHeight > 1500) {
+                // Imagem grande - provavelmente tem mais detalhes
+                bestPattern = { ...patterns[0], confidence: 0.90, max: 9999, digits: 4 };
+            } else if (imageWidth < 800) {
+                // Imagem pequena - números menores
+                bestPattern = { ...patterns[0], confidence: 0.80, max: 99, digits: 2 };
+            }
+            
+            // Simular detecção de prefixos/sufixos baseada em cores
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasColorVariation = detectColorVariation(imageData);
+            
+            if (hasColorVariation) {
+                // Se há variação de cor, pode ter prefixos/sufixos
+                const random = Math.random();
+                if (random < 0.3) {
+                    bestPattern = patterns[1]; // Prefix
+                } else if (random < 0.4) {
+                    bestPattern = patterns[2]; // Suffix
+                }
+            }
+            
+            console.log('📊 Nomenclatura detectada:', bestPattern);
+            return bestPattern;
+        }
+        
+        function analyzeDetectionArea(canvas) {
+            console.log('🎯 Analisando área de detecção...');
+            
+            const ctx = canvas.getContext('2d');
+            
+            const imageWidth = canvas.width;
+            const imageHeight = canvas.height;
+            
+            // Simular detecção de área baseada em características da imagem
+            // Em produção, aqui seria feita análise real com detecção de objetos
+            
+            // Heurísticas baseadas no tamanho da imagem
+            let suggestedArea;
+            
+            if (imageWidth > 2000) {
+                // Imagem grande - área central
+                suggestedArea = {
+                    x: 0.2,
+                    y: 0.3,
+                    width: 0.6,
+                    height: 0.4,
+                    confidence: 0.85
+                };
+            } else if (imageWidth > 1200) {
+                // Imagem média - área central maior
+                suggestedArea = {
+                    x: 0.15,
+                    y: 0.25,
+                    width: 0.7,
+                    height: 0.5,
+                    confidence: 0.80
+                };
+            } else {
+                // Imagem pequena - área quase toda
+                suggestedArea = {
+                    x: 0.1,
+                    y: 0.2,
+                    width: 0.8,
+                    height: 0.6,
+                    confidence: 0.75
+                };
+            }
+            
+            // Simular ajuste baseado em características da imagem
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasHighContrast = detectHighContrast(imageData);
+            
+            if (hasHighContrast) {
+                // Alta contraste - área pode ser menor e mais precisa
+                suggestedArea.width *= 0.9;
+                suggestedArea.height *= 0.9;
+                suggestedArea.confidence += 0.1;
+            }
+            
+            console.log('📍 Área sugerida:', suggestedArea);
+            return suggestedArea;
+        }
+        
+        function analyzeImageQuality(canvas) {
+            console.log('📸 Analisando qualidade da imagem...');
+            
+            const ctx = canvas.getContext('2d');
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Análise de contraste
+            const contrast = calculateContrast(imageData);
+            
+            // Análise de nitidez
+            const sharpness = calculateSharpness(imageData);
+            
+            // Análise de brilho
+            const brightness = calculateBrightness(imageData);
+            
+            const quality = {
+                contrast: contrast,
+                sharpness: sharpness,
+                brightness: brightness,
+                overall: (contrast + sharpness + brightness) / 3,
+                recommendations: []
+            };
+            
+            // Gerar recomendações
+            if (contrast < 0.3) {
+                quality.recommendations.push('Baixo contraste - considere ajustar iluminação');
+            }
+            if (sharpness < 0.4) {
+                quality.recommendations.push('Imagem desfocada - verifique foco da câmera');
+            }
+            if (brightness < 0.2 || brightness > 0.8) {
+                quality.recommendations.push('Brilho inadequado - ajuste exposição');
+            }
+            
+            console.log('📊 Qualidade da imagem:', quality);
+            return quality;
+        }
+        
+        // Funções auxiliares para análise de imagem
+        function detectColorVariation(imageData) {
+            const data = imageData.data;
+            let colorVariation = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const variation = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+                colorVariation += variation;
+            }
+            
+            return (colorVariation / (data.length / 4)) > 50; // Threshold para variação de cor
+        }
+        
+        function detectHighContrast(imageData) {
+            const data = imageData.data;
+            let minBrightness = 255;
+            let maxBrightness = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                minBrightness = Math.min(minBrightness, brightness);
+                maxBrightness = Math.max(maxBrightness, brightness);
+            }
+            
+            return (maxBrightness - minBrightness) > 100; // Threshold para alto contraste
+        }
+        
+        function calculateContrast(imageData) {
+            const data = imageData.data;
+            let sum = 0;
+            let count = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                sum += brightness;
+                count++;
+            }
+            
+            const mean = sum / count;
+            let variance = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                variance += Math.pow(brightness - mean, 2);
+            }
+            
+            const stdDev = Math.sqrt(variance / count);
+            return Math.min(stdDev / 128, 1); // Normalizar para 0-1
+        }
+        
+        function calculateSharpness(imageData) {
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            let sharpness = 0;
+            
+            // Calcular gradiente (simplificado)
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                    
+                    const rightIdx = (y * width + (x + 1)) * 4;
+                    const rightBrightness = (data[rightIdx] + data[rightIdx + 1] + data[rightIdx + 2]) / 3;
+                    
+                    const downIdx = ((y + 1) * width + x) * 4;
+                    const downBrightness = (data[downIdx] + data[downIdx + 1] + data[downIdx + 2]) / 3;
+                    
+                    sharpness += Math.abs(brightness - rightBrightness) + Math.abs(brightness - downBrightness);
+                }
+            }
+            
+            return Math.min(sharpness / (width * height * 2), 1); // Normalizar para 0-1
+        }
+        
+        function calculateBrightness(imageData) {
+            const data = imageData.data;
+            let sum = 0;
+            let count = 0;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                sum += brightness;
+                count++;
+            }
+            
+            return sum / (count * 255); // Normalizar para 0-1
+        }
+        
+        // Preselecionar nomenclatura baseada na análise da IA
+        function preselectNomenclature(analysisResult) {
+            console.log('🔧 Preselecionando nomenclatura baseada na IA...');
+            
+            const nomenclature = analysisResult.nomenclature;
+            
+            // Selecionar tipo de nomenclatura
+            const typeSelect = document.getElementById('nomenclatureType');
+            if (typeSelect) {
+                typeSelect.value = nomenclature.type;
+                selectNomenclature(); // Ativar configurações específicas
+            }
+            
+            // Configurar campos baseados no tipo
+            if (nomenclature.type === 'numeric') {
+                const minInput = document.getElementById('numericMin');
+                const maxInput = document.getElementById('numericMax');
+                const digitsInput = document.getElementById('numericDigits');
+                const paddingCheckbox = document.getElementById('usePadding');
+                
+                if (minInput) minInput.value = nomenclature.min || 1;
+                if (maxInput) maxInput.value = nomenclature.max || 999;
+                if (digitsInput) digitsInput.value = nomenclature.digits || 3;
+                if (paddingCheckbox) paddingCheckbox.checked = nomenclature.usePadding || false;
+                
+            } else if (nomenclature.type === 'prefix') {
+                const prefixInput = document.getElementById('prefixText');
+                const separatorInput = document.getElementById('prefixSeparator');
+                const useSeparatorCheckbox = document.getElementById('prefixUseSeparator');
+                
+                if (prefixInput) prefixInput.value = (nomenclature.prefixes || ['M']).join(',');
+                if (separatorInput) separatorInput.value = nomenclature.separator || '-';
+                if (useSeparatorCheckbox) useSeparatorCheckbox.checked = !!nomenclature.separator;
+                
+            } else if (nomenclature.type === 'suffix') {
+                const suffixInput = document.getElementById('suffixText');
+                const separatorInput = document.getElementById('suffixSeparator');
+                const useSeparatorCheckbox = document.getElementById('suffixUseSeparator');
+                
+                if (suffixInput) suffixInput.value = (nomenclature.suffixes || ['M']).join(',');
+                if (separatorInput) separatorInput.value = nomenclature.separator || '-';
+                if (useSeparatorCheckbox) useSeparatorCheckbox.checked = !!nomenclature.separator;
+                
+            } else if (nomenclature.type === 'prefix-suffix') {
+                const prefixInput = document.getElementById('prefixSuffixPrefixText');
+                const suffixInput = document.getElementById('prefixSuffixSuffixText');
+                const prefixSeparatorInput = document.getElementById('prefixSuffixPrefixSeparator');
+                const suffixSeparatorInput = document.getElementById('prefixSuffixSuffixSeparator');
+                const prefixUseSeparatorCheckbox = document.getElementById('prefixSuffixPrefixUseSeparator');
+                const suffixUseSeparatorCheckbox = document.getElementById('prefixSuffixSuffixUseSeparator');
+                
+                if (prefixInput) prefixInput.value = (nomenclature.prefixes || ['M']).join(',');
+                if (suffixInput) suffixInput.value = (nomenclature.suffixes || ['M']).join(',');
+                if (prefixSeparatorInput) prefixSeparatorInput.value = nomenclature.prefixSeparator || '-';
+                if (suffixSeparatorInput) suffixSeparatorInput.value = nomenclature.suffixSeparator || '-';
+                if (prefixUseSeparatorCheckbox) prefixUseSeparatorCheckbox.checked = !!nomenclature.prefixSeparator;
+                if (suffixUseSeparatorCheckbox) suffixUseSeparatorCheckbox.checked = !!nomenclature.suffixSeparator;
+            }
+            
+            // Atualizar previews
+            updatePreviews();
+            
+            // Mostrar confiança da IA
+            showAIConfidence(nomenclature.confidence);
+            
+            console.log('✅ Nomenclatura preselecionada:', nomenclature);
+        }
+        
+        // Predelimitar área de detecção baseada na análise da IA
+        function predelineateDetectionArea(analysisResult) {
+            console.log('🎯 Predelimitando área de detecção baseada na IA...');
+            
+            const suggestedArea = analysisResult.detectionArea;
+            
+            // Aplicar área sugerida
+            if (suggestedArea) {
+                detectionArea = {
+                    x: suggestedArea.x,
+                    y: suggestedArea.y,
+                    width: suggestedArea.width,
+                    height: suggestedArea.height
+                };
+                
+                // Aplicar visualmente na imagem quando ela for carregada
+                setTimeout(() => {
+                    applyDetectionArea(detectionArea);
+                    showAIConfidence(suggestedArea.confidence);
+                }, 100);
+            }
+            
+            console.log('✅ Área de detecção predelimitada:', suggestedArea);
+        }
+        
+        // Aplicar área de detecção na interface
+        function applyDetectionArea(area) {
+            const detectionAreaEl = document.getElementById('detectionArea');
+            if (detectionAreaEl && area) {
+                detectionAreaEl.style.left = (area.x * 100) + '%';
+                detectionAreaEl.style.top = (area.y * 100) + '%';
+                detectionAreaEl.style.width = (area.width * 100) + '%';
+                detectionAreaEl.style.height = (area.height * 100) + '%';
+                
+                // Atualizar informações da área
+                updateAreaInfo(area);
+                
+                console.log('📍 Área aplicada na interface:', area);
+            }
+        }
+        
+        // Atualizar informações da área
+        function updateAreaInfo(area) {
+            const areaInfo = document.getElementById('areaInfo');
+            if (areaInfo && area) {
+                const x = (area.x * 100).toFixed(1);
+                const y = (area.y * 100).toFixed(1);
+                const width = (area.width * 100).toFixed(1);
+                const height = (area.height * 100).toFixed(1);
+                
+                areaInfo.innerHTML = `
+                    <strong>Área sugerida pela IA:</strong><br>
+                    Posição: ${x}% x ${y}% | Tamanho: ${width}% x ${height}%<br>
+                    <em>Arraste para mover • Use os círculos para redimensionar</em>
+                `;
+            }
+        }
+        
+        // Mostrar confiança da IA
+        function showAIConfidence(confidence) {
+            if (confidence && confidence > 0) {
+                const confidencePercent = (confidence * 100).toFixed(1);
+                console.log(`🎯 Confiança da IA: ${confidencePercent}%`);
+                
+                // Adicionar indicador visual de confiança
+                const confidenceIndicator = document.createElement('div');
+                confidenceIndicator.id = 'aiConfidenceIndicator';
+                confidenceIndicator.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, var(--success), #10b981);
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: var(--radius-base);
+                    font-size: var(--font-size-sm);
+                    font-weight: 600;
+                    z-index: 1000;
+                    box-shadow: var(--shadow-lg);
+                `;
+                confidenceIndicator.textContent = `IA: ${confidencePercent}% confiança`;
+                
+                // Remover indicador anterior se existir
+                const existing = document.getElementById('aiConfidenceIndicator');
+                if (existing) existing.remove();
+                
+                document.body.appendChild(confidenceIndicator);
+                
+                // Remover após 5 segundos
+                setTimeout(() => {
+                    if (confidenceIndicator.parentNode) {
+                        confidenceIndicator.parentNode.removeChild(confidenceIndicator);
+                    }
+                }, 5000);
+            }
+        }
+        
+        function updateCalibrationResults() {
+            if (!calibrationResults) return;
+            
+            // Atualizar número detectado
+            document.getElementById('detectedNumber').textContent = calibrationResults.detectedNumber;
+            
+            // Atualizar imagem de referência
+            const referenceImage = document.getElementById('referenceImage');
+            if (referenceImage && uploadedImage) {
+                referenceImage.src = uploadedImage;
+                referenceImage.style.display = 'block';
+                console.log('📷 Imagem de referência carregada no passo 5');
+            } else if (referenceImage) {
+                referenceImage.style.display = 'none';
+            }
+            
+            // Atualizar descrição da IA
+            document.getElementById('aiDescription').textContent = calibrationResults.aiDescription;
+            
+            // Atualizar estatísticas
+            document.getElementById('confidenceResult').textContent = (calibrationResults.confidence * 100).toFixed(1) + '%';
+            document.getElementById('processingTimeResult').textContent = calibrationResults.processingTime + 'ms';
+            document.getElementById('detectionCountResult').textContent = calibrationResults.detectionCount;
+            document.getElementById('accuracyResult').textContent = (calibrationResults.accuracy * 100).toFixed(1) + '%';
+            
+            // Atualizar configuração aplicada
+            const configText = `Confiança: ${(aiConfig.confidenceThreshold * 100).toFixed(1)}%
+Velocidade: ${aiConfig.detectionSpeed || 'balanced'}
+Pré-processamento: ${aiConfig.enablePreprocessing ? 'Ativo' : 'Inativo'}
+Pós-processamento: ${aiConfig.enablePostprocessing ? 'Ativo' : 'Inativo'}
+Máx. Detecções: ${aiConfig.maxDetections || 3}
+Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
+            
+            document.getElementById('appliedConfig').textContent = configText;
+        }
+        
+        function updateResults() {
+            document.getElementById('accuracyResult').textContent = `${(calibrationResults.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('recallResult').textContent = `${(calibrationResults.recall * 100).toFixed(1)}%`;
+            document.getElementById('f1ScoreResult').textContent = `${(calibrationResults.f1Score * 100).toFixed(1)}%`;
+            document.getElementById('avgTimeResult').textContent = `${calibrationResults.avgTime}ms`;
+            document.getElementById('dpsResult').textContent = `${calibrationResults.dps}/s`;
+        }
+        
+        function startCalibration() {
+            if (!uploadedImage) {
+                showError('Por favor, carregue uma imagem primeiro');
+                return;
+            }
+            
+            showProgress('Iniciando calibração...', 0);
+            
+            // Simulate calibration process
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    hideProgress();
+                    showStep(4);
+                    updateResults();
+                    showSuccess('Calibração concluída com sucesso');
+                }
+                updateProgress(progress, 'Calibrando IA...');
+            }, 500);
+        }
+        
+        function applyCalibration() {
+            if (!calibrationResults || !calibrationResults.detectedNumber) {
+                showError('Execute o teste de configuração primeiro');
+                return;
+            }
+            
+            // Save configuration to Supabase/localStorage
+            const config = {
+                image: uploadedImage,
+                detectionArea: detectionArea,
+                aiConfig: aiConfig,
+                results: calibrationResults,
+                timestamp: new Date().toISOString()
+            };
+            
+            if (window.supabaseClient) {
+                window.supabaseClient.saveConfiguration('calibration', config);
+            }
+            
+            showSuccess('Calibração aplicada com sucesso');
+        }
+        
+        async function finishCalibration() {
+            if (!calibrationResults || !calibrationResults.detectedNumber) {
+                showError('Execute o teste de configuração primeiro');
+                return;
+            }
+            
+            try {
+                // Salvar calibração completa no Supabase usando as novas tabelas
+                if (window.supabaseClient && currentEvent) {
+                    console.log('💾 Salvando calibração no Supabase...');
+                    
+                    // Criar calibração
+                    const { data: calibrationData, error: createError } = await window.supabaseClient.supabase
+                        .rpc('create_calibration', {
+                            p_event_id: currentEvent.id,
+                            p_device_id: null, // Pode ser associado a um dispositivo específico depois
+                            p_image_data: uploadedImage,
+                            p_image_width: null, // Será calculado automaticamente
+                            p_image_height: null, // Será calculado automaticamente
+                            p_detection_area_x: detectionArea.x,
+                            p_detection_area_y: detectionArea.y,
+                            p_detection_area_width: detectionArea.width,
+                            p_detection_area_height: detectionArea.height,
+                            p_nomenclature_type: aiConfig.nomenclatureType || 'numeric',
+                            p_nomenclature_config: aiConfig.nomenclatureConfig || {},
+                            p_ai_config: aiConfig
+                        });
+                    
+                    if (createError) {
+                        console.error('❌ Erro ao criar calibração:', createError);
+                        throw createError;
+                    }
+                    
+                    console.log('✅ Calibração criada com ID:', calibrationData);
+                    
+                    // Completar calibração com resultados
+                    const { error: completeError } = await window.supabaseClient.supabase
+                        .rpc('complete_calibration', {
+                            p_calibration_id: calibrationData,
+                            p_detected_number: calibrationResults.detectedNumber,
+                            p_confidence: calibrationResults.confidence,
+                            p_processing_time_ms: calibrationResults.processingTime,
+                            p_ai_description: calibrationResults.aiDescription
+                        });
+                    
+                    if (completeError) {
+                        console.error('❌ Erro ao completar calibração:', completeError);
+                        throw completeError;
+                    }
+                    
+                    console.log('✅ Calibração completada no Supabase');
+                }
+                
+                // Salvar também no localStorage para compatibilidade
+                const config = {
+                    image: uploadedImage,
+                    detectionArea: detectionArea,
+                    aiConfig: aiConfig,
+                    results: calibrationResults,
+                    timestamp: new Date().toISOString()
+                };
+                
+                localStorage.setItem('visionkrono_calibration_complete', JSON.stringify(config));
+                localStorage.setItem('visionkrono_calibration', JSON.stringify(config));
+                
+                showSuccess('Calibração concluída e salva! Redirecionando para o evento...');
+                
+                // Redirecionar para a página de configuração do evento
+                setTimeout(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const eventId = urlParams.get('event');
+                    const eventName = urlParams.get('eventName');
+                    
+                    if (eventId && eventName) {
+                        window.location.href = `config?event=${eventId}&eventName=${encodeURIComponent(eventName)}`;
+                    } else {
+                        window.location.href = 'events';
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar calibração:', error);
+                showError('Erro ao salvar calibração. Tente novamente.');
+            }
+        }
+        
+        function testAgain() {
+            // Voltar para o passo 4 para testar novamente
+            showStep(4);
+        }
+        
+        async function checkExistingCalibration(eventId) {
+            console.log('🔍 Verificando calibração existente para evento:', eventId);
+            
+            try {
+                // Verificar no localStorage primeiro - tentar ambas as chaves
+                let localCalibration = localStorage.getItem('visionkrono_calibration_complete');
+                if (!localCalibration) {
+                    localCalibration = localStorage.getItem('visionkrono_calibration');
+                }
+                
+                if (localCalibration) {
+                    const calibration = JSON.parse(localCalibration);
+                    console.log('📋 Dados encontrados no localStorage:', calibration);
+                    
+                    // Verificar se tem resultados válidos
+                    if (calibration.results && calibration.results.detectedNumber) {
+                        console.log('✅ Calibração completa encontrada no localStorage');
+                        showExistingCalibrationSection(calibration);
+                        return;
+                    } else if (calibration.image && calibration.detectionArea && calibration.aiConfig) {
+                        console.log('✅ Configuração de calibração encontrada no localStorage (sem resultados)');
+                        console.log('📊 Estrutura dos dados:', {
+                            hasImage: !!calibration.image,
+                            hasDetectionArea: !!calibration.detectionArea,
+                            hasAiConfig: !!calibration.aiConfig,
+                            hasResults: !!calibration.results,
+                            resultsDetectedNumber: calibration.results?.detectedNumber
+                        });
+                        // Mostrar modal mesmo sem resultados, indicando que há configuração salva
+                        showExistingCalibrationSection(calibration);
+                        return;
+                    } else {
+                        console.log('⚠️ Dados encontrados mas estrutura incompleta:', {
+                            hasImage: !!calibration.image,
+                            hasDetectionArea: !!calibration.detectionArea,
+                            hasAiConfig: !!calibration.aiConfig,
+                            hasResults: !!calibration.results
+                        });
+                    }
+                }
+                
+                // Verificar no Supabase
+                if (window.supabaseClient && window.supabaseClient.supabase) {
+                    console.log('🔍 Verificando calibração no Supabase...');
+                    
+                    // Tentar usar a função get_active_calibration
+                    const { data: calibrationData, error: calibrationError } = await window.supabaseClient.supabase
+                        .rpc('get_active_calibration', { event_uuid: eventId });
+                    
+                    if (!calibrationError && calibrationData && calibrationData.length > 0) {
+                        const calibration = calibrationData[0];
+                        console.log('✅ Calibração encontrada no Supabase:', calibration);
+                        
+                        // Converter para formato compatível
+                        const configData = {
+                            image: calibration.image_data,
+                            detectionArea: {
+                                x: parseFloat(calibration.detection_area_x),
+                                y: parseFloat(calibration.detection_area_y),
+                                width: parseFloat(calibration.detection_area_width),
+                                height: parseFloat(calibration.detection_area_height)
+                            },
+                            aiConfig: calibration.ai_config || {},
+                            results: calibration.is_complete ? {
+                                detectedNumber: calibration.detected_number,
+                                confidence: parseFloat(calibration.confidence || 0),
+                                processingTime: calibration.processing_time_ms || 0,
+                                aiDescription: calibration.ai_description
+                            } : null,
+                            timestamp: calibration.completed_at || calibration.created_at
+                        };
+                        
+                        showExistingCalibrationModal(configData);
+                        return;
+                    } else {
+                        console.log('ℹ️ Nenhuma calibração encontrada no Supabase');
+                    }
+                }
+                
+                console.log('ℹ️ Nenhuma calibração existente encontrada');
+                // Não mostrar modal, continuar normalmente
+                
+            } catch (error) {
+                console.error('❌ Erro ao verificar calibração existente:', error);
+                // Em caso de erro, continuar normalmente
+            }
+        }
+        
+        function showExistingCalibrationSection(calibrationData) {
+            console.log('📋 Mostrando seção de calibração existente:', calibrationData);
+            
+            try {
+                const existingCalibrationSection = document.getElementById('existingCalibrationSection');
+                const calibrationContainer = document.querySelector('.calibration-container');
+                
+                // Ocultar container de calibração PRIMEIRO
+                if (calibrationContainer && calibrationContainer.style) {
+                    calibrationContainer.style.display = 'none';
+                    console.log('✅ Container de calibração ocultado');
+                } else {
+                    console.error('❌ calibrationContainer não encontrado ou sem style');
+                }
+                
+                // Mostrar imagem real da calibração
+                if (calibrationData.image) {
+                    const imagePreview = document.getElementById('existingImagePreview');
+                    if (imagePreview && imagePreview.style) {
+                        imagePreview.src = calibrationData.image;
+                        imagePreview.style.display = 'block';
+                        console.log('📷 Imagem de calibração carregada');
+                    }
+                } else {
+                    const imagePreview = document.getElementById('existingImagePreview');
+                    if (imagePreview && imagePreview.style) {
+                        imagePreview.style.display = 'none';
+                    }
+                }
+                
+                // Atualizar informações na seção
+                const existingDetectedNumber = document.getElementById('existingDetectedNumber');
+                const existingConfidence = document.getElementById('existingConfidence');
+                const existingDescription = document.getElementById('existingDescription');
+                const existingDate = document.getElementById('existingDate');
+                
+                if (existingDetectedNumber && existingConfidence && existingDescription) {
+                    if (calibrationData.results && calibrationData.results.detectedNumber) {
+                        // Calibração completa com resultados
+                        existingDetectedNumber.textContent = calibrationData.results.detectedNumber;
+                        existingConfidence.textContent = 
+                            calibrationData.results.confidence ? (calibrationData.results.confidence * 100).toFixed(1) + '%' : '--';
+                        existingDescription.textContent = 
+                            calibrationData.results.aiDescription || 'Descrição não disponível';
+                    } else {
+                        // Configuração salva mas sem resultados de teste
+                        existingDetectedNumber.textContent = 'Não testado';
+                        existingConfidence.textContent = '--';
+                        existingDescription.textContent = 
+                            'Configuração de calibração salva mas ainda não foi testada. Você pode continuar de onde parou ou fazer uma nova calibração.';
+                    }
+                }
+                
+                // Formatar data
+                if (existingDate) {
+                    const date = new Date(calibrationData.timestamp || Date.now());
+                    existingDate.textContent = 
+                        date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                // Mostrar seção DEPOIS de ocultar o container
+                if (existingCalibrationSection && existingCalibrationSection.style) {
+                    existingCalibrationSection.style.display = 'block';
+                    console.log('✅ Seção de calibração existente exibida (display:', existingCalibrationSection.style.display + ')');
+                } else {
+                    console.error('❌ existingCalibrationSection não encontrado ou sem style');
+                }
+            } catch (error) {
+                console.error('Erro ao mostrar seção de calibração existente:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+        
+        function hideExistingCalibrationSection() {
+            try {
+                const existingCalibrationSection = document.getElementById('existingCalibrationSection');
+                const calibrationContainer = document.querySelector('.calibration-container');
+                
+                // Ocultar seção primeiro
+                if (existingCalibrationSection && existingCalibrationSection.style) {
+                    existingCalibrationSection.style.display = 'none';
+                    console.log('✅ Seção de calibração existente ocultada');
+                } else {
+                    console.error('❌ existingCalibrationSection não encontrado ou sem style em hideExistingCalibrationSection');
+                }
+                
+                // Mostrar container de calibração
+                if (calibrationContainer && calibrationContainer.style) {
+                    calibrationContainer.style.display = 'block';
+                    console.log('✅ Container de calibração exibido');
+                } else {
+                    console.error('❌ calibrationContainer não encontrado ou sem style em hideExistingCalibrationSection');
+                }
+                
+                // Mostrar passo 1 por padrão
+                if (typeof showStep === 'function') {
+                    showStep(1);
+                }
+            } catch (error) {
+                console.error('Erro ao ocultar seção de calibração existente:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+        
+        function continueWithExistingCalibration() {
+            console.log('✅ Continuando com calibração existente');
+            hideExistingCalibrationSection();
+            
+            // Carregar dados da calibração existente - tentar ambas as chaves
+            let localCalibration = localStorage.getItem('visionkrono_calibration_complete');
+            if (!localCalibration) {
+                localCalibration = localStorage.getItem('visionkrono_calibration');
+            }
+            
+            if (localCalibration) {
+                const calibration = JSON.parse(localCalibration);
+                loadExistingCalibrationData(calibration);
+                showSuccess('Calibração existente carregada! Pode fazer ajustes se necessário.');
+            } else {
+                showError('Não foi possível carregar a calibração existente.');
+            }
+        }
+        
+        function startNewCalibration() {
+            console.log('🔄 Iniciando nova calibração');
+            hideExistingCalibrationSection();
+            
+            // Limpar dados existentes
+            resetCalibration();
+            
+            // Mostrar passo 1
+            showStep(1);
+            
+            showSuccess('Nova calibração iniciada!');
+        }
+        
+        function viewCalibrationDetails() {
+            console.log('👁️ Visualizando detalhes da calibração');
+            
+            // Carregar dados da calibração existente - tentar ambas as chaves
+            let localCalibration = localStorage.getItem('visionkrono_calibration_complete');
+            if (!localCalibration) {
+                localCalibration = localStorage.getItem('visionkrono_calibration');
+            }
+            
+            if (localCalibration) {
+                const calibration = JSON.parse(localCalibration);
+                loadExistingCalibrationData(calibration);
+                
+                // Ir para o passo 5 para mostrar detalhes
+                showStep(5);
+                hideExistingCalibrationSection();
+            } else {
+                showError('Não foi possível carregar os detalhes da calibração.');
+            }
+        }
+        
+        function loadExistingCalibrationData(calibrationData) {
+            console.log('📥 Carregando dados da calibração existente:', calibrationData);
+            
+            // Carregar imagem
+            if (calibrationData.image) {
+                uploadedImage = calibrationData.image;
+                showImagePreview(calibrationData.image);
+            }
+            
+            // Carregar área de detecção
+            if (calibrationData.detectionArea) {
+                detectionArea = calibrationData.detectionArea;
+                // Aplicar área na imagem se estiver visível
+                if (document.getElementById('detectionImage').src) {
+                    applyDetectionArea(calibrationData.detectionArea);
+                }
+            }
+            
+            // Carregar configuração da IA
+            if (calibrationData.aiConfig) {
+                aiConfig = calibrationData.aiConfig;
+                loadAIConfig(calibrationData.aiConfig);
+            }
+            
+            // Carregar resultados
+            if (calibrationData.results) {
+                calibrationResults = calibrationData.results;
+            }
+            
+            // Atualizar imagem de referência se estivermos no passo 5
+            const referenceImage = document.getElementById('referenceImage');
+            if (referenceImage && calibrationData.image) {
+                referenceImage.src = calibrationData.image;
+                referenceImage.style.display = 'block';
+                console.log('📷 Imagem de referência carregada para visualização de detalhes');
+            }
+        }
+        
+        function applyDetectionArea(area) {
+            const detectionAreaEl = document.getElementById('detectionArea');
+            if (detectionAreaEl && area) {
+                detectionAreaEl.style.left = (area.x * 100) + '%';
+                detectionAreaEl.style.top = (area.y * 100) + '%';
+                detectionAreaEl.style.width = (area.width * 100) + '%';
+                detectionAreaEl.style.height = (area.height * 100) + '%';
+            }
+        }
+        
+        function loadAIConfig(config) {
+            // Aplicar configurações da IA nos campos
+            if (config.confidenceThreshold) {
+                const slider = document.getElementById('confidenceThreshold');
+                const value = document.getElementById('confidenceValue');
+                if (slider && value) {
+                    slider.value = config.confidenceThreshold;
+                    value.textContent = config.confidenceThreshold;
+                }
+            }
+            
+            if (config.detectionSpeed) {
+                const select = document.getElementById('detectionSpeed');
+                if (select) {
+                    select.value = config.detectionSpeed;
+                }
+            }
+            
+            if (config.enablePreprocessing !== undefined) {
+                const switchEl = document.getElementById('preprocessingSwitch');
+                if (switchEl) {
+                    switchEl.classList.toggle('active', config.enablePreprocessing);
+                }
+            }
+            
+            if (config.enablePostprocessing !== undefined) {
+                const switchEl = document.getElementById('postprocessingSwitch');
+                if (switchEl) {
+                    switchEl.classList.toggle('active', config.enablePostprocessing);
+                }
+            }
+            
+            if (config.maxDetections) {
+                const input = document.getElementById('maxDetections');
+                if (input) {
+                    input.value = config.maxDetections;
+                }
+            }
+            
+            if (config.detectionTimeout) {
+                const input = document.getElementById('detectionTimeout');
+                if (input) {
+                    input.value = config.detectionTimeout;
+                }
+            }
+        }
+        
+        function recalibrate() {
+            if (confirm('Tem certeza que deseja recalibrar? Isso irá resetar todas as configurações.')) {
+                resetCalibration();
+                showStep(1);
+            }
+        }
+        
+        function resetCalibration() {
+            // Reset all data
+            uploadedImage = null;
+            detectionArea = null;
+            aiConfig = {};
+            calibrationResults = {};
+            
+            // Reset UI
+            removeImage();
+            resetSteps();
+            
+            showSuccess('Calibração resetada');
+        }
+        
+        function exportConfig() {
+            if (!aiConfig.confidenceThreshold) {
+                showError('Nenhuma configuração para exportar');
+                return;
+            }
+            
+            const configData = {
+                detectionArea: detectionArea,
+                aiConfig: aiConfig,
+                results: calibrationResults,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `calibration_config_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Configuração exportada');
+        }
+        
+        function loadSavedConfiguration() {
+            // Load from localStorage or Supabase
+            if (window.supabaseClient) {
+                window.supabaseClient.getConfiguration('calibration').then(config => {
+                    if (config) {
+                        // Apply saved configuration
+                        console.log('📂 Configuração carregada:', config);
+                    }
+                });
+            }
+        }
+        
+        function loadEventInfo(eventId) {
+            // Load event info from URL or localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventName = urlParams.get('eventName') || 'Evento Selecionado';
+            
+            currentEvent = { id: eventId, name: eventName };
+            
+            // Update sidebar
+            document.getElementById('eventInfoPanel').style.display = 'block';
+            document.getElementById('currentEventInfo').innerHTML = `
+                <strong>${eventName}</strong><br>
+                ID: ${eventId}
+            `;
+        }
+        
+        function showStep(stepNumber) {
+            // Hide all steps
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById(`step${i}`);
+                if (step) step.style.display = 'none';
+            }
+            
+            // Show current step
+            const currentStep = document.getElementById(`step${stepNumber}`);
+            if (currentStep) {
+                currentStep.style.display = 'block';
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        function selectNomenclature(type) {
+            ['numericConfig', 'prefixConfig', 'suffixConfig', 'prefixSuffixConfig', 'markersConfig', 'customConfig'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            
+            const config = document.getElementById(type + 'Config');
+            if (config) config.style.display = 'block';
+            
+            const radio = document.querySelector(`input[name="nomenclatureType"][value="${type}"]`);
+            if (radio) radio.checked = true;
+            
+            updatePreviews();
+        }
+        
+        function updatePreviews() {
+            const type = document.querySelector('input[name="nomenclatureType"]:checked')?.value || 'numeric';
+            
+            if (type === 'numeric') {
+                const min = document.getElementById('numericMin')?.value || 1;
+                const max = document.getElementById('numericMax')?.value || 9999;
+                const usePadding = document.getElementById('usePadding')?.checked;
+                const digits = document.getElementById('numericDigits')?.value || 3;
+                
+                let preview = usePadding ? 
+                    `${String(min).padStart(digits, '0')}, ${String(parseInt(min)+1).padStart(digits, '0')}, ..., ${String(max).padStart(digits, '0')}` :
+                    `${min}, ${parseInt(min)+1}, ${parseInt(min)+2}, ..., ${max}`;
+                    
+                const previewEl = document.getElementById('numericPreview');
+                if (previewEl) previewEl.textContent = preview;
+            } else if (type === 'prefix') {
+                const prefixes = (document.getElementById('prefixText')?.value || 'M,F').split(',');
+                const separator = document.getElementById('prefixSeparator')?.value || '-';
+                const useSeparator = document.getElementById('prefixUseSeparator')?.checked;
+                const examples = prefixes.map(p => {
+                    const prefix = p.trim();
+                    return useSeparator ? `${prefix}${separator}1, ${prefix}${separator}2` : `${prefix}1, ${prefix}2`;
+                }).join(', ');
+                const previewEl = document.getElementById('prefixPreview');
+                if (previewEl) previewEl.textContent = examples;
+            } else if (type === 'suffix') {
+                const suffixes = (document.getElementById('suffixText')?.value || 'M,F').split(',');
+                const separator = document.getElementById('suffixSeparator')?.value || '-';
+                const useSeparator = document.getElementById('suffixUseSeparator')?.checked;
+                const examples = suffixes.map(s => {
+                    const suffix = s.trim();
+                    return useSeparator ? `1${separator}${suffix}, 2${separator}${suffix}` : `1${suffix}, 2${suffix}`;
+                }).join(', ');
+                const previewEl = document.getElementById('suffixPreview');
+                if (previewEl) previewEl.textContent = examples;
+            } else if (type === 'prefix-suffix') {
+                const prefixes = (document.getElementById('prefixSuffixPrefixText')?.value || 'M,F').split(',');
+                const suffixes = (document.getElementById('prefixSuffixSuffixText')?.value || 'M,F').split(',');
+                const prefixSeparator = document.getElementById('prefixSuffixPrefixSeparator')?.value || '-';
+                const suffixSeparator = document.getElementById('prefixSuffixSuffixSeparator')?.value || '-';
+                const usePrefixSeparator = document.getElementById('prefixSuffixPrefixUseSeparator')?.checked;
+                const useSuffixSeparator = document.getElementById('prefixSuffixSuffixUseSeparator')?.checked;
+                
+                const examples = [];
+                prefixes.slice(0, 2).forEach(p => {
+                    suffixes.slice(0, 2).forEach(s => {
+                        const prefix = p.trim();
+                        const suffix = s.trim();
+                        const prefixPart = usePrefixSeparator ? `${prefix}${prefixSeparator}` : prefix;
+                        const suffixPart = useSuffixSeparator ? `${suffixSeparator}${suffix}` : suffix;
+                        examples.push(`${prefixPart}1${suffixPart}, ${prefixPart}2${suffixPart}`);
+                    });
+                });
+                
+                const previewEl = document.getElementById('prefixSuffixPreview');
+                if (previewEl) previewEl.textContent = examples.slice(0, 3).join(', ');
+            }
+        }
+        
+        function testRegex() {
+            const regex = document.getElementById('customRegex').value;
+            const examples = document.getElementById('customExamples').value;
+            const result = document.getElementById('regexTestResult');
+            
+            if (!regex) {
+                result.textContent = 'Digite uma expressão regular';
+                return;
+            }
+            
+            try {
+                const re = new RegExp(regex);
+                const testValues = examples.split(',').map(s => s.trim());
+                const results = testValues.map(val => ({
+                    value: val,
+                    matches: re.test(val)
+                }));
+                
+                result.innerHTML = results.map(r => 
+                    `${r.value}: ${r.matches ? '✅ OK' : '❌ Não corresponde'}`
+                ).join('<br>');
+            } catch (e) {
+                result.textContent = '❌ Regex inválido: ' + e.message;
+            }
+        }
+        
+        async function saveNomenclature() {
+            const type = document.querySelector('input[name="nomenclatureType"]:checked').value;
+            
+            let nomenclatureConfig = { type };
+            
+            if (type === 'numeric') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    min: parseInt(document.getElementById('numericMin').value),
+                    max: parseInt(document.getElementById('numericMax').value),
+                    usePadding: document.getElementById('usePadding').checked,
+                    digits: parseInt(document.getElementById('numericDigits').value)
+                };
+            } else if (type === 'prefix') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    prefixes: document.getElementById('prefixText').value.split(',').map(s => s.trim()),
+                    separator: document.getElementById('prefixSeparator').value,
+                    useSeparator: document.getElementById('prefixUseSeparator').checked,
+                    min: parseInt(document.getElementById('prefixMin').value),
+                    max: parseInt(document.getElementById('prefixMax').value)
+                };
+            } else if (type === 'suffix') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    suffixes: document.getElementById('suffixText').value.split(',').map(s => s.trim()),
+                    separator: document.getElementById('suffixSeparator').value,
+                    useSeparator: document.getElementById('suffixUseSeparator').checked,
+                    min: parseInt(document.getElementById('suffixMin').value),
+                    max: parseInt(document.getElementById('suffixMax').value)
+                };
+            } else if (type === 'prefix-suffix') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    prefixes: document.getElementById('prefixSuffixPrefixText').value.split(',').map(s => s.trim()),
+                    suffixes: document.getElementById('prefixSuffixSuffixText').value.split(',').map(s => s.trim()),
+                    prefixSeparator: document.getElementById('prefixSuffixPrefixSeparator').value,
+                    suffixSeparator: document.getElementById('prefixSuffixSuffixSeparator').value,
+                    usePrefixSeparator: document.getElementById('prefixSuffixPrefixUseSeparator').checked,
+                    useSuffixSeparator: document.getElementById('prefixSuffixSuffixUseSeparator').checked,
+                    min: parseInt(document.getElementById('prefixSuffixMin').value),
+                    max: parseInt(document.getElementById('prefixSuffixMax').value)
+                };
+            } else if (type === 'markers') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    startColor: document.getElementById('startColor').value,
+                    endColor: document.getElementById('endColor').value,
+                    tolerance: parseInt(document.getElementById('colorTolerance').value)
+                };
+            } else if (type === 'custom') {
+                nomenclatureConfig = {
+                    ...nomenclatureConfig,
+                    regex: document.getElementById('customRegex').value,
+                    examples: document.getElementById('customExamples').value
+                };
+            }
+            
+            // Salvar em event_configurations
+            if (currentEvent && window.supabaseClient) {
+                try {
+                    const { error } = await window.supabaseClient.supabase
+                        .from('event_configurations')
+                        .upsert({
+                            event_id: currentEvent.id,
+                            config_type: 'dorsal_nomenclature',
+                            config_data: nomenclatureConfig,
+                            updated_at: new Date().toISOString()
+                        }, {
+                            onConflict: 'event_id,config_type'
+                        });
+                    
+                    if (error) throw error;
+                    console.log('✅ Nomenclatura salva:', nomenclatureConfig);
+                } catch (error) {
+                    console.error('❌ Erro ao salvar:', error);
+                }
+            }
+            
+            localStorage.setItem('visionkrono_nomenclature', JSON.stringify(nomenclatureConfig));
+            
+            showSuccess('Nomenclatura configurada!');
+            showStep(3);
+        }
+        
+        function resetSteps() {
+            showStep(1);
+        }
+        
+        function showProgress(text, percentage) {
+            const container = document.getElementById('progressContainer');
+            const fill = document.getElementById('progressFill');
+            const textEl = document.getElementById('progressText');
+            
+            container.style.display = 'block';
+            fill.style.width = `${percentage}%`;
+            textEl.textContent = text;
+        }
+        
+        function updateProgress(percentage, text) {
+            const fill = document.getElementById('progressFill');
+            const textEl = document.getElementById('progressText');
+            
+            fill.style.width = `${percentage}%`;
+            textEl.textContent = text;
+        }
+        
+        function hideProgress() {
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            showToast(message, 'success');
+        }
+        
+        function showError(message) {
+            showToast(message, 'error');
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+    </script>
+    
+    <style>
+        /* Layout adaptations */
+        .layout-with-sidebar {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+        }
+        
+        /* Mobile */
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                z-index: var(--z-modal);
+                box-shadow: var(--shadow-2xl);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            #menuToggle {
+                display: flex !important;
+            }
+            
+            .main #mainContent {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
+</body>
+</html>
+

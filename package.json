@@ -1,0 +1,30 @@
+{
+  "name": "visionkrono",
+  "version": "1.0.0",
+  "description": "Webapp para detectar números de dorsais usando Vertex AI Vision",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "generate-cert": "node generate-cert.js"
+  },
+  "keywords": [
+    "vision",
+    "ai",
+    "dorsais",
+    "camera",
+    "gps"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "selfsigned": "^2.4.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

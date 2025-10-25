@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Mobile - VisionKrono</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .debug-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        h2 {
+            color: #00ff88;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+            background: #00ff88;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        #logs {
+            background: #222;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Mobile Interface</h1>
+    
+    <div class="debug-info">
+        <h2>📱 Device Info</h2>
+        <div id="deviceInfo">Carregando...</div>
+    </div>
+    
+    <div class="debug-info">
+        <h2>🔧 Configurações</h2>
+        <div id="configStatus">Verificando...</div>
+        <button onclick="testConfigs()">Testar Configurações</button>
+        <button onclick="testSupabase()">Testar Supabase</button>
+        <button onclick="testCamera()">Testar Câmera</button>
+    </div>
+    
+    <div class="debug-info">
+        <h2>📋 Logs</h2>
+        <div id="logs"></div>
+        <button onclick="clearLogs()">Limpar Logs</button>
+    </div>
+    
+    <div class="debug-info">
+        <h2>🎯 Links</h2>
+        <a href="/detection" style="color: #00ff88;">Página de Detecção</a><br>
+        <a href="/calibration" style="color: #00ff88;">Página de Calibração</a><br>
+        <a href="/" style="color: #00ff88;">Página Principal</a>
+    </div>
+    
+    <script src="supabase.js"></script>
+    <script>
+        let logs = [];
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            logs.push(logMessage);
+            document.getElementById('logs').textContent = logs.join('\n');
+            console.log(logMessage);
+        }
+        
+        function clearLogs() {
+            logs = [];
+            document.getElementById('logs').textContent = '';
+        }
+        
+        // Device info
+        function showDeviceInfo() {
+            const info = {
+                userAgent: navigator.userAgent,
+                screen: `${screen.width}x${screen.height}`,
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                devicePixelRatio: window.devicePixelRatio,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine
+            };
+            
+            document.getElementById('deviceInfo').innerHTML = Object.entries(info)
+                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                .join('<br>');
+        }
+        
+        async function testConfigs() {
+            log('🔧 Testando configurações...');
+            
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                log('✅ Servidor respondeu: ' + JSON.stringify(config, null, 2));
+                
+                // Testar localStorage
+                const localArea = localStorage.getItem('visionkrono_number_area');
+                const localCalibration = localStorage.getItem('visionkrono_calibration');
+                
+                log('📂 localStorage:');
+                log('  - number_area: ' + (localArea ? 'EXISTE' : 'NÃO EXISTE'));
+                log('  - calibration: ' + (localCalibration ? 'EXISTE' : 'NÃO EXISTE'));
+                
+                if (localArea) log('  - Área: ' + localArea);
+                if (localCalibration) log('  - Calibração: ' + localCalibration);
+                
+            } catch (error) {
+                log('❌ Erro: ' + error.message);
+            }
+        }
+        
+        async function testSupabase() {
+            log('📊 Testando Supabase...');
+            
+            try {
+                const client = new SupabaseClient();
+                const connected = await client.init();
+                
+                log('🔗 Supabase conectado: ' + (connected ? 'SIM' : 'NÃO'));
+                
+                if (connected) {
+                    // Testar configurações
+                    const numberArea = await client.getConfiguration('number_area');
+                    const calibration = await client.getConfiguration('calibration');
+                    
+                    log('📏 Área do Supabase: ' + (numberArea ? JSON.stringify(numberArea) : 'NÃO ENCONTRADA'));
+                    log('🔧 Calibração do Supabase: ' + (calibration ? JSON.stringify(calibration) : 'NÃO ENCONTRADA'));
+                }
+            } catch (error) {
+                log('❌ Erro Supabase: ' + error.message);
+            }
+        }
+        
+        async function testCamera() {
+            log('📹 Testando câmera...');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                
+                log('✅ Câmera acessível');
+                log('📊 Stream tracks: ' + stream.getTracks().length);
+                
+                // Parar stream
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                log('❌ Erro câmera: ' + error.message);
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            showDeviceInfo();
+            log('🚀 Debug page carregada');
+            
+            // Testar automaticamente
+            setTimeout(testConfigs, 1000);
+            setTimeout(testSupabase, 2000);
+        });
+    </script>
+</body>
+</html>

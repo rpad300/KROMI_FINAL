@@ -1,0 +1,2528 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações do Evento - VisionKrono</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VisionKrono">
+    <meta name="description" content="Sistema de detecção de dorsais VisionKrono">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+        <link rel="stylesheet" href="kromi-layout-fixes.css">
+        <script src="kromi-sidebar-toggle.js"></script>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        /* Sidebar toggle functionality */
+        .sidebar-hidden {
+            transform: translateX(-100%) !important;
+        }
+        
+        .main-expanded {
+            margin-left: 0 !important;
+            width: 100% !important;
+        }
+        
+        .header-expanded {
+            left: 0 !important;
+        }
+        
+        /* Mobile menu button */
+        #menuToggle {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            #menuToggle {
+                display: flex !important;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Config page specific styles */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .config-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+        }
+        
+        .config-section h3 {
+            margin: 0 0 var(--spacing-4) 0;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            transition: all 0.2s ease;
+            font-family: var(--font-family-base);
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-5);
+            padding-top: var(--spacing-4);
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        
+        .event-info-display {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-5);
+            border: 1px solid var(--border-color);
+        }
+        
+        .event-info-display h3 {
+            margin: 0 0 var(--spacing-3) 0;
+            color: var(--primary);
+            font-size: var(--font-size-lg);
+        }
+        
+        .event-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-3);
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+        
+        .info-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-2);
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            background: var(--bg-primary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .checkbox-item:hover {
+            background: rgba(252, 107, 3, 0.05);
+            border-color: var(--primary);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .category-icon {
+            font-size: var(--font-size-xl);
+            line-height: 1;
+        }
+        
+        .category-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+        
+        .category-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .category-details {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-12);
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .empty-state p {
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .checkbox-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .event-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Header actions responsive */
+        @media (max-width: 640px) {
+            #headerActions {
+                display: none !important;
+            }
+        }
+        
+        /* Processor Configuration Styles */
+        .processor-info-card {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .processor-info-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .processor-info-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .processor-icon {
+            font-size: var(--font-size-3xl);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .processor-name {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .processor-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-3);
+        }
+        
+        .processor-stats {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-sm);
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+        }
+        
+        .stat-value {
+            font-weight: 600;
+        }
+        
+        .stat-value.high {
+            color: var(--success);
+        }
+        
+        .stat-value.medium {
+            color: var(--warning);
+        }
+        
+        .stat-value.low {
+            color: var(--danger);
+        }
+        
+        .stat-value.perfect {
+            color: var(--primary);
+        }
+        
+        .stat-value.fast {
+            color: var(--success);
+        }
+        
+        .stat-value.slow {
+            color: var(--warning);
+        }
+        
+        .stat-value.manual {
+            color: var(--text-secondary);
+        }
+        
+        .stat-value.free {
+            color: var(--success);
+        }
+        
+        .range-value {
+            text-align: center;
+            margin-top: var(--spacing-1);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    ⚙️ Configurações
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    ⚙️ Configurações do Evento
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-primary" id="saveConfig">
+                    <i>💾</i> Salvar Configurações
+                </button>
+                <button class="btn btn-sm btn-secondary" id="resetConfig">
+                    <i>🔄</i> Resetar
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Event Selector -->
+                <div class="config-grid event-selector-container">
+                    <div class="config-section">
+                        <h3>📋 Selecionar Evento</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="eventSelect">Evento:</label>
+                            <select id="eventSelect" class="form-select">
+                                <option value="">-- Selecionar Evento --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Info Display -->
+                <div class="event-info-display event-info-container" id="eventInfoDisplay" style="display: none;">
+                    <h3>ℹ️ Informações do Evento</h3>
+                    <div class="event-info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Nome</div>
+                            <div class="info-value" id="displayEventName">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Data</div>
+                            <div class="info-value" id="displayEventDate">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Local</div>
+                            <div class="info-value" id="displayEventLocation">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Status</div>
+                            <div class="info-value" id="displayEventStatus">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Configuration -->
+                <div class="config-grid" id="configSections" style="display: none;">
+                    
+                    <!-- Basic Info -->
+                    <div class="config-section">
+                        <h3>📝 Informações Básicas</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="eventName">Nome do Evento:</label>
+                                <input type="text" id="eventName" class="form-input" placeholder="Ex: Maratona Lisboa 2024">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventDate">Data:</label>
+                                <input type="date" id="eventDate" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventTime">Hora de Início:</label>
+                                <input type="time" id="eventTime" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventLocation">Local:</label>
+                                <input type="text" id="eventLocation" class="form-input" placeholder="Ex: Parque das Nações">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Event Settings -->
+                    <div class="config-section">
+                        <h3>🏃 Configurações do Evento</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="eventType">Tipo de Evento:</label>
+                                <select id="eventType" class="form-select">
+                                    <option value="running">Corrida</option>
+                                    <option value="cycling">Ciclismo</option>
+                                    <option value="triathlon">Triatlo</option>
+                                    <option value="walking">Caminhada</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventDistance">Distância (km):</label>
+                                <input type="number" id="eventDistance" class="form-input" placeholder="10.0" step="0.1" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventStatus">Status:</label>
+                                <select id="eventStatus" class="form-select">
+                                    <option value="active">Ativo</option>
+                                    <option value="paused">Pausado</option>
+                                    <option value="completed">Concluído</option>
+                                    <option value="cancelled">Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="hasCategories">Categorias:</label>
+                                <select id="hasCategories" class="form-select">
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Categories Configuration -->
+                    <div class="config-section">
+                        <h3>🏅 Configuração de Categorias</h3>
+                        <div class="form-group">
+                            <label class="form-label">Categorias Habilitadas:</label>
+                            <div id="categoriesConfig" class="checkbox-grid">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-sm btn-secondary" id="addCustomCategory">
+                                <i>➕</i> Adicionar Categoria Personalizada
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Modalities Configuration -->
+                    <div class="config-section">
+                        <h3>🏃 Configuração de Modalidades</h3>
+                        <div class="form-group">
+                            <label class="form-label">Modalidades Habilitadas:</label>
+                            <div id="modalitiesConfig" class="checkbox-grid">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-sm btn-secondary" id="addCustomModality">
+                                <i>➕</i> Adicionar Modalidade Personalizada
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Multi-Modal Configuration -->
+                    <div class="config-section" id="multimodalConfig" style="display: none;">
+                        <h3>🏊🚴🏃 Configuração Multi-Disciplinar</h3>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                            Configure as atividades específicas para eventos multi-disciplinares (Duatlo/Triatlo).
+                        </p>
+                        <div id="multimodalActivities">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+                        <div id="multimodalValidation" style="display: none; margin-top: var(--spacing-3); padding: var(--spacing-3); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-base); color: var(--danger);">
+                            <strong>⚠️ Validação:</strong> <span id="multimodalValidationText">Verificando configuração...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Lap Counter Configuration -->
+                    <div class="config-section">
+                        <h3>🔄 Configuração de Contador de Voltas</h3>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                            Configure se este evento utiliza contador de voltas. Quando ativado, o sistema calculará automaticamente estatísticas de voltas.
+                        </p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="hasLapCounter">Contador de Voltas:</label>
+                                <select id="hasLapCounter" class="form-select">
+                                    <option value="false">Desativado</option>
+                                    <option value="true">Ativado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="lapDistance">Distância por Volta (km):</label>
+                                <input type="number" id="lapDistance" class="form-input" placeholder="2.5" step="0.1" min="0" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="totalLaps">Total de Voltas Esperadas:</label>
+                                <input type="number" id="totalLaps" class="form-input" placeholder="10" min="1" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="minLapsForClassification">Mínimo de Voltas para Classificar:</label>
+                                <input type="number" id="minLapsForClassification" class="form-input" placeholder="1" min="1" disabled>
+                            </div>
+                        </div>
+                        <div id="lapCounterValidation" style="display: none; margin-top: var(--spacing-3); padding: var(--spacing-3); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-base); color: var(--danger);">
+                            <strong>⚠️ Validação:</strong> <span id="lapCounterValidationText">Verificando configuração...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Checkpoint Types Configuration -->
+                    <div class="config-section">
+                        <h3>📍 Tipos de Checkpoints (Global)</h3>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                            Configure os tipos de checkpoints disponíveis para todos os eventos.
+                        </p>
+                        <div id="checkpointTypesConfig">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+                        <div style="margin-top: var(--spacing-3);">
+                            <button class="btn btn-sm btn-secondary" id="addCheckpointTypeBtn">
+                                <i>➕</i> Adicionar Tipo Personalizado
+                            </button>
+                            <button class="btn btn-sm btn-primary" id="refreshCheckpointTypesBtn">
+                                <i>🔄</i> Atualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Settings -->
+                    <div class="config-section">
+                        <h3>🔧 Configurações Avançadas</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="autoStartEnabled">Início Automático:</label>
+                                <select id="autoStartEnabled" class="form-select">
+                                    <option value="true">Ativado</option>
+                                    <option value="false">Desativado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="scheduledStartTime">Hora Programada:</label>
+                                <input type="datetime-local" id="scheduledStartTime" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="eventDescription">Descrição:</label>
+                                <textarea id="eventDescription" class="form-textarea" placeholder="Descrição detalhada do evento..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Processor Configuration -->
+                    <div class="config-section">
+                        <h3>🤖 Configuração do Processador de IA</h3>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                            Escolha o tipo de processador de IA para detecção de dorsais. Cada processador tem características específicas de velocidade, precisão e custo.
+                        </p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="processorType">Tipo de Processador:</label>
+                                <select id="processorType" class="form-select">
+                                    <option value="gemini">🤖 Gemini AI (Recomendado)</option>
+                                    <option value="google-vision">👁️ Google Vision API</option>
+                                    <option value="ocr">📄 OCR Tradicional</option>
+                                    <option value="hybrid">🔄 Híbrido (Gemini + OCR)</option>
+                                    <option value="manual">✋ Manual (Sem IA)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="processorSpeed">Velocidade de Processamento:</label>
+                                <select id="processorSpeed" class="form-select">
+                                    <option value="fast">⚡ Rápido (Menos Precisão)</option>
+                                    <option value="balanced">⚖️ Equilibrado (Padrão)</option>
+                                    <option value="accurate">🎯 Preciso (Mais Lento)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="processorConfidence">Confiança Mínima:</label>
+                                <input type="range" id="processorConfidence" class="form-range" min="0.1" max="1.0" step="0.1" value="0.7">
+                                <div class="range-value">
+                                    <span id="confidenceValue">70%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Processor Info Cards -->
+                        <div class="processor-info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-4);">
+                            <div class="processor-info-card" data-processor="gemini">
+                                <div class="processor-icon">🤖</div>
+                                <div class="processor-name">Gemini AI</div>
+                                <div class="processor-desc">IA avançada do Google</div>
+                                <div class="processor-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Precisão:</span>
+                                        <span class="stat-value high">95%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Velocidade:</span>
+                                        <span class="stat-value medium">2-5s</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Custo:</span>
+                                        <span class="stat-value medium">Médio</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="processor-info-card" data-processor="google-vision">
+                                <div class="processor-icon">👁️</div>
+                                <div class="processor-name">Google Vision</div>
+                                <div class="processor-desc">OCR especializado</div>
+                                <div class="processor-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Precisão:</span>
+                                        <span class="stat-value medium">85%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Velocidade:</span>
+                                        <span class="stat-value fast">1-3s</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Custo:</span>
+                                        <span class="stat-value low">Baixo</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="processor-info-card" data-processor="ocr">
+                                <div class="processor-icon">📄</div>
+                                <div class="processor-name">OCR Tradicional</div>
+                                <div class="processor-desc">Processamento local</div>
+                                <div class="processor-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Precisão:</span>
+                                        <span class="stat-value low">70%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Velocidade:</span>
+                                        <span class="stat-value fast">0.5-2s</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Custo:</span>
+                                        <span class="stat-value free">Gratuito</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="processor-info-card" data-processor="hybrid">
+                                <div class="processor-icon">🔄</div>
+                                <div class="processor-name">Híbrido</div>
+                                <div class="processor-desc">Combina múltiplas IA</div>
+                                <div class="processor-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Precisão:</span>
+                                        <span class="stat-value high">98%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Velocidade:</span>
+                                        <span class="stat-value slow">5-10s</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Custo:</span>
+                                        <span class="stat-value high">Alto</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="processor-info-card" data-processor="manual">
+                                <div class="processor-icon">✋</div>
+                                <div class="processor-name">Manual</div>
+                                <div class="processor-desc">Sem processamento IA</div>
+                                <div class="processor-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Precisão:</span>
+                                        <span class="stat-value perfect">100%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Velocidade:</span>
+                                        <span class="stat-value manual">Manual</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Custo:</span>
+                                        <span class="stat-value free">Gratuito</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="config-section">
+                        <h3>💾 Ações</h3>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" id="saveEventConfig">
+                                <i>💾</i> Salvar Configuração
+                            </button>
+                            <button class="btn btn-secondary" id="resetEventConfig">
+                                <i>🔄</i> Resetar
+                            </button>
+                            <button class="btn btn-danger" id="deleteEvent">
+                                <i>🗑️</i> Excluir Evento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-state-icon">⚙️</div>
+                    <h3>Selecione um evento para configurar</h3>
+                    <p>Escolha um evento na lista acima para ver e editar suas configurações.</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav" id="bottomNav">
+            <!-- Será preenchido por navigation.js -->
+        </nav>
+    </div> <!-- Fim .layout-with-sidebar -->
+    
+    <!-- Scripts -->
+    <script src="navigation.js"></script>
+    <script src="supabase.js"></script>
+    
+    <!-- Configuration Logic -->
+    <script>
+        // Global variables
+        let currentEvent = null;
+        let events = [];
+        
+        // Função para alternar sidebar
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const main = document.querySelector('.main');
+            const header = document.querySelector('.header');
+            
+            if (sidebar && main && header) {
+                sidebar.classList.toggle('sidebar-hidden');
+                main.classList.toggle('main-expanded');
+                header.classList.toggle('header-expanded');
+                
+                console.log('🔄 Sidebar alternado:', sidebar.classList.contains('sidebar-hidden') ? 'Oculto' : 'Visível');
+            }
+        }
+        
+        // Verificar se é mobile e mostrar botão de menu
+        function checkMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            if (menuToggle && window.innerWidth <= 768) {
+                menuToggle.style.display = 'flex';
+            } else if (menuToggle) {
+                menuToggle.style.display = 'none';
+            }
+        }
+        
+        // Event listener para redimensionamento
+        window.addEventListener('resize', checkMobileMenu);
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Inicializando página config...');
+            
+            // Check mobile menu visibility
+            checkMobileMenu();
+            
+            // Initialize Supabase first
+            if (window.supabaseClient) {
+                console.log('🔑 Inicializando Supabase...');
+                await window.supabaseClient.init();
+                console.log('✅ Supabase inicializado:', window.supabaseClient.isConnected);
+            } else {
+                console.error('❌ window.supabaseClient não encontrado');
+            }
+            
+            // Initialize navigation
+            if (window.Navigation) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                const eventName = urlParams.get('eventName');
+                
+                console.log('📍 Evento da URL:', eventId, eventName);
+                
+                window.Navigation.init('config', eventId);
+                
+                if (eventId) {
+                    console.log('🎯 Carregando evento automaticamente...');
+                    // Se temos evento na URL, carregar automaticamente
+                    await loadEventInfo(eventId);
+                    
+                    // Esconder dropdown de seleção de evento
+                    const eventSelectorContainer = document.querySelector('.event-selector-container');
+                    if (eventSelectorContainer) {
+                        eventSelectorContainer.style.display = 'none';
+                    }
+                    
+                    // Mostrar info do evento selecionado
+                    const eventInfoContainer = document.querySelector('.event-info-container');
+                    if (eventInfoContainer) {
+                        eventInfoContainer.style.display = 'block';
+                    }
+                }
+            } else {
+                console.error('❌ window.Navigation não encontrado');
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load events
+            console.log('📋 Carregando lista de eventos...');
+            await loadEvents();
+            console.log('✅ Página inicializada');
+        });
+        
+        function setupEventListeners() {
+            // Event selector
+            const eventSelect = document.getElementById('eventSelect');
+            if (eventSelect) {
+                eventSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        loadEventInfo(e.target.value);
+                    } else {
+                        hideEventInfo();
+                    }
+                });
+            }
+            
+            // Configuration buttons
+            const saveEventConfigBtn = document.getElementById('saveEventConfig');
+            const resetEventConfigBtn = document.getElementById('resetEventConfig');
+            const deleteEventBtn = document.getElementById('deleteEvent');
+            const saveConfigBtn = document.getElementById('saveConfig');
+            const resetConfigBtn = document.getElementById('resetConfig');
+            
+            if (saveEventConfigBtn) saveEventConfigBtn.addEventListener('click', saveEventConfig);
+            if (resetEventConfigBtn) resetEventConfigBtn.addEventListener('click', resetEventConfig);
+            if (deleteEventBtn) deleteEventBtn.addEventListener('click', deleteEvent);
+            if (saveConfigBtn) saveConfigBtn.addEventListener('click', saveEventConfig);
+            if (resetConfigBtn) resetConfigBtn.addEventListener('click', resetEventConfig);
+            
+            // Lap counter configuration
+            const hasLapCounter = document.getElementById('hasLapCounter');
+            if (hasLapCounter) {
+                hasLapCounter.addEventListener('change', handleLapCounterToggle);
+            }
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-open');
+                });
+            }
+        }
+        
+        async function loadEvents() {
+            try {
+                console.log('📋 loadEvents: Iniciando...');
+                console.log('📋 window.supabaseClient:', !!window.supabaseClient);
+                console.log('📋 window.supabaseClient.supabase:', !!window.supabaseClient?.supabase);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('❌ Supabase não disponível');
+                    return;
+                }
+                
+                console.log('📋 Fazendo query para eventos...');
+                const { data: eventsData, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar eventos:', error);
+                    return;
+                }
+                
+                console.log('✅ Eventos carregados:', eventsData?.length || 0);
+                events = eventsData || [];
+                
+                // Update dropdown
+                const selector = document.getElementById('eventSelect');
+                if (selector) {
+                    selector.innerHTML = '<option value="">-- Selecionar Evento --</option>';
+                    events.forEach(event => {
+                        const option = document.createElement('option');
+                        option.value = event.id;
+                        option.textContent = event.name;
+                        selector.appendChild(option);
+                    });
+                    console.log('✅ Dropdown atualizado com', events.length, 'eventos');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos:', error);
+            }
+        }
+        
+        async function loadEventInfo(eventId) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('Supabase não disponível');
+                    return;
+                }
+                
+                // Carregar dados do evento
+                const { data: event, error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (eventError) {
+                    console.error('Erro ao carregar evento:', eventError);
+                    showError('Erro ao carregar evento');
+                    return;
+                }
+                
+                currentEvent = event;
+                
+                // Update display info
+                updateEventDisplay(event);
+                
+                // Update form fields
+                updateFormFields(event);
+                
+                // Load categories, modalities and checkpoint types
+                await loadCategories();
+                await loadModalities();
+                await loadCheckpointTypes();
+                
+                // Initialize processor configuration
+                initializeProcessorConfig();
+                
+                // Load event-specific configurations
+                const categoryConfig = await loadEventCategoryConfig(eventId);
+                const modalityConfig = await loadEventModalityConfig(eventId);
+                
+                // Update checkboxes based on event configuration
+                updateCategoryCheckboxes(categoryConfig);
+                updateModalityCheckboxes(modalityConfig);
+                
+                // Show config sections
+                const configSections = document.getElementById('configSections');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (configSections) configSections.style.display = 'grid';
+                if (emptyState) emptyState.style.display = 'none';
+                
+                // Update sidebar
+                const eventInfoPanel = document.getElementById('eventInfoPanel');
+                const currentEventInfo = document.getElementById('currentEventInfo');
+                
+                if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                if (currentEventInfo) {
+                    currentEventInfo.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        Local: ${event.location || 'Não definido'}
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar evento:', error);
+                showError('Erro ao carregar evento');
+            }
+        }
+        
+        function updateEventDisplay(event) {
+            const displayEventName = document.getElementById('displayEventName');
+            const displayEventDate = document.getElementById('displayEventDate');
+            const displayEventLocation = document.getElementById('displayEventLocation');
+            const displayEventStatus = document.getElementById('displayEventStatus');
+            
+            if (displayEventName) displayEventName.textContent = event.name || '--';
+            if (displayEventDate) displayEventDate.textContent = event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : '--';
+            if (displayEventLocation) displayEventLocation.textContent = event.location || '--';
+            if (displayEventStatus) displayEventStatus.textContent = event.status || '--';
+        }
+        
+        function updateFormFields(event) {
+            const eventName = document.getElementById('eventName');
+            const eventDate = document.getElementById('eventDate');
+            const eventTime = document.getElementById('eventTime');
+            const eventLocation = document.getElementById('eventLocation');
+            const eventType = document.getElementById('eventType');
+            const eventDistance = document.getElementById('eventDistance');
+            const eventStatus = document.getElementById('eventStatus');
+            const hasCategories = document.getElementById('hasCategories');
+            const autoStartEnabled = document.getElementById('autoStartEnabled');
+            const scheduledStartTime = document.getElementById('scheduledStartTime');
+            const eventDescription = document.getElementById('eventDescription');
+            
+            if (eventName) eventName.value = event.name || '';
+            if (eventDate) eventDate.value = event.event_date ? event.event_date.split('T')[0] : '';
+            if (eventTime) eventTime.value = event.event_date ? event.event_date.split('T')[1]?.substring(0, 5) : '';
+            if (eventLocation) eventLocation.value = event.location || '';
+            if (eventType) eventType.value = event.event_type || 'running';
+            if (eventDistance) eventDistance.value = event.distance_km || '';
+            if (eventStatus) eventStatus.value = event.status || 'active';
+            if (hasCategories) hasCategories.value = event.has_categories ? 'true' : 'false';
+            if (autoStartEnabled) autoStartEnabled.value = event.auto_start_enabled ? 'true' : 'false';
+            if (scheduledStartTime) scheduledStartTime.value = event.scheduled_start_time ? event.scheduled_start_time.substring(0, 16) : '';
+            if (eventDescription) eventDescription.value = event.description || '';
+            
+            // Load lap counter configuration
+            loadLapCounterConfig(event.id);
+        }
+        
+        function hideEventInfo() {
+            const configSections = document.getElementById('configSections');
+            const emptyState = document.getElementById('emptyState');
+            const eventInfoDisplay = document.getElementById('eventInfoDisplay');
+            
+            if (configSections) configSections.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+            if (eventInfoDisplay) eventInfoDisplay.style.display = 'none';
+            
+            currentEvent = null;
+        }
+        
+        // =====================================================
+        // FUNÇÕES PARA CATEGORIAS E MODALIDADES
+        // =====================================================
+        
+        async function loadCategories() {
+            try {
+                console.log('🏅 Carregando categorias...');
+                const { data: categories, error } = await window.supabaseClient.supabase
+                    .from('age_categories')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('sort_order');
+                
+                if (error) throw error;
+                
+                console.log('✅ Categorias carregadas:', categories?.length || 0);
+                renderCategoriesConfig(categories || []);
+            } catch (error) {
+                console.error('❌ Erro ao carregar categorias:', error);
+                showError('Erro ao carregar categorias');
+            }
+        }
+        
+        async function loadModalities() {
+            try {
+                console.log('🏃 Carregando modalidades...');
+                const { data: modalities, error } = await window.supabaseClient.supabase
+                    .from('event_modalities')
+                    .select('*')
+                    .eq('is_active', true);
+                
+                if (error) throw error;
+                
+                console.log('✅ Modalidades carregadas:', modalities?.length || 0);
+                renderModalitiesConfig(modalities || []);
+            } catch (error) {
+                console.error('❌ Erro ao carregar modalidades:', error);
+                showError('Erro ao carregar modalidades');
+            }
+        }
+        
+        async function loadEventCategoryConfig(eventId) {
+            try {
+                console.log('🔧 Carregando configuração de categorias do evento...');
+                const { data: config, error } = await window.supabaseClient.supabase
+                    .from('event_category_config')
+                    .select(`
+                        *,
+                        age_categories (*)
+                    `)
+                    .eq('event_id', eventId);
+                
+                if (error) throw error;
+                
+                console.log('✅ Configuração de categorias carregada:', config?.length || 0);
+                return config || [];
+            } catch (error) {
+                console.error('❌ Erro ao carregar configuração de categorias:', error);
+                return [];
+            }
+        }
+        
+        async function loadEventModalityConfig(eventId) {
+            try {
+                console.log('🔧 Carregando configuração de modalidades do evento...');
+                const { data: config, error } = await window.supabaseClient.supabase
+                    .from('event_modality_config')
+                    .select(`
+                        *,
+                        event_modalities (*)
+                    `)
+                    .eq('event_id', eventId);
+                
+                if (error) throw error;
+                
+                console.log('✅ Configuração de modalidades carregada:', config?.length || 0);
+                return config || [];
+            } catch (error) {
+                console.error('❌ Erro ao carregar configuração de modalidades:', error);
+                return [];
+            }
+        }
+        
+        function renderCategoriesConfig(categories) {
+            const container = document.getElementById('categoriesConfig');
+            if (!container) return;
+            
+            let html = '';
+            categories.forEach(category => {
+                const genderText = category.gender === 'M' ? 'Masculino' : 
+                                 category.gender === 'F' ? 'Feminino' : 'Misto';
+                
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" 
+                               id="category_${category.id}" 
+                               value="${category.id}"
+                               data-category='${JSON.stringify(category)}'>
+                        <label for="category_${category.id}">
+                            <span class="category-icon">${category.icon}</span>
+                            <div class="category-info">
+                                <div class="category-name">${category.name}</div>
+                                <div class="category-details">${genderText} • ${category.min_age}-${category.max_age} anos</div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function renderModalitiesConfig(modalities) {
+            const container = document.getElementById('modalitiesConfig');
+            if (!container) return;
+            
+            let html = '';
+            modalities.forEach(modality => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" 
+                               id="modality_${modality.id}" 
+                               value="${modality.id}"
+                               data-modality='${JSON.stringify(modality)}'
+                               onchange="handleModalityChange('${modality.id}', '${modality.name}')">
+                        <label for="modality_${modality.id}">
+                            <span class="category-icon">${modality.icon}</span>
+                            <div class="category-info">
+                                <div class="category-name">${modality.name}</div>
+                                <div class="category-details">${modality.description || ''}</div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function updateCategoryCheckboxes(categoryConfig) {
+            // Clear all checkboxes first
+            const checkboxes = document.querySelectorAll('#categoriesConfig input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Check enabled categories
+            categoryConfig.forEach(config => {
+                if (config.is_enabled) {
+                    const checkbox = document.getElementById(`category_${config.age_category_id}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                }
+            });
+        }
+        
+        function updateModalityCheckboxes(modalityConfig) {
+            // Clear all checkboxes first
+            const checkboxes = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Check enabled modalities
+            modalityConfig.forEach(config => {
+                if (config.is_enabled) {
+                    const checkbox = document.getElementById(`modality_${config.modality_id}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                }
+            });
+        }
+        
+        async function saveCategoryConfigurations(eventId) {
+            try {
+                console.log('💾 Salvando configurações de categorias...');
+                
+                // Get all checked categories
+                const checkedCategories = document.querySelectorAll('#categoriesConfig input[type="checkbox"]:checked');
+                
+                // Delete existing configurations
+                await window.supabaseClient.supabase
+                    .from('event_category_config')
+                    .delete()
+                    .eq('event_id', eventId);
+                
+                // Insert new configurations
+                if (checkedCategories.length > 0) {
+                    const configs = Array.from(checkedCategories).map(checkbox => ({
+                        event_id: eventId,
+                        age_category_id: checkbox.value,
+                        is_enabled: true
+                    }));
+                    
+                    const { error } = await window.supabaseClient.supabase
+                        .from('event_category_config')
+                        .insert(configs);
+                    
+                    if (error) throw error;
+                }
+                
+                console.log('✅ Configurações de categorias salvas:', checkedCategories.length);
+            } catch (error) {
+                console.error('❌ Erro ao salvar configurações de categorias:', error);
+                throw error;
+            }
+        }
+        
+        async function saveModalityConfigurations(eventId) {
+            try {
+                console.log('💾 Salvando configurações de modalidades...');
+                
+                // Get all checked modalities
+                const checkedModalities = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]:checked');
+                
+                // Delete existing configurations
+                await window.supabaseClient.supabase
+                    .from('event_modality_config')
+                    .delete()
+                    .eq('event_id', eventId);
+                
+                // Insert new configurations
+                if (checkedModalities.length > 0) {
+                    const configs = Array.from(checkedModalities).map(checkbox => ({
+                        event_id: eventId,
+                        modality_id: checkbox.value,
+                        is_enabled: true
+                    }));
+                    
+                    const { error } = await window.supabaseClient.supabase
+                        .from('event_modality_config')
+                        .insert(configs);
+                    
+                    if (error) throw error;
+                }
+                
+                console.log('✅ Configurações de modalidades salvas:', checkedModalities.length);
+            } catch (error) {
+                console.error('❌ Erro ao salvar configurações de modalidades:', error);
+                throw error;
+            }
+        }
+        
+        async function saveEventConfig() {
+            if (!currentEvent) {
+                showError('Nenhum evento selecionado');
+                return;
+            }
+            
+            try {
+                const eventName = document.getElementById('eventName').value;
+                const eventDate = document.getElementById('eventDate').value;
+                const eventTime = document.getElementById('eventTime').value;
+                const eventLocation = document.getElementById('eventLocation').value;
+                const eventType = document.getElementById('eventType').value;
+                const eventDistance = document.getElementById('eventDistance').value;
+                const eventStatus = document.getElementById('eventStatus').value;
+                const hasCategories = document.getElementById('hasCategories').value === 'true';
+                const autoStartEnabled = document.getElementById('autoStartEnabled').value === 'true';
+                const scheduledStartTime = document.getElementById('scheduledStartTime').value;
+                const eventDescription = document.getElementById('eventDescription').value;
+                
+                // Combine date and time
+                let eventDateTime = null;
+                if (eventDate && eventTime) {
+                    eventDateTime = new Date(`${eventDate}T${eventTime}`).toISOString();
+                } else if (eventDate) {
+                    eventDateTime = new Date(`${eventDate}T00:00:00`).toISOString();
+                }
+                
+                const updateData = {
+                    name: eventName,
+                    event_date: eventDateTime,
+                    location: eventLocation,
+                    event_type: eventType,
+                    distance_km: eventDistance ? parseFloat(eventDistance) : null,
+                    status: eventStatus,
+                    has_categories: hasCategories,
+                    auto_start_enabled: autoStartEnabled,
+                    scheduled_start_time: scheduledStartTime ? new Date(scheduledStartTime).toISOString() : null,
+                    description: eventDescription,
+                    updated_at: new Date().toISOString()
+                };
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .update(updateData)
+                    .eq('id', currentEvent.id);
+                
+                if (error) {
+                    console.error('Erro ao salvar evento:', error);
+                    showError('Erro ao salvar configurações');
+                    return;
+                }
+                
+                // Save category configurations
+                await saveCategoryConfigurations(currentEvent.id);
+                
+                // Save modality configurations
+                await saveModalityConfigurations(currentEvent.id);
+                
+                // Save lap counter configuration
+                await saveLapCounterConfig(currentEvent.id);
+                
+                showSuccess('Configurações salvas com sucesso!');
+                
+                // Reload event info
+                await loadEventInfo(currentEvent.id);
+                
+            } catch (error) {
+                console.error('Erro ao salvar evento:', error);
+                showError('Erro ao salvar configurações');
+            }
+        }
+        
+        function resetEventConfig() {
+            if (currentEvent) {
+                updateFormFields(currentEvent);
+                showSuccess('Formulário resetado');
+            }
+        }
+        
+        async function deleteEvent() {
+            if (!currentEvent) {
+                showError('Nenhum evento selecionado');
+                return;
+            }
+            
+            if (!confirm(`Tem certeza que deseja excluir o evento "${currentEvent.name}"? Esta ação não pode ser desfeita.`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .delete()
+                    .eq('id', currentEvent.id);
+                
+                if (error) {
+                    console.error('Erro ao excluir evento:', error);
+                    showError('Erro ao excluir evento');
+                    return;
+                }
+                
+                showSuccess('Evento excluído com sucesso!');
+                
+                // Reset form
+                hideEventInfo();
+                
+                // Reload events
+                await loadEvents();
+                
+            } catch (error) {
+                console.error('Erro ao excluir evento:', error);
+                showError('Erro ao excluir evento');
+            }
+        }
+        
+        // =====================================================
+        // FUNÇÕES PARA CHECKPOINT TYPES (GLOBAL)
+        // =====================================================
+        
+        async function loadCheckpointTypes() {
+            try {
+                console.log('📍 Carregando tipos de checkpoints...');
+                const { data: types, error } = await window.supabaseClient.supabase
+                    .from('checkpoint_types')
+                    .select('*')
+                    .order('sort_order');
+                
+                if (error) throw error;
+                
+                console.log('✅ Tipos de checkpoints carregados:', types?.length || 0);
+                renderCheckpointTypesConfig(types || []);
+            } catch (error) {
+                console.error('❌ Erro ao carregar tipos:', error);
+                const container = document.getElementById('checkpointTypesConfig');
+                container.innerHTML = `
+                    <div style="padding: var(--spacing-4); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-base); color: var(--danger);">
+                        ❌ Erro ao carregar tipos. Execute <strong>create-checkpoint-types.sql</strong> no Supabase.
+                    </div>
+                `;
+            }
+        }
+        
+        function renderCheckpointTypesConfig(types) {
+            const container = document.getElementById('checkpointTypesConfig');
+            
+            if (types.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">Nenhum tipo configurado</p>';
+                return;
+            }
+            
+            container.innerHTML = types.map(type => `
+                <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); margin-bottom: var(--spacing-2); border-left: 4px solid ${type.color};">
+                    <div style="font-size: var(--font-size-2xl); flex-shrink: 0;">${type.icon}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-1);">${type.name}</div>
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                            ${type.description || ''} • 
+                            ${type.is_start ? '🏁 Início' : ''}
+                            ${type.is_finish ? '🏁 Meta' : ''}
+                            ${type.is_intermediate ? '📍 Intermédio' : ''} • 
+                            Splits: ${type.requires_split ? '✓' : '✗'}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-1);">
+                        <button class="btn btn-sm btn-ghost" onclick="toggleCheckpointType('${type.code}', ${!type.is_active})" title="${type.is_active ? 'Desativar' : 'Ativar'}">
+                            ${type.is_active ? '✓' : '✗'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function toggleCheckpointType(code, activate) {
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('checkpoint_types')
+                    .update({ is_active: activate })
+                    .eq('code', code);
+                
+                if (error) throw error;
+                
+                showSuccess(`Tipo ${activate ? 'ativado' : 'desativado'}!`);
+                await loadCheckpointTypes();
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar tipo:', error);
+                showError('Erro ao atualizar tipo');
+            }
+        }
+        
+        // Setup listeners for checkpoint types
+        document.addEventListener('DOMContentLoaded', () => {
+            const addCheckpointTypeBtn = document.getElementById('addCheckpointTypeBtn');
+            const refreshCheckpointTypesBtn = document.getElementById('refreshCheckpointTypesBtn');
+            
+            if (addCheckpointTypeBtn) {
+                addCheckpointTypeBtn.addEventListener('click', () => {
+                    showSuccess('Funcionalidade em desenvolvimento. Use SQL para adicionar tipos personalizados.');
+                });
+            }
+            
+            if (refreshCheckpointTypesBtn) {
+                refreshCheckpointTypesBtn.addEventListener('click', loadCheckpointTypes);
+            }
+        });
+        
+        function showError(message) {
+            // Simple error display - you can enhance this with toast notifications
+            alert(`❌ ${message}`);
+        }
+        
+        function showSuccess(message) {
+            // Simple success display - you can enhance this with toast notifications
+            alert(`✅ ${message}`);
+        }
+        
+        // Processor Configuration Functions
+        function initializeProcessorConfig() {
+            console.log('🤖 Inicializando configuração do processador...');
+            
+            // Processor type selection
+            const processorTypeSelect = document.getElementById('processorType');
+            if (processorTypeSelect) {
+                processorTypeSelect.addEventListener('change', handleProcessorTypeChange);
+            }
+            
+            // Processor speed selection
+            const processorSpeedSelect = document.getElementById('processorSpeed');
+            if (processorSpeedSelect) {
+                processorSpeedSelect.addEventListener('change', handleProcessorSpeedChange);
+            }
+            
+            // Confidence range
+            const confidenceRange = document.getElementById('processorConfidence');
+            if (confidenceRange) {
+                confidenceRange.addEventListener('input', handleConfidenceChange);
+            }
+            
+            // Processor info cards
+            const processorCards = document.querySelectorAll('.processor-info-card');
+            processorCards.forEach(card => {
+                card.addEventListener('click', () => selectProcessorCard(card));
+            });
+            
+            // Load saved processor config
+            loadProcessorConfig();
+        }
+        
+        function handleProcessorTypeChange(event) {
+            const selectedType = event.target.value;
+            console.log('🔧 Tipo de processador alterado:', selectedType);
+            
+            // Update processor cards selection
+            updateProcessorCardsSelection(selectedType);
+            
+            // Update processor speed options based on type
+            updateProcessorSpeedOptions(selectedType);
+            
+            // Save configuration
+            saveProcessorConfig();
+        }
+        
+        function handleProcessorSpeedChange(event) {
+            const selectedSpeed = event.target.value;
+            console.log('⚡ Velocidade alterada:', selectedSpeed);
+            saveProcessorConfig();
+        }
+        
+        function handleConfidenceChange(event) {
+            const confidence = event.target.value;
+            const confidenceValue = document.getElementById('confidenceValue');
+            if (confidenceValue) {
+                confidenceValue.textContent = Math.round(confidence * 100) + '%';
+            }
+            console.log('🎯 Confiança alterada:', confidence);
+            saveProcessorConfig();
+        }
+        
+        function selectProcessorCard(card) {
+            const processorType = card.dataset.processor;
+            console.log('🎯 Processador selecionado:', processorType);
+            
+            // Update select
+            const processorTypeSelect = document.getElementById('processorType');
+            if (processorTypeSelect) {
+                processorTypeSelect.value = processorType;
+            }
+            
+            // Update cards selection
+            updateProcessorCardsSelection(processorType);
+            
+            // Update speed options
+            updateProcessorSpeedOptions(processorType);
+            
+            // Save configuration
+            saveProcessorConfig();
+        }
+        
+        function updateProcessorCardsSelection(selectedType) {
+            const processorCards = document.querySelectorAll('.processor-info-card');
+            processorCards.forEach(card => {
+                if (card.dataset.processor === selectedType) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        }
+        
+        function updateProcessorSpeedOptions(processorType) {
+            const speedSelect = document.getElementById('processorSpeed');
+            if (!speedSelect) return;
+            
+            // Clear existing options
+            speedSelect.innerHTML = '';
+            
+            // Add options based on processor type
+            const speedOptions = {
+                'gemini': [
+                    { value: 'fast', text: '⚡ Rápido (Menos Precisão)' },
+                    { value: 'balanced', text: '⚖️ Equilibrado (Padrão)' },
+                    { value: 'accurate', text: '🎯 Preciso (Mais Lento)' }
+                ],
+                'google-vision': [
+                    { value: 'fast', text: '⚡ Rápido (Menos Precisão)' },
+                    { value: 'balanced', text: '⚖️ Equilibrado (Padrão)' }
+                ],
+                'ocr': [
+                    { value: 'fast', text: '⚡ Rápido (Menos Precisão)' },
+                    { value: 'balanced', text: '⚖️ Equilibrado (Padrão)' }
+                ],
+                'hybrid': [
+                    { value: 'balanced', text: '⚖️ Equilibrado (Padrão)' },
+                    { value: 'accurate', text: '🎯 Preciso (Mais Lento)' }
+                ],
+                'manual': [
+                    { value: 'manual', text: '✋ Manual (Sem IA)' }
+                ]
+            };
+            
+            const options = speedOptions[processorType] || speedOptions['gemini'];
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.text;
+                speedSelect.appendChild(optionElement);
+            });
+            
+            // Set default to balanced if available
+            if (speedSelect.querySelector('option[value="balanced"]')) {
+                speedSelect.value = 'balanced';
+            } else {
+                speedSelect.value = speedSelect.firstElementChild.value;
+            }
+        }
+        
+        function loadProcessorConfig() {
+            if (!currentEvent) return;
+            
+            console.log('📥 Carregando configuração do processador...');
+            
+            // Load from event configuration or use defaults
+            const defaultConfig = {
+                processorType: 'gemini',
+                processorSpeed: 'balanced',
+                processorConfidence: 0.7
+            };
+            
+            // Apply configuration
+            const processorTypeSelect = document.getElementById('processorType');
+            const processorSpeedSelect = document.getElementById('processorSpeed');
+            const confidenceRange = document.getElementById('processorConfidence');
+            const confidenceValue = document.getElementById('confidenceValue');
+            
+            if (processorTypeSelect) {
+                processorTypeSelect.value = defaultConfig.processorType;
+                updateProcessorCardsSelection(defaultConfig.processorType);
+                updateProcessorSpeedOptions(defaultConfig.processorType);
+            }
+            
+            if (processorSpeedSelect) {
+                processorSpeedSelect.value = defaultConfig.processorSpeed;
+            }
+            
+            if (confidenceRange) {
+                confidenceRange.value = defaultConfig.processorConfidence;
+            }
+            
+            if (confidenceValue) {
+                confidenceValue.textContent = Math.round(defaultConfig.processorConfidence * 100) + '%';
+            }
+        }
+        
+        function saveProcessorConfig() {
+            if (!currentEvent) return;
+            
+            const config = {
+                processorType: document.getElementById('processorType')?.value || 'gemini',
+                processorSpeed: document.getElementById('processorSpeed')?.value || 'balanced',
+                processorConfidence: parseFloat(document.getElementById('processorConfidence')?.value || '0.7')
+            };
+            
+            console.log('💾 Salvando configuração do processador:', config);
+            
+            // Salvar no localStorage
+            localStorage.setItem(`visionkrono_processor_config_${currentEvent.id}`, JSON.stringify(config));
+            
+            // Salvar no Supabase
+            saveProcessorConfigToSupabase(config);
+        }
+        
+        async function saveProcessorConfigToSupabase(config) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível, salvando apenas no localStorage');
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase.rpc('update_event_processor_config', {
+                    event_id_param: currentEvent.id,
+                    processor_type_param: config.processorType,
+                    processor_speed_param: config.processorSpeed,
+                    processor_confidence_param: config.processorConfidence
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao salvar configuração no Supabase:', error);
+                    showError('Erro ao salvar configuração no servidor');
+                } else {
+                    console.log('✅ Configuração salva no Supabase:', data);
+                    showSuccess('Configuração do processador salva com sucesso!');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao conectar com Supabase:', error);
+                showError('Erro ao conectar com o servidor');
+            }
+        }
+        
+        async function loadProcessorConfig() {
+            if (!currentEvent) return;
+            
+            console.log('📥 Carregando configuração do processador...');
+            
+            // Tentar carregar do Supabase primeiro
+            let config = await loadProcessorConfigFromSupabase();
+            
+            // Se não encontrar no Supabase, tentar localStorage
+            if (!config) {
+                const localConfig = localStorage.getItem(`visionkrono_processor_config_${currentEvent.id}`);
+                if (localConfig) {
+                    try {
+                        config = JSON.parse(localConfig);
+                        console.log('📥 Configuração carregada do localStorage:', config);
+                    } catch (error) {
+                        console.error('❌ Erro ao carregar configuração do localStorage:', error);
+                    }
+                }
+            }
+            
+            // Usar configuração padrão se não encontrar nenhuma
+            if (!config) {
+                config = {
+                    processorType: 'gemini',
+                    processorSpeed: 'balanced',
+                    processorConfidence: 0.7
+                };
+                console.log('📥 Usando configuração padrão:', config);
+            }
+            
+            // Aplicar configuração
+            const processorTypeSelect = document.getElementById('processorType');
+            const processorSpeedSelect = document.getElementById('processorSpeed');
+            const confidenceRange = document.getElementById('processorConfidence');
+            const confidenceValue = document.getElementById('confidenceValue');
+            
+            if (processorTypeSelect) {
+                processorTypeSelect.value = config.processorType;
+                updateProcessorCardsSelection(config.processorType);
+                updateProcessorSpeedOptions(config.processorType);
+            }
+            
+            if (processorSpeedSelect) {
+                processorSpeedSelect.value = config.processorSpeed;
+            }
+            
+            if (confidenceRange) {
+                confidenceRange.value = config.processorConfidence;
+            }
+            
+            if (confidenceValue) {
+                confidenceValue.textContent = Math.round(config.processorConfidence * 100) + '%';
+            }
+        }
+        
+        async function loadProcessorConfigFromSupabase() {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    return null;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase.rpc('get_event_processor_config', {
+                    event_id_param: currentEvent.id
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar configuração do Supabase:', error);
+                    return null;
+                }
+                
+                if (data && data.length > 0) {
+                    const config = {
+                        processorType: data[0].processor_type,
+                        processorSpeed: data[0].processor_speed,
+                        processorConfidence: parseFloat(data[0].processor_confidence)
+                    };
+                    console.log('📥 Configuração carregada do Supabase:', config);
+                    return config;
+                }
+                
+                return null;
+                
+            } catch (error) {
+                console.error('❌ Erro ao conectar com Supabase:', error);
+                return null;
+            }
+        }
+        
+        // =====================================================
+        // FUNÇÕES PARA CONTADOR DE VOLTAS
+        // =====================================================
+        
+        async function loadLapCounterConfig(eventId) {
+            try {
+                console.log('🔄 Carregando configuração de contador de voltas...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível');
+                    return;
+                }
+                
+                // Carregar configuração do evento
+                const { data: eventData, error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('has_lap_counter')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (eventError) {
+                    console.error('❌ Erro ao carregar configuração do evento:', eventError);
+                    return;
+                }
+                
+                // Carregar configuração detalhada de voltas
+                const { data: lapConfig, error: lapError } = await window.supabaseClient.supabase
+                    .from('event_lap_config')
+                    .select('*')
+                    .eq('event_id', eventId)
+                    .single();
+                
+                // Atualizar campos do formulário
+                const hasLapCounter = document.getElementById('hasLapCounter');
+                const lapDistance = document.getElementById('lapDistance');
+                const totalLaps = document.getElementById('totalLaps');
+                const minLapsForClassification = document.getElementById('minLapsForClassification');
+                
+                if (hasLapCounter) {
+                    hasLapCounter.value = eventData.has_lap_counter ? 'true' : 'false';
+                }
+                
+                if (lapConfig) {
+                    if (lapDistance) lapDistance.value = lapConfig.lap_distance_km || '';
+                    if (totalLaps) totalLaps.value = lapConfig.total_laps || '';
+                    if (minLapsForClassification) minLapsForClassification.value = lapConfig.min_laps_for_classification || 1;
+                } else {
+                    if (lapDistance) lapDistance.value = '';
+                    if (totalLaps) totalLaps.value = '';
+                    if (minLapsForClassification) minLapsForClassification.value = 1;
+                }
+                
+                // Ativar/desativar campos baseado na configuração
+                handleLapCounterToggle();
+                
+                // Validar configuração
+                await validateLapCounterSetup(eventId);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar configuração de voltas:', error);
+            }
+        }
+        
+        function handleLapCounterToggle() {
+            const hasLapCounter = document.getElementById('hasLapCounter');
+            const lapDistance = document.getElementById('lapDistance');
+            const totalLaps = document.getElementById('totalLaps');
+            const minLapsForClassification = document.getElementById('minLapsForClassification');
+            
+            const isEnabled = hasLapCounter && hasLapCounter.value === 'true';
+            
+            if (lapDistance) lapDistance.disabled = !isEnabled;
+            if (totalLaps) totalLaps.disabled = !isEnabled;
+            if (minLapsForClassification) minLapsForClassification.disabled = !isEnabled;
+            
+            // Limpar campos se desativado
+            if (!isEnabled) {
+                if (lapDistance) lapDistance.value = '';
+                if (totalLaps) totalLaps.value = '';
+                if (minLapsForClassification) minLapsForClassification.value = 1;
+            }
+            
+            // Validar configuração
+            if (currentEvent) {
+                validateLapCounterSetup(currentEvent.id);
+            }
+        }
+        
+        async function validateLapCounterSetup(eventId) {
+            try {
+                const hasLapCounter = document.getElementById('hasLapCounter');
+                const validationDiv = document.getElementById('lapCounterValidation');
+                const validationText = document.getElementById('lapCounterValidationText');
+                
+                if (!hasLapCounter || !validationDiv || !validationText) return;
+                
+                const isEnabled = hasLapCounter.value === 'true';
+                
+                if (!isEnabled) {
+                    validationDiv.style.display = 'none';
+                    return;
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    validationText.textContent = 'Erro: Supabase não disponível';
+                    validationDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Verificar se tem dispositivos necessários
+                const { data: lapDevices, error: lapError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select(`
+                        *,
+                        checkpoint_types!inner(code, is_finish)
+                    `)
+                    .eq('event_id', eventId);
+                
+                if (lapError) {
+                    validationText.textContent = 'Erro ao verificar dispositivos';
+                    validationDiv.style.display = 'block';
+                    return;
+                }
+                
+                const lapCounterDevices = lapDevices.filter(d => d.checkpoint_types.code === 'lap_counter');
+                const finishDevices = lapDevices.filter(d => d.checkpoint_types.is_finish);
+                
+                if (lapCounterDevices.length === 0) {
+                    validationText.textContent = 'Necessário pelo menos 1 dispositivo com checkpoint "Contador de Voltas"';
+                    validationDiv.style.display = 'block';
+                } else if (finishDevices.length === 0) {
+                    validationText.textContent = 'Necessário pelo menos 1 dispositivo com checkpoint "Meta"';
+                    validationDiv.style.display = 'block';
+                } else {
+                    validationText.textContent = `✅ Configuração válida: ${lapCounterDevices.length} contador(es) de voltas, ${finishDevices.length} meta(s)`;
+                    validationDiv.style.display = 'block';
+                    validationDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+                    validationDiv.style.borderColor = 'var(--success)';
+                    validationDiv.style.color = 'var(--success)';
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao validar configuração de voltas:', error);
+                const validationText = document.getElementById('lapCounterValidationText');
+                if (validationText) {
+                    validationText.textContent = 'Erro ao validar configuração';
+                }
+            }
+        }
+        
+        async function saveLapCounterConfig(eventId) {
+            try {
+                console.log('💾 Salvando configuração de contador de voltas...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível');
+                    return;
+                }
+                
+                const hasLapCounter = document.getElementById('hasLapCounter');
+                const lapDistance = document.getElementById('lapDistance');
+                const totalLaps = document.getElementById('totalLaps');
+                const minLapsForClassification = document.getElementById('minLapsForClassification');
+                
+                const isEnabled = hasLapCounter && hasLapCounter.value === 'true';
+                const distance = lapDistance && lapDistance.value ? parseFloat(lapDistance.value) : null;
+                const totalLapsValue = totalLaps && totalLaps.value ? parseInt(totalLaps.value) : null;
+                const minLaps = minLapsForClassification && minLapsForClassification.value ? parseInt(minLapsForClassification.value) : 1;
+                
+                // Usar função SQL para configurar
+                const { data, error } = await window.supabaseClient.supabase.rpc('configure_lap_counter', {
+                    p_event_id: eventId,
+                    p_has_lap_counter: isEnabled,
+                    p_lap_distance_km: distance,
+                    p_total_laps: totalLapsValue,
+                    p_min_laps_for_classification: minLaps
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao salvar configuração de voltas:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Configuração de voltas salva:', data);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar configuração de voltas:', error);
+                throw error;
+            }
+        }
+        
+        // =====================================================
+        // FUNÇÕES PARA MODALIDADES MULTI-DISCIPLINARES
+        // =====================================================
+        
+        function handleModalityChange(modalityId, modalityName) {
+            console.log('🔄 Modalidade alterada:', modalityName);
+            
+            // Verificar se é modalidade multi-disciplinar
+            const isMultimodal = ['Duatlo', 'Triatlo'].includes(modalityName);
+            const multimodalConfig = document.getElementById('multimodalConfig');
+            
+            if (isMultimodal) {
+                if (multimodalConfig) multimodalConfig.style.display = 'block';
+                loadMultimodalActivities(modalityId);
+                if (currentEvent && currentEvent.id) {
+                    validateMultimodalSetup(currentEvent.id);
+                }
+            } else {
+                if (multimodalConfig) multimodalConfig.style.display = 'none';
+            }
+        }
+        
+        async function loadMultimodalActivities(modalityId) {
+            try {
+                console.log('🏊🚴🏃 Carregando atividades multi-disciplinares...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível');
+                    return;
+                }
+                
+                // Carregar TODAS as atividades (ativas e inativas) para permitir reativação
+                const { data: activities, error } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .select('*')
+                    .eq('modality_id', modalityId)
+                    .order('activity_order');
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar atividades:', error);
+                    return;
+                }
+                
+                renderMultimodalActivities(activities || []);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar atividades:', error);
+            }
+        }
+        
+        function renderMultimodalActivities(activities) {
+            const container = document.getElementById('multimodalActivities');
+            if (!container) return;
+            
+            if (activities.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary); padding: var(--spacing-4); text-align: center;">Nenhuma atividade configurada para esta modalidade</p>';
+                return;
+            }
+            
+            // Ordenar atividades por ordem
+            const sortedActivities = [...activities].sort((a, b) => a.activity_order - b.activity_order);
+            
+            let html = '<div class="form-grid">';
+            sortedActivities.forEach((activity, index) => {
+                // Estilo diferente para atividades ativas vs inativas
+                const isActive = activity.is_active;
+                const opacity = isActive ? '1' : '0.6';
+                const backgroundOpacity = isActive ? '1' : '0.3';
+                const borderColor = isActive ? activity.activity_color : '#6b7280';
+                const isLastActivity = index === sortedActivities.length - 1;
+                
+                html += `
+                    <div class="form-group">
+                        <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-4); background: rgba(255, 255, 255, ${backgroundOpacity}); border: 1px solid var(--border-color); border-radius: var(--radius-base); border-left: 4px solid ${borderColor}; opacity: ${opacity};">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1);">
+                                <div style="font-size: var(--font-size-2xl); flex-shrink: 0;">${activity.activity_icon}</div>
+                                <div style="font-size: var(--font-size-xs); color: var(--text-secondary); font-weight: 600;">#${activity.activity_order}</div>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-1);">
+                                    ${activity.activity_name}
+                                    ${!isActive ? '<span style="font-size: var(--font-size-xs); color: var(--danger); margin-left: var(--spacing-2);">(Desativada)</span>' : ''}
+                                    ${isLastActivity ? '<span style="font-size: var(--font-size-xs); color: var(--primary); margin-left: var(--spacing-2);">(Final)</span>' : ''}
+                                </div>
+                                <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                                    Cor: ${activity.activity_color}
+                                    ${isLastActivity ? ' • Conta tempo total da prova' : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-1); align-items: center;">
+                                ${index > 0 ? `
+                                    <button class="btn btn-sm btn-ghost" onclick="moveActivity('${activity.id}', 'up')" title="Mover para cima" style="background: var(--primary); color: white; border: none; padding: var(--spacing-1);">
+                                        ↑
+                                    </button>
+                                ` : ''}
+                                ${index < sortedActivities.length - 1 ? `
+                                    <button class="btn btn-sm btn-ghost" onclick="moveActivity('${activity.id}', 'down')" title="Mover para baixo" style="background: var(--primary); color: white; border: none; padding: var(--spacing-1);">
+                                        ↓
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-ghost" onclick="toggleActivity('${activity.id}', ${!activity.is_active})" title="${activity.is_active ? 'Desativar atividade' : 'Ativar atividade'}" style="background: ${activity.is_active ? 'var(--success)' : 'var(--danger)'}; color: white; border: none; min-width: 40px;">
+                                    ${activity.is_active ? '✓' : '✗'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            // Adicionar informações sobre checkpoints necessários (apenas atividades ativas)
+            const activeActivities = sortedActivities.filter(a => a.is_active);
+            if (activeActivities.length > 0) {
+                html += `
+                    <div style="margin-top: var(--spacing-4); padding: var(--spacing-3); background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); border-radius: var(--radius-base);">
+                        <h4 style="color: var(--primary); margin-bottom: var(--spacing-2);">📋 Checkpoints Necessários:</h4>
+                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+                            Para eventos multi-disciplinares, você precisa configurar dispositivos com os seguintes tipos de checkpoint:
+                        </div>
+                        <ul style="margin-top: var(--spacing-2); font-size: var(--font-size-sm); color: var(--text-secondary);">
+                            ${activeActivities.map(activity => {
+                                const checkpointType = activity.activity_name === 'Natação' ? 'Meta Natação' : 
+                                                    activity.activity_name === 'Ciclismo' ? 'Meta Ciclismo' : 
+                                                    activity.activity_name === 'Corrida' ? 'Meta Corrida' : '';
+                                const isLast = activity.activity_order === Math.max(...activeActivities.map(a => a.activity_order));
+                                return `<li>${activity.activity_icon} ${checkpointType} (${activity.activity_name})${isLast ? ' - Conta tempo total' : ''}</li>`;
+                            }).join('')}
+                        </ul>
+                        <div style="margin-top: var(--spacing-2); padding: var(--spacing-2); background: rgba(34, 197, 94, 0.1); border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--success);">
+                            <strong>💡 Dica:</strong> A última atividade da ordem conta automaticamente o tempo total da prova. Não é necessário dispositivo de "Meta Final" separado.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        async function moveActivity(activityId, direction) {
+            try {
+                console.log(`🔄 Movendo atividade ${activityId} para ${direction}...`);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    showError('Supabase não disponível');
+                    return;
+                }
+                
+                // Obter atividade atual
+                const { data: currentActivity, error: getError } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .select('*')
+                    .eq('id', activityId)
+                    .single();
+                
+                if (getError) throw getError;
+                
+                // Obter todas as atividades da mesma modalidade
+                const { data: allActivities, error: allError } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .select('*')
+                    .eq('modality_id', currentActivity.modality_id)
+                    .order('activity_order');
+                
+                if (allError) throw allError;
+                
+                // Encontrar posição atual
+                const currentIndex = allActivities.findIndex(a => a.id === activityId);
+                if (currentIndex === -1) {
+                    showError('Atividade não encontrada');
+                    return;
+                }
+                
+                // Calcular nova posição
+                let newIndex;
+                if (direction === 'up' && currentIndex > 0) {
+                    newIndex = currentIndex - 1;
+                } else if (direction === 'down' && currentIndex < allActivities.length - 1) {
+                    newIndex = currentIndex + 1;
+                } else {
+                    showError('Não é possível mover nesta direção');
+                    return;
+                }
+                
+                // Trocar ordens
+                const tempOrder = allActivities[currentIndex].activity_order;
+                const newOrder = allActivities[newIndex].activity_order;
+                
+                // Atualizar ambas as atividades
+                const { error: updateError1 } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .update({ activity_order: newOrder })
+                    .eq('id', activityId);
+                
+                if (updateError1) throw updateError1;
+                
+                const { error: updateError2 } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .update({ activity_order: tempOrder })
+                    .eq('id', allActivities[newIndex].id);
+                
+                if (updateError2) throw updateError2;
+                
+                showSuccess('Ordem das atividades atualizada!');
+                
+                // Recarregar atividades
+                loadMultimodalActivities(currentActivity.modality_id);
+                
+            } catch (error) {
+                console.error('❌ Erro ao mover atividade:', error);
+                showError('Erro ao mover atividade');
+            }
+        }
+        
+        async function toggleActivity(activityId, activate) {
+            try {
+                console.log(`🔄 ${activate ? 'Ativando' : 'Desativando'} atividade ${activityId}...`);
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('modality_activities')
+                    .update({ is_active: activate })
+                    .eq('id', activityId);
+                
+                if (error) throw error;
+                
+                showSuccess(`Atividade ${activate ? 'ativada' : 'desativada'} com sucesso!`);
+                
+                // Recarregar atividades para mostrar mudanças visuais
+                const checkedModalities = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]:checked');
+                checkedModalities.forEach(checkbox => {
+                    const modalityData = JSON.parse(checkbox.dataset.modality);
+                    if (['Duatlo', 'Triatlo'].includes(modalityData.name)) {
+                        loadMultimodalActivities(modalityData.id);
+                    }
+                });
+                
+                // Validar configuração se há evento selecionado
+                if (currentEvent && currentEvent.id) {
+                    validateMultimodalSetup(currentEvent.id);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar atividade:', error);
+                showError(`Erro ao ${activate ? 'ativar' : 'desativar'} atividade`);
+            }
+        }
+        
+        async function validateMultimodalSetup(eventId) {
+            try {
+                const validationDiv = document.getElementById('multimodalValidation');
+                const validationText = document.getElementById('multimodalValidationText');
+                
+                if (!validationDiv || !validationText) return;
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    validationText.textContent = 'Erro: Supabase não disponível';
+                    validationDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Verificar se tem dispositivos necessários para modalidades multi-disciplinares
+                const { data: lapDevices, error: lapError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select(`
+                        *,
+                        checkpoint_types!inner(code, is_finish)
+                    `)
+                    .eq('event_id', eventId);
+                
+                if (lapError) {
+                    validationText.textContent = 'Erro ao verificar dispositivos';
+                    validationDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Verificar checkpoints específicos para modalidades multi-disciplinares
+                const swimmingDevices = lapDevices.filter(d => d.checkpoint_types.code === 'swimming_finish');
+                const cyclingDevices = lapDevices.filter(d => d.checkpoint_types.code === 'cycling_finish');
+                const runningDevices = lapDevices.filter(d => d.checkpoint_types.code === 'running_finish');
+                
+                // Verificar se o evento é multi-disciplinar
+                const { data: event, error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('event_type')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (eventError) {
+                    validationText.textContent = 'Erro ao verificar tipo de evento';
+                    validationDiv.style.display = 'block';
+                    return;
+                }
+                
+                const isMultimodal = ['Duatlo', 'Triatlo'].includes(event.event_type);
+                
+                if (!isMultimodal) {
+                    validationDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Validações específicas por modalidade (sem meta final)
+                let validationMessage = '';
+                let isValid = true;
+                
+                if (event.event_type === 'Triatlo') {
+                    if (swimmingDevices.length === 0) {
+                        validationMessage += 'Necessário dispositivo "Meta Natação" • ';
+                        isValid = false;
+                    }
+                    if (cyclingDevices.length === 0) {
+                        validationMessage += 'Necessário dispositivo "Meta Ciclismo" • ';
+                        isValid = false;
+                    }
+                    if (runningDevices.length === 0) {
+                        validationMessage += 'Necessário dispositivo "Meta Corrida" (conta tempo total) • ';
+                        isValid = false;
+                    }
+                } else if (event.event_type === 'Duatlo') {
+                    if (cyclingDevices.length === 0) {
+                        validationMessage += 'Necessário dispositivo "Meta Ciclismo" • ';
+                        isValid = false;
+                    }
+                    if (runningDevices.length === 0) {
+                        validationMessage += 'Necessário dispositivo "Meta Corrida" (conta tempo total) • ';
+                        isValid = false;
+                    }
+                }
+                
+                if (isValid) {
+                    validationMessage = `✅ Configuração válida para ${event.event_type}`;
+                    validationDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+                    validationDiv.style.borderColor = 'var(--success)';
+                    validationDiv.style.color = 'var(--success)';
+                } else {
+                    validationMessage = validationMessage.slice(0, -3); // Remove último "• "
+                    validationDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    validationDiv.style.borderColor = 'var(--danger)';
+                    validationDiv.style.color = 'var(--danger)';
+                }
+                
+                validationText.textContent = validationMessage;
+                validationDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Erro ao validar configuração multi-disciplinar:', error);
+                const validationText = document.getElementById('multimodalValidationText');
+                if (validationText) {
+                    validationText.textContent = 'Erro ao validar configuração';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+

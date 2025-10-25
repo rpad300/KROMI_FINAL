@@ -1,0 +1,323 @@
+/* CORREÇÕES MOBILE ESPECÍFICAS PARA PÁGINAS DE DETECÇÃO */
+
+/* Mobile - Telas pequenas (até 768px) */
+@media (max-width: 768px) {
+    /* Garantir que páginas de detecção sejam fullscreen em mobile */
+    .layout-with-sidebar .main {
+        margin: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 1 !important;
+    }
+    
+    /* Ocultar sidebar e header em mobile para páginas de detecção */
+    .layout-with-sidebar .sidebar,
+    .layout-with-sidebar .header {
+        display: none !important;
+    }
+    
+    /* Ocultar elementos desnecessários em mobile */
+    .detection-stats,
+    #detectionStats,
+    #endSessionBtn,
+    .header,
+    #headerActions,
+    #menuToggle,
+    #pageTitle,
+    #toggleFullscreen {
+        display: none !important;
+    }
+    
+    /* Camera container fullscreen */
+    .camera-container {
+        width: 100vw !important;
+        height: 100vh !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 1 !important;
+    }
+    
+    /* Controles da câmera - LADO A LADO EM MOBILE */
+    .camera-controls {
+        position: fixed !important;
+        bottom: 15px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 1000 !important;
+        display: flex !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        max-width: calc(100vw - 20px) !important;
+        padding: 0 10px !important;
+        overflow-x: auto !important;
+    }
+    
+    /* Side Controls (Left Side) */
+    .side-controls {
+        position: absolute !important;
+        left: 10px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        z-index: 20 !important;
+    }
+    
+    .side-controls .btn {
+        padding: 8px !important;
+        font-size: 10px !important;
+        min-width: 50px !important;
+        height: 40px !important;
+        border-radius: 20px !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+    }
+    
+    /* Main Camera Controls (Center Bottom) */
+    .main-camera-controls {
+        position: absolute !important;
+        bottom: 15px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        gap: 10px !important;
+        z-index: 20 !important;
+        justify-content: center !important;
+    }
+    
+    .main-camera-controls .btn {
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        min-width: 120px !important;
+        height: 50px !important;
+        border-radius: 25px !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 5px !important;
+    }
+    
+    /* Garantir que os botões sejam clicáveis */
+    .side-controls .btn:hover,
+    .side-controls .btn:active,
+    .side-controls .btn:focus,
+    .main-camera-controls .btn:hover,
+    .main-camera-controls .btn:active,
+    .main-camera-controls .btn:focus {
+        opacity: 0.8 !important;
+        transform: scale(0.95) !important;
+        transition: all 0.1s ease !important;
+    }
+    
+    /* Ícones dos botões */
+    .camera-controls .btn i {
+        font-size: 14px !important;
+        margin: 0 !important;
+    }
+    
+    /* Texto dos botões */
+    .camera-controls .btn span {
+        font-size: 9px !important;
+        line-height: 1 !important;
+    }
+    
+    /* Informações da câmera - COMPACTAS */
+    .camera-info {
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        z-index: 1000 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    
+    /* Stats e info - MUITO COMPACTOS */
+    .detection-stats,
+    .event-info {
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        border-radius: 6px !important;
+        backdrop-filter: blur(10px) !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        max-width: 48% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Botão de voltar mobile - COMPACTO */
+    .back-button-mobile {
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 1001 !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 36px !important;
+        height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 16px !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    
+    /* PIN entry panel - mobile friendly */
+    .pin-entry-panel {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: var(--bg-primary) !important;
+        z-index: 2000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 20px !important;
+    }
+    
+    .pin-entry-panel .form-group {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+    
+    .pin-entry-panel .form-input {
+        width: 100% !important;
+        padding: 16px !important;
+        font-size: 16px !important;
+        text-align: center !important;
+    }
+    
+    .pin-entry-panel .btn {
+        width: 100% !important;
+        padding: 16px !important;
+        font-size: 16px !important;
+        margin-top: 16px !important;
+    }
+    
+    /* Session info - COMPACTO */
+    .session-info {
+        position: fixed !important;
+        top: 50px !important;
+        right: 10px !important;
+        z-index: 1000 !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        font-size: 10px !important;
+        backdrop-filter: blur(10px) !important;
+        max-width: 100px !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Garantir que não há sobreposição de elementos */
+    .camera-overlay {
+        pointer-events: none !important;
+        z-index: 10 !important;
+    }
+    
+    /* Ocultar elementos que podem causar problemas em mobile */
+    .app-bottom-nav {
+        display: none !important;
+    }
+    
+    /* Garantir que o body não tenha scroll em mobile */
+    body {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+    
+    /* OTIMIZAÇÕES ESPECÍFICAS PARA BOTÕES */
+    .camera-controls .btn i {
+        font-size: 14px !important;
+        margin-right: 4px !important;
+    }
+    
+    /* Botões principais mais visíveis */
+    .camera-controls .btn.btn-primary {
+        background: var(--primary) !important;
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    
+    .camera-controls .btn.btn-secondary {
+        background: var(--warning) !important;
+        color: white !important;
+    }
+    
+    .camera-controls .btn.btn-danger {
+        background: var(--danger) !important;
+        color: white !important;
+    }
+    
+    /* Layout vertical para botões quando necessário */
+    @media (max-height: 600px) {
+        .camera-controls {
+            flex-direction: column !important;
+            align-items: center !important;
+            bottom: 5px !important;
+        }
+        
+        .camera-controls .btn {
+            width: 80px !important;
+            margin-bottom: 4px !important;
+        }
+    }
+}
+
+/* Tablet - Telas médias (769px a 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .camera-controls {
+        bottom: 20px !important;
+        gap: 12px !important;
+    }
+    
+    .camera-controls .btn {
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+        height: 40px !important;
+    }
+    
+    .camera-info {
+        top: 20px !important;
+        left: 20px !important;
+        right: 20px !important;
+    }
+    
+    .detection-stats,
+    .event-info {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+}

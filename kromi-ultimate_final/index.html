@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KROMI - Plataforma de Gestão de Eventos</title>
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #fc6b03;
+            --primary-dark: #e55a02;
+            --bg-light: #ffffff;
+            --bg-dark: #000000;
+            --card-light: #f8fafc;
+            --card-dark: #1a1a1a;
+            --text-light: #1f2937;
+            --text-dark: #ffffff;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --muted: #6b7280;
+            --accent: #22d3ee;
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+            --safe-area-inset-left: env(safe-area-inset-left);
+            --safe-area-inset-right: env(safe-area-inset-right);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: var(--bg-dark);
+            --bg-secondary: var(--card-dark);
+            --text-primary: var(--text-dark);
+            --text-secondary: #a0a0a0;
+            --border-color: var(--border-dark);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: var(--bg-light);
+            --bg-secondary: var(--card-light);
+            --text-primary: var(--text-light);
+            --text-secondary: #6b7280;
+            --border-color: var(--border-light);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+            padding-left: var(--safe-area-inset-left);
+            padding-right: var(--safe-area-inset-right);
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            padding-top: calc(12px + var(--safe-area-inset-top));
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(252, 107, 3, 0.1);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .brand-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '☀️';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            content: '🌙';
+            left: 26px;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background: var(--primary);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, var(--primary), var(--success));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .logout-btn:hover {
+            background: var(--border-color);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: -300px;
+            top: 60px;
+            width: 300px;
+            height: calc(100vh - 60px);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 999;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar.active {
+            transform: translateX(300px);
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                left: 0;
+                transform: none;
+            }
+            .sidebar.active {
+                transform: none;
+            }
+            .main-content {
+                margin-left: 300px;
+            }
+        }
+
+        .nav-section {
+            margin-bottom: 32px;
+        }
+
+        .nav-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+
+        .nav-section-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 20px 0;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-link i {
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .badge {
+            position: absolute;
+            right: 12px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 60px;
+            padding: 20px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+
+        .page-section {
+            display: none;
+        }
+
+        .page-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(252, 107, 3, 0.05);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        /* Charts */
+        .chart-container {
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background: rgba(107, 114, 128, 0.2);
+            color: var(--muted);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        /* Empty states */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        /* Loading states */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+                padding-top: calc(12px + var(--safe-area-inset-top));
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+
+            .sidebar.active {
+                transform: translateX(100%);
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .user-details {
+                display: none;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+        }
+
+        /* Notification dot */
+        .notification-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-toggle lg:hidden" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo-section">
+                <div class="logo">K</div>
+                <span class="brand-text">KROMI</span>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <div class="theme-toggle" id="themeToggle"></div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">JD</div>
+                <div class="user-details">
+                    <span class="user-name" id="userName">João Silva</span>
+                    <span class="user-role" id="userRole">Utilizador</span>
+                </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn" title="Sair">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <!-- User Profile Section -->
+        <div class="nav-section" id="userSection">
+            <div class="nav-section-header">
+                <i class="fas fa-user"></i>
+                <span>Perfil Pessoal</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-section="profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Meu Perfil</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="my-events">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Eventos que Participo</span>
+                        <span class="badge" id="participatingBadge">3</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="organized-events">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Eventos Organizados</span>
+                        <span class="badge" id="organizedBadge">2</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="nav-section-divider"></div>
+
+        <!-- Super Admin Section -->
+        <div class="nav-section" id="adminSection" style="display: none;">
+            <div class="nav-section-header">
+                <i class="fas fa-cog"></i>
+                <span>Administração</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="platform-events">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Eventos da Plataforma</span>
+                        <span class="badge" id="platformEventsBadge">12</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="platform-users">
+                        <i class="fas fa-users"></i>
+                        <span>Utilizadores</span>
+                        <div class="notification-dot"></div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="platform-settings">
+                        <i class="fas fa-server"></i>
+                        <span>Configurações</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="nav-section-divider" id="adminDivider" style="display: none;"></div>
+
+        <!-- Analytics Section -->
+        <div class="nav-section">
+            <div class="nav-section-header">
+                <i class="fas fa-chart-line"></i>
+                <span>Analytics</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-section="reports">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Relatórios</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Profile Section -->
+        <section id="profile" class="page-section active">
+            <div class="page-header">
+                <h1 class="page-title">Meu Perfil</h1>
+                <p class="page-subtitle">Gerir informações pessoais e definições da conta</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Informações Pessoais</h3>
+                        <button class="btn btn-secondary">
+                            <i class="fas fa-edit"></i>
+                            Editar
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome Completo</label>
+                        <input type="text" class="form-input" value="João Silva" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-input" value="joao.silva@example.com" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="tel" class="form-input" value="+351 910 000 000" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Nascimento</label>
+                        <input type="date" class="form-input" value="1990-01-01" readonly>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Estatísticas Pessoais</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🏃‍♂️</div>
+                            <div class="stat-value">15</div>
+                            <div class="stat-label">Eventos participados</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-value">5</div>
+                            <div class="stat-label">Eventos organizados</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-value">42:30</div>
+                            <div class="stat-label">Melhor tempo (10K)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-value">2021</div>
+                            <div class="stat-label">Membro desde</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- My Events Section -->
+        <section id="my-events" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Eventos que Participo</h1>
+                <p class="page-subtitle">Gerir participações em eventos</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Próximos eventos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Completados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Em andamento</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Próximos Eventos</h3>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                        Procurar Eventos
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Evento</th>
+                                <th>Data</th>
+                                <th>Local</th>
+                                <th>Distância</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Maratona de Lisboa</strong></td>
+                                <td>15 Mar 2025</td>
+                                <td>Lisboa</td>
+                                <td>42.2 km</td>
+                                <td><span class="status-badge status-active">Confirmado</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Trail da Serra</strong></td>
+                                <td>22 Mar 2025</td>
+                                <td>Sintra</td>
+                                <td>15 km</td>
+                                <td><span class="status-badge status-pending">Pendente</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Corrida da Cidade</strong></td>
+                                <td>05 Abr 2025</td>
+                                <td>Porto</td>
+                                <td>10 km</td>
+                                <td><span class="status-badge status-active">Confirmado</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Organized Events Section -->
+        <section id="organized-events" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Eventos Organizados</h1>
+                <p class="page-subtitle">Gerir os seus eventos</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Eventos ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value">347</div>
+                    <div class="stat-label">Total participantes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value">€2.450</div>
+                    <div class="stat-label">Receita total</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Meus Eventos</h3>
+                    <button class="btn btn-primary" id="createEventBtn">
+                        <i class="fas fa-plus"></i>
+                        Criar Evento
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome do Evento</th>
+                                <th>Data</th>
+                                <th>Participantes</th>
+                                <th>Status</th>
+                                <th>Receita</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Trail do Vale</strong></td>
+                                <td>28 Fev 2025</td>
+                                <td>150/200</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>€1.200</td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 6px 12px;">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Corrida Benéfica</strong></td>
+                                <td>15 Mar 2025</td>
+                                <td>197/250</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>€1.250</td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 6px 12px;">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Events Section (SuperAdmin) -->
+        <section id="platform-events" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Eventos da Plataforma</h1>
+                <p class="page-subtitle">Gerir todos os eventos da plataforma</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value">45</div>
+                    <div class="stat-label">Eventos ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value">12.847</div>
+                    <div class="stat-label">Total participantes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value">€48.250</div>
+                    <div class="stat-label">Receita mensal</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">+23%</div>
+                    <div class="stat-label">Crescimento</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Todos os Eventos</h3>
+                    <div>
+                        <input type="search" class="form-input" style="width: 250px; display: inline-block; margin-right: 12px;" placeholder="Pesquisar eventos...">
+                        <button class="btn btn-secondary">
+                            <i class="fas fa-filter"></i>
+                            Filtrar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Evento</th>
+                                <th>Organizador</th>
+                                <th>Data</th>
+                                <th>Participantes</th>
+                                <th>Status</th>
+                                <th>Receita</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Maratona Internacional</strong></td>
+                                <td>João Silva</td>
+                                <td>15 Mar 2025</td>
+                                <td>1,247/1,500</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>€15.450</td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; margin-right: 4px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px;">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Trail da Montanha</strong></td>
+                                <td>Maria Santos</td>
+                                <td>22 Mar 2025</td>
+                                <td>567/800</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>€8.950</td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; margin-right: 4px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px;">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Users Section (SuperAdmin) -->
+        <section id="platform-users" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Utilizadores da Plataforma</h1>
+                <p class="page-subtitle">Gerir utilizadores e permissões</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value">2,847</div>
+                    <div class="stat-label">Total utilizadores</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value">2,651</div>
+                    <div class="stat-label">Ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value">196</div>
+                    <div class="stat-label">Pendentes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔧</div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Administradores</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Gestão de Utilizadores</h3>
+                    <div>
+                        <input type="search" class="form-input" style="width: 250px; display: inline-block; margin-right: 12px;" placeholder="Pesquisar utilizadores...">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Convidar Utilizador
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Tipo</th>
+                                <th>Eventos</th>
+                                <th>Status</th>
+                                <th>Último acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>João Silva</strong></td>
+                                <td>joao.silva@example.com</td>
+                                <td>Utilizador</td>
+                                <td>15</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>Há 2 horas</td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; margin-right: 4px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Maria Santos</strong></td>
+                                <td>maria.santos@example.com</td>
+                                <td>Organizador</td>
+                                <td>8</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>Há 1 dia</td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; margin-right: 4px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Carlos Pereira</strong></td>
+                                <td>carlos.pereira@example.com</td>
+                                <td>Super Admin</td>
+                                <td>-</td>
+                                <td><span class="status-badge status-active">Ativo</span></td>
+                                <td>Há 3 horas</td>
+                                <td>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; margin-right: 4px;">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" style="padding: 6px 12px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Platform Settings Section (SuperAdmin) -->
+        <section id="platform-settings" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Configurações da Plataforma</h1>
+                <p class="page-subtitle">Configurações gerais e administração do sistema</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configurações Gerais</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome da Plataforma</label>
+                        <input type="text" class="form-input" value="KROMI">
+                    </div>
+                    <div class="form-group">
+                        <label>URL da Plataforma</label>
+                        <input type="url" class="form-input" value="https://kromi.platform">
+                    </div>
+                    <div class="form-group">
+                        <label>Email de Suporte</label>
+                        <input type="email" class="form-input" value="support@kromi.platform">
+                    </div>
+                    <div class="form-group">
+                        <label>Timezone</label>
+                        <select class="form-select">
+                            <option selected>Europe/Lisbon</option>
+                            <option>Europe/London</option>
+                            <option>Europe/Paris</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Guardar Alterações
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configurações de Email</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Servidor SMTP</label>
+                        <input type="text" class="form-input" value="smtp.kromi.platform">
+                    </div>
+                    <div class="form-group">
+                        <label>Porta SMTP</label>
+                        <input type="number" class="form-input" value="587">
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" class="form-input" value="noreply@kromi.platform">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-input" value="••••••••">
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-envelope"></i>
+                        Testar Email
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configurações de Pagamentos</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Gateway de Pagamento</label>
+                        <select class="form-select">
+                            <option selected>Stripe</option>
+                            <option>PayPal</option>
+                            <option>MB Way</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Chave Pública</label>
+                        <input type="text" class="form-input" value="pk_live_••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>Chave Secreta</label>
+                        <input type="password" class="form-input" value="sk_live_••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>Taxa da Plataforma (%)</label>
+                        <input type="number" class="form-input" value="5" min="0" max="20" step="0.1">
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-credit-card"></i>
+                        Atualizar Configurações
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configurações de Segurança</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Duração do Token (minutos)</label>
+                        <input type="number" class="form-input" value="15" min="5" max="60">
+                    </div>
+                    <div class="form-group">
+                        <label>Tentativas de Login</label>
+                        <input type="number" class="form-input" value="5" min="3" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloqueio após tentativas (minutos)</label>
+                        <input type="number" class="form-input" value="30" min="10" max="120">
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-shield-alt"></i>
+                        Atualizar Segurança
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">Visão geral da atividade</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="dashboardEvents">8</div>
+                    <div class="stat-label">Meus eventos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏃‍♂️</div>
+                    <div class="stat-value" id="dashboardParticipations">15</div>
+                    <div class="stat-label">Participações</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value">42:30</div>
+                    <div class="stat-label">Melhor tempo</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Pódios</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Eventos por Mês</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="eventsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Atividade Recente</h3>
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></div>
+                                <div>
+                                    <p style="margin: 0; font-weight: 500;">Inscrito em "Trail da Serra"</p>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Há 2 horas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary);"></div>
+                                <div>
+                                    <p style="margin: 0; font-weight: 500;">Evento "Corrida Benéfica" atualizado</p>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Há 1 dia</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--info);"></div>
+                                <div>
+                                    <p style="margin: 0; font-weight: 500;">Completou "Maratona de Lisboa"</p>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Há 3 dias</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="page-section">
+            <div class="page-header">
+                <h1 class="page-title">Relatórios</h1>
+                <p class="page-subtitle">Análise detalhada de performance</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Performance por Evento</h3>
+                    <div>
+                        <select class="form-select" style="width: 200px; display: inline-block; margin-right: 12px;">
+                            <option>Últimos 6 meses</option>
+                            <option>Último ano</option>
+                            <option>Todos os tempos</option>
+                        </select>
+                        <button class="btn btn-secondary">
+                            <i class="fas fa-download"></i>
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // User profile management
+        let currentUser = {
+            id: 1,
+            name: 'João Silva',
+            email: 'joao.silva@example.com',
+            role: 'user', // 'user' or 'super_admin'
+            avatar: 'JD'
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializeCharts();
+            setupEventListeners();
+        });
+
+        function initializeApp() {
+            // Set user info
+            updateUserInfo();
+            
+            // Set sidebar based on user role
+            updateSidebarForRole();
+            
+            // Initialize theme
+            initializeTheme();
+        }
+
+        function updateUserInfo() {
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userAvatar').textContent = currentUser.avatar;
+            document.getElementById('userRole').textContent = 
+                currentUser.role === 'super_admin' ? 'Super Admin' : 'Utilizador';
+        }
+
+        function updateSidebarForRole() {
+            const adminSection = document.getElementById('adminSection');
+            const adminDivider = document.getElementById('adminDivider');
+            const dashboardEvents = document.getElementById('dashboardEvents');
+            const dashboardParticipations = document.getElementById('dashboardParticipations');
+
+            if (currentUser.role === 'super_admin') {
+                adminSection.style.display = 'block';
+                adminDivider.style.display = 'block';
+                // Update dashboard stats for admin
+                dashboardEvents.textContent = '45';
+                dashboardParticipations.textContent = '12,847';
+            } else {
+                adminSection.style.display = 'none';
+                adminDivider.style.display = 'none';
+                // Update dashboard stats for user
+                dashboardEvents.textContent = '8';
+                dashboardParticipations.textContent = '15';
+            }
+        }
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function setupEventListeners() {
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // Menu toggle
+            document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+
+            // Navigation links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-section');
+                    navigateToSection(sectionId);
+                });
+            });
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (confirm('Tem a certeza que deseja sair?')) {
+                    // Redirect to auth page or handle logout
+                    alert('Logout realizado com sucesso!');
+                }
+            });
+
+            // Profile switcher (for demo purposes)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'u') {
+                    toggleUserRole();
+                }
+            });
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', function(e) {
+                const sidebar = document.getElementById('sidebar');
+                const menuToggle = document.getElementById('menuToggle');
+                
+                if (window.innerWidth < 1024 && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+
+            // Window resize handler
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 1024) {
+                    closeSidebar();
+                }
+            });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('active');
+        }
+
+        function navigateToSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                closeSidebar();
+            }
+        }
+
+        function toggleUserRole() {
+            currentUser.role = currentUser.role === 'user' ? 'super_admin' : 'user';
+            if (currentUser.role === 'super_admin') {
+                currentUser.name = 'Admin Carlos';
+                currentUser.avatar = 'AC';
+            } else {
+                currentUser.name = 'João Silva';
+                currentUser.avatar = 'JD';
+            }
+            updateUserInfo();
+            updateSidebarForRole();
+            
+            // Show notification
+            alert(`Perfil alterado para: ${currentUser.role === 'super_admin' ? 'Super Admin' : 'Utilizador'}\n\nPressione Ctrl+U para alternar novamente.`);
+        }
+
+        function initializeCharts() {
+            // Events chart
+            const eventsCtx = document.getElementById('eventsChart');
+            if (eventsCtx) {
+                new Chart(eventsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                        datasets: [{
+                            label: 'Eventos',
+                            data: [2, 3, 1, 4, 2, 3],
+                            borderColor: '#fc6b03',
+                            backgroundColor: 'rgba(252, 107, 3, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Performance chart
+            const performanceCtx = document.getElementById('performanceChart');
+            if (performanceCtx) {
+                new Chart(performanceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['5K', '10K', '21K', '42K', 'Trail'],
+                        datasets: [{
+                            label: 'Melhor Tempo (minutos)',
+                            data: [22, 45, 95, 180, 85],
+                            backgroundColor: 'rgba(252, 107, 3, 0.8)',
+                            borderColor: '#fc6b03',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Demo: Show notification when buttons are clicked
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-primary') && e.target.textContent.includes('Criar Evento')) {
+                alert('Funcionalidade de criação de eventos será implementada!');
+            }
+        });
+
+        // Demo: Add some interaction to table buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('button') && e.target.closest('.data-table')) {
+                const button = e.target.closest('button');
+                const row = button.closest('tr');
+                const eventName = row.querySelector('strong')?.textContent || 'Item';
+                
+                if (button.querySelector('.fa-eye')) {
+                    alert(`Visualizar detalhes de: ${eventName}`);
+                } else if (button.querySelector('.fa-cog')) {
+                    alert(`Configurar: ${eventName}`);
+                } else if (button.querySelector('.fa-edit')) {
+                    alert(`Editar: ${eventName}`);
+                }
+            }
+        });
+
+        console.log('🚀 KROMI Platform initialized successfully!');
+        console.log('💡 Tip: Press Ctrl+U to toggle between User and Super Admin profiles');
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDksoLvcZ7RcaBgunNRwk%2BVWfhTGZDYQVV8Wyb88z57oxxs7H0ylddakpntbT4pjLGQJSNRg%2BIIl3qgjSfgH2Z0ea96LTt2OD57ycSEsxQNo1Voj3a0hLlOON7hfpAx7%2FK6EL8bPHIvQaM230ogdpz5qhjamE54gcYhl7o7XxIDSk6pRNB6fFgKSuXJt0nzdw1ULqXAtFu%2Ful304znNwLelGxLIWZcBdOTkGJQxGcsm8LF3niHT1o7gViRE9AF7zlNv3ain0xbRtQxO9EwN70smItKGRmnvSLxYSE7AYlxdZHIhQAdrUXEwEvhIAuS1vd5%2BArKuWqB726n1bzklzGmkTvA52NvtLYToPCmN99ee5m1CCUWetHpUNNsm5cjrFxxVmagXVwUPdobM97eHJBKyu%2FpopLlM36hkd0aQSYIP9AnDKptABym9DRIZ3SXPSJ1MZg7ytgFh%2FESlhR8a74TwboWTYS4KuD6EYzNU8i0rmpHbqIpeqAIaSSMU0lYdN67g%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDksoLvcZ7RcaBgunNRwk+VWfhTGZDYQVV8Wyb88z57oxxs7H0ylddakpntbT4pjLGQJSNRg+IIl3qgjSfgH2Z0ea96LTt2OD57ycSEsxQNo1Voj3a0hLlOON7hfpAx7/K6EL8bPHIvQaM230ogdpz5qhjamE54gcYhl7o7XxIDSk6pRNB6fFgKSuXJt0nzdw1ULqXAtFu/ul304znNwLelGxLIWZcBdOTkGJQxGcsm8LF3niHT1o7gViRE9AF7zlNv3ain0xbRtQxO9EwN70smItKGRmnvSLxYSE7AYlxdZHIhQAdrUXEwEvhIAuS1vd5+ArKuWqB726n1bzklzGmkTvA52NvtLYToPCmN99ee5m1CCUWetHpUNNsm5cjrFxxVmagXVwUPdobM97eHJBKyu/popLlM36hkd0aQSYIP9AnDKptABym9DRIZ3SXPSJ1MZg7ytgFh/ESlhR8a74TwboWTYS4KuD6EYzNU8i0rmpHbqIpeqAIaSSMU0lYdN67g==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

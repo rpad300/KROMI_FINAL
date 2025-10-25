@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>VisionKrono - Detecção</title>
+    <link rel="stylesheet" href="detection.css">
+    <style>
+        .permission-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        
+        .permission-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .permission-content h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .permission-content p {
+            margin: 0 0 25px 0;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .permission-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn-accept, .btn-reject {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-accept {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-accept:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-reject {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-reject:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+        
+        .permission-info {
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Video stream da câmera -->
+        <video id="cameraStream" autoplay playsinline muted></video>
+        
+        <!-- Canvas para captura de frames -->
+        <canvas id="captureCanvas" style="display: none;"></canvas>
+        
+        <!-- Overlay com controles simplificados -->
+        <div class="overlay">
+            <!-- Status bar no topo -->
+            <div class="status-bar">
+                <div class="app-title">VisionKrono</div>
+                <div class="status" id="status">Inicializando...</div>
+                <div class="connectivity-status" id="connectivityStatus">
+                    <div class="status-item">
+                        <span class="status-icon">🌐</span>
+                        <span class="status-text">Online</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controles principais -->
+            <div class="main-controls">
+                <button id="startBtn" class="control-btn start">
+                    <div class="btn-icon">▶</div>
+                    <div class="btn-text">Iniciar</div>
+                </button>
+                
+                <button id="stopBtn" class="control-btn stop" disabled>
+                    <div class="btn-icon">⏹</div>
+                    <div class="btn-text">Parar</div>
+                </button>
+            </div>
+            
+            <!-- Controles de câmera e som -->
+            <div class="camera-controls">
+                <button id="cameraToggleBtn" class="control-btn camera" title="Alternar entre câmera frontal e traseira">
+                    <div class="btn-icon">📷</div>
+                    <div class="btn-text">Traseira</div>
+                </button>
+                
+                <button id="flashToggleBtn" class="control-btn flash-off" title="Ligar/desligar flash">
+                    <div class="btn-icon">🔦</div>
+                    <div class="btn-text">Flash OFF</div>
+                </button>
+                
+                <button id="soundToggleBtn" class="control-btn sound-on" title="Ativar/desativar som de detecção">
+                    <div class="btn-icon">🔊</div>
+                    <div class="btn-text">Som ON</div>
+                </button>
+            </div>
+            
+            <!-- Painel de detecções -->
+            <div class="detection-panel" id="detectionPanel">
+                <div class="panel-header">
+                    <h3>Últimas Detecções</h3>
+                    <span class="total">Total: <span id="totalDetected">0</span></span>
+                </div>
+                
+                <div class="detections-list" id="detectionsList">
+                    <div class="no-detections">Nenhuma detecção ainda</div>
+                </div>
+                
+                <button id="downloadBtn" class="download-btn">
+                    📄 Download Registros
+                </button>
+            </div>
+            
+            <!-- Botão para mostrar/esconder painel -->
+            <button id="togglePanelBtn" class="toggle-panel">📊</button>
+        </div>
+        
+        <!-- Loading overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Carregando configurações...</p>
+        </div>
+        
+        <!-- Error overlay -->
+        <div id="errorOverlay" class="error-overlay" style="display: none;">
+            <div class="error-content">
+                <h2>⚠️ Configuração Necessária</h2>
+                <p id="errorMessage">Configure o sistema primeiro</p>
+                <button id="openCalibrationBtn" class="btn primary">Abrir Calibração</button>
+            </div>
+        </div>
+        
+        <!-- Live Stream Permission Panel -->
+        <div id="liveStreamPermissionPanel" class="permission-panel" style="display: none;">
+            <div class="permission-content">
+                <h3>🎥 Solicitação de Live Stream</h3>
+                <p>O painel de Live Stream está tentando acessar sua câmera.</p>
+                <div class="permission-actions">
+                    <button id="acceptLiveStream" class="btn-accept">✅ Permitir Stream</button>
+                    <button id="rejectLiveStream" class="btn-reject">❌ Recusar Stream</button>
+                </div>
+                <div class="permission-info">
+                    <small>Dispositivo: <span id="requestingDevice"></span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="gemini-queue.js"></script>
+    <script src="supabase.js"></script>
+    <script src="detection.js"></script>
+    
+    <!-- Socket.IO para Live Stream -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Sistema Live Stream Client -->
+    <script src="livestream-client.js"></script>
+</body>
+</html>

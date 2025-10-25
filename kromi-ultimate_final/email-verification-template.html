@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>KROMI - Código de Verificação para Login</title>
+    
+    <style type="text/css">
+        /* Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+        
+        /* Base styles */
+        body {
+            width: 100% !important;
+            height: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .logo {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #fc6b03, #e55a02);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        
+        .logo::after {
+            content: 'K';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .header-title {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .header-subtitle {
+            color: #a0a0a0;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+        }
+        
+        /* Main content */
+        .main-content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+        
+        .message {
+            font-size: 16px;
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        /* Verification code */
+        .code-container {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            border-radius: 16px;
+            padding: 32px 20px;
+            text-align: center;
+            margin: 32px 0;
+            border: 2px solid #fc6b03;
+        }
+        
+        .code-label {
+            color: #a0a0a0;
+            font-size: 14px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .verification-code {
+            font-family: 'Courier New', monospace;
+            font-size: 42px;
+            font-weight: bold;
+            color: #fc6b03;
+            letter-spacing: 8px;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(252, 107, 3, 0.3);
+        }
+        
+        .code-note {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 16px;
+            font-style: italic;
+        }
+        
+        /* Security info */
+        .security-info {
+            background-color: #fef3cd;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+        
+        .security-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background-color: #f59e0b;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+            position: relative;
+        }
+        
+        .security-icon::after {
+            content: '!';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .security-text {
+            color: #92400e;
+            font-size: 14px;
+            display: inline-block;
+            vertical-align: middle;
+            width: calc(100% - 28px);
+        }
+        
+        /* Instructions */
+        .instructions {
+            margin: 24px 0;
+        }
+        
+        .instructions h3 {
+            color: #1f2937;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .instructions ul {
+            margin: 12px 0 0 20px;
+            color: #4b5563;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        /* Action button */
+        .action-button {
+            display: inline-block;
+            background: linear-gradient(45deg, #fc6b03, #e55a02);
+            color: white;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(252, 107, 3, 0.3);
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: #1f2937;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .footer-content {
+            color: #9ca3af;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .footer-content strong {
+            color: #ffffff;
+        }
+        
+        .footer-links {
+            margin: 16px 0;
+        }
+        
+        .footer-links a {
+            color: #fc6b03;
+            text-decoration: none;
+            margin: 0 8px;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer-legal {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 20px;
+            border-top: 1px solid #374151;
+            padding-top: 20px;
+        }
+        
+        /* Mobile responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            
+            .main-content {
+                padding: 20px !important;
+            }
+            
+            .verification-code {
+                font-size: 36px !important;
+                letter-spacing: 4px !important;
+            }
+            
+            .code-container {
+                padding: 24px 16px !important;
+            }
+            
+            .header {
+                padding: 20px !important;
+            }
+            
+            .footer {
+                padding: 20px !important;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1f2937 !important;
+            }
+            
+            .main-content {
+                background-color: #1f2937 !important;
+            }
+            
+            .greeting {
+                color: #ffffff !important;
+            }
+            
+            .message {
+                color: #d1d5db !important;
+            }
+            
+            .instructions h3 {
+                color: #ffffff !important;
+            }
+            
+            .instructions li {
+                color: #d1d5db !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td style="padding: 20px 0;">
+                <div class="email-container">
+                    
+                    <!-- Header -->
+                    <div class="header">
+                        <div class="logo"></div>
+                        <h1 class="header-title">KROMI</h1>
+                        <p class="header-subtitle">Plataforma de Gestão de Eventos Desportivos</p>
+                    </div>
+                    
+                    <!-- Main Content -->
+                    <div class="main-content">
+                        <p class="greeting">Olá!</p>
+                        
+                        <p class="message">
+                            Recebemos uma tentativa de login na sua conta KROMI. Para garantir a segurança da sua conta, 
+                            utilize o código de verificação abaixo para completar o seu login.
+                        </p>
+                        
+                        <!-- Verification Code -->
+                        <div class="code-container">
+                            <p class="code-label">Código de Verificação</p>
+                            <p class="verification-code">590302</p>
+                            <p class="code-note">Este código expira em 15 minutos</p>
+                        </div>
+                        
+                        <!-- Security Warning -->
+                        <div class="security-info">
+                            <span class="security-icon"></span>
+                            <span class="security-text">
+                                <strong>Importante:</strong> Nunca partilhe este código com ninguém. 
+                                A KROMI nunca lhe pedirá este código por telefone ou email.
+                            </span>
+                        </div>
+                        
+                        <!-- Instructions -->
+                        <div class="instructions">
+                            <h3>Como usar este código:</h3>
+                            <ul>
+                                <li>Volte à página de login da KROMI</li>
+                                <li>Introduza este código no campo "Código de Verificação"</li>
+                                <li>Clique em "Verificar e Entrar"</li>
+                                <li>Se o código expirar, pode solicitar um novo</li>
+                            </ul>
+                        </div>
+                        
+                        <center>
+                            <a href="#" class="action-button">Continuar Login na KROMI</a>
+                        </center>
+                        
+                        <p class="message" style="margin-top: 32px; font-size: 14px;">
+                            <strong>Não foi você?</strong><br>
+                            Se não tentou fazer login, ignore este email. A sua conta permanece segura. 
+                            Para maior segurança, recomendamos que altere a sua palavra-passe.
+                        </p>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="footer">
+                        <div class="footer-content">
+                            <strong>KROMI - Plataforma de Gestão de Eventos Desportivos</strong><br>
+                            Tecnologia avançada para cronometragem e gestão de competições
+                        </div>
+                        
+                        <div class="footer-links">
+                            <a href="#">Suporte</a> |
+                            <a href="#">Privacidade</a> |
+                            <a href="#">Termos de Uso</a> |
+                            <a href="#">Contato</a>
+                        </div>
+                        
+                        <div class="footer-legal">
+                            Este email foi enviado para verificação de segurança da sua conta KROMI.<br>
+                            © 2024 KROMI. Todos os direitos reservados.<br><br>
+                            
+                            <strong>Contactos de Suporte:</strong><br>
+                            📧 Email: support@kromi.online<br>
+                            📞 Telefone: +351 XXX XXX XXX<br>
+                            🌐 Website: www.kromi.online
+                        </div>
+                    </div>
+                    
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDmGe9Y4i5dGz72AHOu%2B%2FioXlK3xXYq%2BN68%2BfhWW5SGW5SgDS5eN7YU7cbf4QTzK2R7Cwq3f18t7%2BfQ2hHmhkxUEA7ae6hwcuU6BYi9RljZG0CRhPBHWBNeTlxK7AxRpkngYuChn1O%2FXEsIMVsdylMSdtbOlGmdDEddpkIB4ELkLEkYzwag%2BsvAgwli%2FAboWs%2BQA40EUEs3k99kXEMHe1CoAOquxBeQI%2B6OZfUizyFLTCmgXBr2msyM%2BS992NS61vdK%2BWOFJQaj%2BMqQCOgDYvxdgSb7MCVXRd3ZJuOvCIMe%2B0cbjfYd8Q7nFNx7TvjUjNzQfVWxEStV%2Fsjv7in5V0GmCbvvPeUgKOsJBdqsdwu8TVyDX8VuJRhWC43a%2BI59xiLX1SaJXhh3eJa5%2B55rU5RRCfpS3ydlVRZv8lId5zS1no%2BopqZfmEl4f%2FS6YRpCWDJYyULNQaneSWLWyZgCEggHIBQHV2v4GrZMeVfzM86%2B%2F%2BIj%2BWxdYT5I%2BZejBLnKlBpg%3D%3D";
+        window.__genspark_locale = "pt-BR";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDmGe9Y4i5dGz72AHOu+/ioXlK3xXYq+N68+fhWW5SGW5SgDS5eN7YU7cbf4QTzK2R7Cwq3f18t7+fQ2hHmhkxUEA7ae6hwcuU6BYi9RljZG0CRhPBHWBNeTlxK7AxRpkngYuChn1O/XEsIMVsdylMSdtbOlGmdDEddpkIB4ELkLEkYzwag+svAgwli/AboWs+QA40EUEs3k99kXEMHe1CoAOquxBeQI+6OZfUizyFLTCmgXBr2msyM+S992NS61vdK+WOFJQaj+MqQCOgDYvxdgSb7MCVXRd3ZJuOvCIMe+0cbjfYd8Q7nFNx7TvjUjNzQfVWxEStV/sjv7in5V0GmCbvvPeUgKOsJBdqsdwu8TVyDX8VuJRhWC43a+I59xiLX1SaJXhh3eJa5+55rU5RRCfpS3ydlVRZv8lId5zS1no+opqZfmEl4f/S6YRpCWDJYyULNQaneSWLWyZgCEggHIBQHV2v4GrZMeVfzM86+/+Ij+WxdYT5I+ZejBLnKlBpg==";
+    </script>
+    
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    

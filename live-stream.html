@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream REAL - VisionKrono</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: rgba(255, 68, 68, 0.9);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ff4444;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .status-indicator {
+            color: #00ff88;
+            font-weight: bold;
+            animation: pulse-red 1.5s infinite;
+        }
+        
+        .connection-status {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .close-btn {
+            background: #ff4444;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .content {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .devices-section {
+            background: rgba(255, 68, 68, 0.1);
+            padding: 20px;
+            border-bottom: 1px solid #ff4444;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-header h2 {
+            color: #ff4444;
+            margin: 0;
+            font-weight: bold;
+        }
+        
+        .refresh-btn {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .device-item {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .device-info {
+            flex: 1;
+        }
+        
+        .device-name {
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .device-status {
+            color: #00ff88;
+            font-size: 0.9rem;
+        }
+        
+        .device-real-indicator {
+            color: #ff4444;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 2px;
+            animation: pulse-red 1.5s infinite;
+        }
+        
+        .device-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 68, 68, 0.3);
+        }
+        
+        .control-btn.stop {
+            background: rgba(255, 68, 68, 0.3);
+            border-color: #ff6666;
+        }
+        
+        .streams-section {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .streams-section h2 {
+            color: #ff4444;
+            margin: 0 0 20px 0;
+            font-weight: bold;
+        }
+        
+        .stream-item {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stream-video-container {
+            position: relative;
+            flex: 1;
+            background: #000;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            min-height: 400px;
+        }
+        
+        .stream-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+            min-width: 320px;
+            min-height: 240px;
+        }
+        
+        .stream-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .stream-placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            animation: pulse-indicator 2s infinite;
+        }
+        
+        .stream-placeholder-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #ff4444;
+        }
+        
+        .stream-placeholder-subtext {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .stream-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .stream-name {
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .stream-status {
+            color: #00ff88;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .stream-real-indicator {
+            color: #ff4444;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 2px;
+            animation: pulse-red 1.5s infinite;
+        }
+        
+        .stream-controls {
+            text-align: right;
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes pulse-indicator {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎥 Live Stream REAL - VisionKrono</h1>
+        <div class="header-info">
+            <span class="status-indicator">🔴 LIVE</span>
+            <span class="connection-status">Conectado</span>
+        </div>
+        <button class="close-btn" onclick="window.close()">×</button>
+    </div>
+    
+    <div class="content">
+        <div class="devices-section">
+            <div class="section-header">
+                <h2>Dispositivos Reais Online</h2>
+                <button class="refresh-btn" onclick="refreshDevices()">🔄 Atualizar</button>
+            </div>
+            <div id="devicesList">
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-name">Carregando dispositivos...</div>
+                        <div class="device-status">Conectando...</div>
+                        <div class="device-real-indicator">🔴 DISPOSITIVO REAL</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="streams-section">
+            <h2>Streams Reais Ativos</h2>
+            <div id="streamsList">
+                <div class="stream-item">
+                    <div class="stream-video-container">
+                        <video class="stream-video" id="mainStream" autoplay muted playsinline style="display: none;"></video>
+                        <div class="stream-placeholder" id="mainPlaceholder">
+                            <div class="stream-placeholder-icon">📺</div>
+                            <div class="stream-placeholder-text">Aguardando Stream REAL</div>
+                            <div class="stream-placeholder-subtext">Conectando com dispositivo real...</div>
+                        </div>
+                    </div>
+                    <div class="stream-info">
+                        <div class="stream-name">Nenhum dispositivo conectado</div>
+                        <div class="stream-status">offline</div>
+                        <div class="stream-real-indicator">🔴 DISPOSITIVO REAL</div>
+                    </div>
+                    <div class="stream-controls">
+                        <button class="control-btn stop" onclick="stopStream()" style="display: none;">
+                            ⏹ Parar Stream
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="supabase.js"></script>
+    <script>
+        // Variáveis globais
+        var currentDeviceId = null;
+        var peerConnection = null;
+        var supabase = null;
+        
+        // Conectar ao Supabase
+        async function connectSupabase() {
+            try {
+                console.log('🔗 Conectando ao Supabase para Live Stream...');
+                
+                // Aguardar o script supabase.js carregar
+                let attempts = 0;
+                const maxAttempts = 10;
+                
+                while (attempts < maxAttempts) {
+                    if (window.supabaseClient && window.supabaseClient.supabase) {
+                        supabase = window.supabaseClient.supabase;
+                        console.log('✅ Supabase conectado via supabase.js para Live Stream');
+                        return;
+                    }
+                    
+                    console.log(`⏳ Aguardando supabase.js... (tentativa ${attempts + 1}/${maxAttempts})`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    attempts++;
+                }
+                
+                // Fallback: criar conexão direta
+                console.log('⚠️ supabase.js não disponível, criando conexão direta...');
+                const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+                supabase = createClient(
+                    'https://mdrvgbztadnluhrrnlob.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnZnYnp0YWRubHVocnJubG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTQ1MDUsImV4cCI6MjA3NjU3MDUwNX0.x2po57tZOQ443NLVURBWDIYQnYbJ4D6O45FlZ5qwmp4'
+                );
+                
+                console.log('✅ Supabase conectado independentemente para Live Stream');
+            } catch (error) {
+                console.error('❌ Erro ao conectar Supabase:', error);
+            }
+        }
+        
+        // Atualizar dispositivos
+        async function updateDevices() {
+            if (!supabase) return;
+            
+            try {
+                const { data: devices, error } = await supabase
+                    .from('livestream_devices')
+                    .select('*')
+                    .eq('status', 'online')
+                    .gte('last_seen', new Date(Date.now() - 60000).toISOString())
+                    .order('last_seen', { ascending: false });
+
+                if (error) {
+                    console.error('❌ Erro ao buscar dispositivos:', error);
+                    return;
+                }
+
+                const devicesList = document.getElementById('devicesList');
+                
+                if (!devices || devices.length === 0) {
+                    devicesList.innerHTML = '<div class="device-item"><div class="device-info"><div class="device-name">Nenhum dispositivo REAL online</div></div></div>';
+                    return;
+                }
+                
+                const devicesHTML = devices.map(device => `
+                    <div class="device-item">
+                        <div class="device-info">
+                            <div class="device-name">${device.device_name}</div>
+                            <div class="device-status">${device.status}</div>
+                            <div class="device-real-indicator">🔴 DISPOSITIVO REAL</div>
+                        </div>
+                        <div class="device-controls">
+                            <button class="control-btn" id="startBtn_${device.device_id}" onclick="startStream('${device.device_id}')">
+                                ▶ Stream REAL
+                            </button>
+                            <button class="control-btn stop" onclick="stopStream()">
+                                ⏹ Parar
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                devicesList.innerHTML = devicesHTML;
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar dispositivos:', error);
+            }
+        }
+        
+        // Iniciar stream
+        async function startStream(deviceId) {
+            try {
+                // Proteção contra duplo clique
+                if (currentDeviceId === deviceId) {
+                    console.log(`⚠️ Stream já está sendo iniciado para ${deviceId}`);
+                    return;
+                }
+                
+                console.log(`🎥 Iniciando stream REAL para dispositivo: ${deviceId}`);
+                currentDeviceId = deviceId;
+                
+                // Desabilitar botão de start
+                const startBtn = document.getElementById(`startBtn_${deviceId}`);
+                if (startBtn) {
+                    startBtn.disabled = true;
+                    startBtn.textContent = '⏳ Iniciando...';
+                }
+                
+                // Verificar se o dispositivo está ativo primeiro
+                const isDeviceActive = await checkDeviceStatus(deviceId);
+                if (!isDeviceActive) {
+                    console.error('❌ Dispositivo não está ativo. Certifique-se de que a página de detecção está aberta no telemóvel.');
+                    console.log('💡 Dica: Acesse /detection?device=879d472c-508d-4873-9b8e-8a612b8e7e14&event=a6301479-56c8-4269-a42d-aa8a7650a575 no telemóvel');
+                    
+                    // Reabilitar botão
+                    if (startBtn) {
+                        startBtn.disabled = false;
+                        startBtn.textContent = '▶ Stream REAL';
+                    }
+                    currentDeviceId = null;
+                    return;
+                }
+                
+                // Enviar comando start
+                await sendCommand(deviceId, 'start');
+                
+                // Aguardar offer
+                await waitForOffer(deviceId);
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao iniciar stream:', error);
+                    
+                    // Reabilitar botão em caso de erro
+                    const startBtn = document.getElementById(`startBtn_${deviceId}`);
+                    if (startBtn) {
+                        startBtn.disabled = false;
+                        startBtn.textContent = '▶ Stream REAL';
+                    }
+                    currentDeviceId = null;
+                }
+            }
+            
+            // Verificar status do dispositivo
+            async function checkDeviceStatus(deviceId) {
+                if (!supabase) return false;
+                
+                try {
+                    const { data: device, error } = await supabase
+                        .from('livestream_devices')
+                        .select('*')
+                        .eq('device_id', deviceId)
+                        .eq('status', 'online')
+                        .gte('last_seen', new Date(Date.now() - 60000).toISOString())
+                        .single();
+                    
+                    if (error || !device) {
+                        console.log(`⚠️ Dispositivo ${deviceId} não está ativo`);
+                        return false;
+                    }
+                    
+                    console.log(`✅ Dispositivo ${deviceId} está ativo`);
+                    return true;
+                } catch (error) {
+                    console.error('❌ Erro ao verificar status do dispositivo:', error);
+                    return false;
+                }
+            }
+            
+            // Verificar comandos enviados para debug
+            async function checkSentCommands(deviceId) {
+                if (!supabase) return;
+                
+                try {
+                    console.log(`🔍 Verificando comandos enviados para ${deviceId}...`);
+                    
+                    const { data: commands, error } = await supabase
+                        .from('livestream_commands')
+                        .select('*')
+                        .eq('device_id', deviceId)
+                        .order('created_at', { ascending: false })
+                        .limit(10);
+                    
+                    if (error) {
+                        console.error('❌ Erro ao verificar comandos:', error);
+                        return;
+                    }
+                    
+                    if (commands && commands.length > 0) {
+                        console.log(`📋 ${commands.length} comando(s) encontrado(s) para ${deviceId}:`);
+                        commands.forEach((cmd, index) => {
+                            const timeAgo = Math.round((Date.now() - new Date(cmd.created_at).getTime()) / 1000);
+                            console.log(`  ${index + 1}. ${cmd.command} - ${cmd.status} (${timeAgo}s atrás)`);
+                        });
+                        
+                        // Verificar se há comandos start pendentes
+                        const pendingStart = commands.filter(cmd => cmd.command === 'start' && cmd.status === 'pending');
+                        if (pendingStart.length > 0) {
+                            console.log(`⚠️ ${pendingStart.length} comando(s) START pendente(s) - dispositivo não está processando`);
+                        } else {
+                            console.log(`✅ Nenhum comando START pendente - dispositivo pode estar processando`);
+                        }
+                    } else {
+                        console.log(`❌ Nenhum comando encontrado para ${deviceId}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao verificar comandos enviados:', error);
+                }
+            }
+            
+            // Tentar streaming via servidor como fallback
+            async function tryServerStreaming(deviceId) {
+                try {
+                    console.log(`🔄 Iniciando fallback para streaming via servidor para ${deviceId}`);
+                    
+                    // Enviar comando para capturar frame atual
+                    await sendCommand(deviceId, 'capture_frame');
+                    
+                    // Aguardar frame capturado
+                    await waitForCapturedFrame(deviceId);
+                    
+                } catch (error) {
+                    console.error('❌ Erro no fallback de streaming:', error);
+                }
+            }
+            
+            // Aguardar frame capturado
+            async function waitForCapturedFrame(deviceId) {
+                const maxAttempts = 30; // 30 segundos
+                let attempts = 0;
+                
+                console.log(`⏳ Aguardando frame capturado para ${deviceId} (máximo ${maxAttempts} segundos)...`);
+                
+                const checkFrame = async () => {
+                    if (!supabase) return;
+                    
+                    try {
+                        const { data: frames, error } = await supabase
+                            .from('livestream_frames')
+                            .select('*')
+                            .eq('device_id', deviceId)
+                            .eq('status', 'ready')
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+
+                        if (error) {
+                            console.error('❌ Erro ao verificar frames:', error);
+                            return;
+                        }
+
+                        if (frames && frames.length > 0) {
+                            const frame = frames[0];
+                            console.log(`📸 Frame capturado encontrado para ${deviceId}`);
+                            await displayCapturedFrame(frame);
+                            
+                            // Deletar frame após usar
+                            await supabase
+                                .from('livestream_frames')
+                                .delete()
+                                .eq('id', frame.id);
+                            
+                            // Iniciar polling contínuo
+                            startFramePolling(deviceId);
+                            return;
+                        }
+                        
+                        attempts++;
+                        console.log(`⏳ Aguardando frame... (${attempts}/${maxAttempts})`);
+                        
+                        if (attempts < maxAttempts) {
+                            setTimeout(checkFrame, 1000);
+                        } else {
+                            console.error('❌ Timeout aguardando frame capturado');
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ Erro ao verificar frames:', error);
+                    }
+                };
+                
+                checkFrame();
+            }
+            
+            // Exibir frame capturado
+            async function displayCapturedFrame(frame) {
+                try {
+                    const videoElement = document.getElementById('mainStream');
+                    const placeholder = document.getElementById('mainPlaceholder');
+                    
+                    if (videoElement && frame.image_data) {
+                        // Criar elemento img temporário para exibir frame
+                        const imgElement = document.createElement('img');
+                        imgElement.src = `data:image/jpeg;base64,${frame.image_data}`;
+                        imgElement.style.width = '100%';
+                        imgElement.style.height = '100%';
+                        imgElement.style.objectFit = 'cover';
+                        imgElement.style.display = 'block';
+                        
+                        // Substituir vídeo por imagem
+                        videoElement.style.display = 'none';
+                        if (placeholder) {
+                            placeholder.style.display = 'none';
+                        }
+                        
+                        // Adicionar imagem ao container
+                        const container = videoElement.parentElement;
+                        container.appendChild(imgElement);
+                        
+                        console.log(`📸 Frame exibido via servidor para ${frame.device_id}`);
+                        updateStreamUI('streaming', `Dispositivo ${frame.device_id.substring(0, 8)} (Servidor)`);
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao exibir frame:', error);
+                }
+            }
+            
+            // Iniciar polling contínuo de frames
+            function startFramePolling(deviceId) {
+                console.log(`🔄 Iniciando polling contínuo de frames para ${deviceId}`);
+                
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const { data: frames, error } = await supabase
+                            .from('livestream_frames')
+                            .select('*')
+                            .eq('device_id', deviceId)
+                            .eq('status', 'ready')
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+
+                        if (error) {
+                            console.error('❌ Erro ao verificar frames:', error);
+                            return;
+                        }
+
+                        if (frames && frames.length > 0) {
+                            const frame = frames[0];
+                            await displayCapturedFrame(frame);
+                            
+                            // Deletar frame após usar
+                            await supabase
+                                .from('livestream_frames')
+                                .delete()
+                                .eq('id', frame.id);
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro no polling de frames:', error);
+                    }
+                }, 1000); // Polling a cada 1 segundo
+                
+                // Armazenar interval para poder parar
+                window.framePollingInterval = pollInterval;
+            }
+        
+        // Parar stream
+        async function stopStream() {
+            try {
+                console.log('🎥 Parando stream...');
+                
+                if (currentDeviceId) {
+                    await sendCommand(currentDeviceId, 'stop');
+                }
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                // Parar polling de frames
+                if (window.framePollingInterval) {
+                    clearInterval(window.framePollingInterval);
+                    window.framePollingInterval = null;
+                    console.log('🔄 Polling de frames parado');
+                }
+                
+                const videoElement = document.getElementById('mainStream');
+                const placeholder = document.getElementById('mainPlaceholder');
+                
+                if (videoElement) {
+                    videoElement.srcObject = null;
+                    videoElement.style.display = 'none';
+                }
+                
+                if (placeholder) {
+                    placeholder.style.display = 'flex';
+                }
+                
+                // Reabilitar botão de start
+                if (currentDeviceId) {
+                    const startBtn = document.getElementById(`startBtn_${currentDeviceId}`);
+                    if (startBtn) {
+                        startBtn.disabled = false;
+                        startBtn.textContent = '▶ Stream REAL';
+                    }
+                }
+                
+                currentDeviceId = null;
+                
+                // Atualizar UI
+                updateStreamUI('offline', 'Nenhum dispositivo conectado');
+                
+            } catch (error) {
+                console.error('❌ Erro ao parar stream:', error);
+            }
+        }
+        
+            // Enviar comando
+            async function sendCommand(deviceId, command, data = null) {
+                if (!supabase) return;
+                
+                try {
+                    const commandData = {
+                        device_id: deviceId,
+                        command: command,
+                        data: data,
+                        status: 'pending'
+                    };
+                    
+                    console.log(`📨 Enviando comando ${command} para ${deviceId}:`, commandData);
+                    
+                    const { data: result, error } = await supabase
+                        .from('livestream_commands')
+                        .insert(commandData)
+                        .select();
+                    
+                    if (error) {
+                        console.error('❌ Erro ao inserir comando:', error);
+                    } else {
+                        console.log(`✅ Comando ${command} inserido com sucesso:`, result);
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao enviar comando:', error);
+                }
+            }
+        
+        // Aguardar offer
+        async function waitForOffer(deviceId) {
+            const maxAttempts = 60; // 60 segundos (aumentado de 30)
+            let attempts = 0;
+            
+            console.log(`⏳ Aguardando offer para ${deviceId} (máximo ${maxAttempts} segundos)...`);
+            
+            // Aguardar 2 segundos antes de começar a procurar (dar tempo para o offer ser salvo)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log('🔍 Iniciando busca por offer após delay de 2 segundos...');
+            
+            const checkOffer = async () => {
+                if (!supabase) return;
+                
+                try {
+                    // Primeiro, verificar todos os offers disponíveis para debug
+                    const { data: allOffers, error: allError } = await supabase
+                        .from('livestream_offers')
+                        .select('*')
+                        .eq('status', 'pending')
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (!allError && allOffers) {
+                        console.log(`🔍 Todos os offers pendentes (últimos 5):`, allOffers.map(o => ({
+                            id: o.id.substring(0, 8),
+                            device_id: o.device_id.substring(0, 8),
+                            status: o.status,
+                            created_at: o.created_at,
+                            expires_at: o.expires_at
+                        })));
+                        
+                        // Verificar se há offers para o dispositivo específico
+                        const deviceOffers = allOffers.filter(o => o.device_id === deviceId);
+                        if (deviceOffers.length > 0) {
+                            console.log(`🎯 Offer encontrado para dispositivo ${deviceId.substring(0, 8)}:`, deviceOffers[0]);
+                        } else {
+                            console.log(`❌ Nenhum offer encontrado para dispositivo ${deviceId.substring(0, 8)}`);
+                        }
+                    }
+                    
+                    const { data: offers, error } = await supabase
+                        .from('livestream_offers')
+                        .select('*')
+                        .eq('device_id', deviceId)
+                        .eq('status', 'pending')
+                        .order('created_at', { ascending: true })
+                        .limit(1);
+
+                    if (error) {
+                        console.error('❌ Erro ao verificar ofertas:', error);
+                        return;
+                    }
+
+                    if (offers && offers.length > 0) {
+                        const offer = offers[0];
+                        console.log(`📡 Offer encontrado para ${deviceId} após ${attempts} segundos`);
+                        console.log(`📡 Offer details:`, {
+                            id: offer.id,
+                            device_id: offer.device_id,
+                            status: offer.status,
+                            created_at: offer.created_at
+                        });
+                        await handleOffer(offer);
+                        
+                        // Deletar offer
+                        await supabase
+                            .from('livestream_offers')
+                            .delete()
+                            .eq('id', offer.id);
+                        
+                        return;
+                    }
+                    
+                    attempts++;
+                    console.log(`⏳ Aguardando offer... (${attempts}/${maxAttempts})`);
+                    
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkOffer, 1000);
+                    } else {
+                        console.error('❌ Timeout aguardando offer após 60 segundos');
+                        console.log('💡 Dica: Certifique-se de que o dispositivo de detecção está ativo');
+                        console.log('🔍 Verificando comandos enviados...');
+                        
+                        // Verificar se comandos foram enviados
+                        checkSentCommands(deviceId);
+                        
+                        // Tentar fallback para streaming via servidor
+                        console.log('🔄 Tentando fallback para streaming via servidor...');
+                        tryServerStreaming(deviceId);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao verificar ofertas:', error);
+                }
+            };
+            
+            checkOffer();
+        }
+        
+        // Processar offer
+        async function handleOffer(offer) {
+            try {
+                console.log(`📡 Processando offer REAL do dispositivo: ${offer.device_id}`);
+                
+            peerConnection = new RTCPeerConnection({
+                iceServers: [
+                    // Google STUN servers (mais confiáveis)
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    // STUN servers públicos alternativos
+                    { urls: 'stun:stun.stunprotocol.org:3478' },
+                    { urls: 'stun:stun.voiparound.com' },
+                    { urls: 'stun:stun.voipbuster.com' },
+                    { urls: 'stun:stun.voipstunt.com' },
+                    { urls: 'stun:stun.counterpath.com' },
+                    { urls: 'stun:stun.1und1.de' },
+                    { urls: 'stun:stun.gmx.net' },
+                    { urls: 'stun:stun.schlund.de' },
+                    // STUN servers europeus
+                    { urls: 'stun:stun.ekiga.net' },
+                    { urls: 'stun:stun.ideasip.com' },
+                    { urls: 'stun:stun.sipgate.net' },
+                    { urls: 'stun:stun.softjoys.com' },
+                    { urls: 'stun:stun.voipgate.net' },
+                    { urls: 'stun:stun.voipia.com' },
+                    { urls: 'stun:stun.voipraider.com' },
+                    { urls: 'stun:stun.voys.nl' },
+                    // TURN servers públicos (para NAT traversal)
+                    { 
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    { 
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    { 
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
+                ],
+                iceCandidatePoolSize: 10,
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require'
+            });
+                
+                console.log('🔗 PeerConnection criado com STUN servers robustos');
+                
+                    peerConnection.ontrack = (event) => {
+                        console.log(`📺 STREAM REAL recebido do dispositivo: ${offer.device_id}`);
+                        console.log('📺 Event details:', {
+                            streams: event.streams.length,
+                            tracks: event.streams[0]?.getTracks().length,
+                            trackTypes: event.streams[0]?.getTracks().map(t => t.kind)
+                        });
+                        
+                        const videoElement = document.getElementById('mainStream');
+                        const placeholder = document.getElementById('mainPlaceholder');
+                        
+                        console.log('📺 Elementos encontrados:', {
+                            videoElement: !!videoElement,
+                            placeholder: !!placeholder,
+                            videoId: 'mainStream',
+                            placeholderId: 'mainPlaceholder'
+                        });
+                        
+                        if (videoElement && event.streams[0]) {
+                            console.log('📺 Configurando vídeo...');
+                            videoElement.srcObject = event.streams[0];
+                            videoElement.style.display = 'block';
+                            videoElement.muted = true;
+                            videoElement.playsInline = true;
+                            
+                            // Forçar dimensões e exibição
+                            videoElement.style.minWidth = '320px';
+                            videoElement.style.minHeight = '240px';
+                            videoElement.style.width = '100%';
+                            videoElement.style.height = '100%';
+                            videoElement.style.objectFit = 'cover';
+                            videoElement.style.backgroundColor = '#000';
+                            videoElement.style.display = 'block';
+                            videoElement.style.visibility = 'visible';
+                            
+                            // Esconder placeholder
+                            if (placeholder) {
+                                placeholder.style.display = 'none';
+                                console.log('📺 Placeholder escondido');
+                            }
+                            
+                        // Aguardar um pouco antes de tentar reproduzir
+                        setTimeout(() => {
+                            console.log('📺 Tentando reproduzir vídeo...');
+                            console.log('📺 Video element antes do play:', {
+                                videoWidth: videoElement.videoWidth,
+                                videoHeight: videoElement.videoHeight,
+                                readyState: videoElement.readyState,
+                                networkState: videoElement.networkState,
+                                paused: videoElement.paused,
+                                muted: videoElement.muted
+                            });
+                            
+                            // Verificar se há dados de vídeo
+                            if (videoElement.videoWidth === 0 && videoElement.videoHeight === 0) {
+                                console.log('⚠️ Stream sem dados de vídeo - verificando conexão WebRTC...');
+                                
+                                // Verificar estado da conexão WebRTC
+                                if (peerConnection) {
+                                    console.log('🔍 Estado da conexão WebRTC:', {
+                                        connectionState: peerConnection.connectionState,
+                                        iceConnectionState: peerConnection.iceConnectionState,
+                                        iceGatheringState: peerConnection.iceGatheringState,
+                                        signalingState: peerConnection.signalingState
+                                    });
+                                    
+                                    // Se conexão não está estabelecida, tentar fallback
+                                    if (peerConnection.iceConnectionState !== 'connected' && 
+                                        peerConnection.iceConnectionState !== 'completed') {
+                                        console.log('🔄 Conexão WebRTC não estabelecida - ativando fallback...');
+                                        tryServerStreaming(offer.device_id);
+                                        return;
+                                    }
+                                }
+                                
+                                // Aguardar mais tempo para dados chegarem
+                                console.log('⏳ Aguardando dados de vídeo...');
+                                setTimeout(() => {
+                                    if (videoElement.videoWidth === 0 && videoElement.videoHeight === 0) {
+                                        console.log('❌ Ainda sem dados de vídeo - ativando fallback...');
+                                        tryServerStreaming(offer.device_id);
+                                        return;
+                                    }
+                                }, 3000); // Aguardar 3 segundos adicionais
+                            }
+                            
+                            videoElement.play().then(() => {
+                                console.log(`✅ Vídeo REAL reproduzindo para ${offer.device_id}`);
+                                console.log('📺 Video dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+                                console.log('📺 Video element visible:', videoElement.offsetWidth, 'x', videoElement.offsetHeight);
+                                console.log('📺 Video element style:', {
+                                    display: videoElement.style.display,
+                                    visibility: videoElement.style.visibility,
+                                    opacity: videoElement.style.opacity
+                                });
+                                
+                                // Forçar atualização visual
+                                videoElement.style.display = 'block';
+                                videoElement.style.visibility = 'visible';
+                                videoElement.style.opacity = '1';
+                                
+                                updateStreamUI('streaming', `Dispositivo ${offer.device_id.substring(0, 8)}`);
+                                
+                                // Verificar se vídeo está realmente visível
+                                setTimeout(() => {
+                                    const rect = videoElement.getBoundingClientRect();
+                                    console.log('📺 Video bounding rect:', {
+                                        width: rect.width,
+                                        height: rect.height,
+                                        top: rect.top,
+                                        left: rect.left,
+                                        visible: rect.width > 0 && rect.height > 0
+                                    });
+                                    
+                                    // Verificar se há dados de vídeo
+                                    console.log('📺 Video data check:', {
+                                        videoWidth: videoElement.videoWidth,
+                                        videoHeight: videoElement.videoHeight,
+                                        duration: videoElement.duration,
+                                        currentTime: videoElement.currentTime,
+                                        paused: videoElement.paused,
+                                        ended: videoElement.ended
+                                    });
+                                }, 1000);
+                            }).catch(err => {
+                                console.error('❌ Erro ao reproduzir vídeo:', err);
+                                console.error('❌ Erro details:', {
+                                    name: err.name,
+                                    message: err.message,
+                                    code: err.code
+                                });
+                                
+                                // Tentar novamente após 1 segundo
+                                setTimeout(() => {
+                                    console.log('📺 Segunda tentativa de reprodução...');
+                                    videoElement.play().catch(e => {
+                                        console.error('❌ Segunda tentativa falhou:', e);
+                                        // Forçar reprodução mesmo com erro
+                                        videoElement.style.display = 'block';
+                                        videoElement.style.visibility = 'visible';
+                                        videoElement.style.opacity = '1';
+                                        
+                                        // Verificar se há dados de vídeo mesmo sem reprodução
+                                        console.log('📺 Video sem reprodução:', {
+                                            videoWidth: videoElement.videoWidth,
+                                            videoHeight: videoElement.videoHeight,
+                                            readyState: videoElement.readyState
+                                        });
+                                    });
+                                }, 1000);
+                            });
+                        }, 500);
+                        } else {
+                            console.error('❌ Elemento de vídeo não encontrado ou stream vazio');
+                            console.error('❌ Video element:', videoElement);
+                            console.error('❌ Stream:', event.streams[0]);
+                        }
+                    };
+                
+                // Configurar eventos ICE
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('📡 ICE candidate gerado:', {
+                            candidate: event.candidate.candidate,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex,
+                            sdpMid: event.candidate.sdpMid
+                        });
+                        sendCommand(offer.device_id, 'ice_candidate', { candidate: event.candidate });
+                    } else {
+                        console.log('📡 ICE gathering completo');
+                    }
+                };
+                
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log('🔗 ICE Connection State:', peerConnection.iceConnectionState);
+                if (peerConnection.iceConnectionState === 'connected' || 
+                    peerConnection.iceConnectionState === 'completed') {
+                    console.log('✅ Conexão ICE estabelecida!');
+                    // Cancelar timeout se conexão estabelecida
+                    if (window.iceTimeout) {
+                        clearTimeout(window.iceTimeout);
+                        window.iceTimeout = null;
+                    }
+                } else if (peerConnection.iceConnectionState === 'failed') {
+                    console.log('❌ Conexão ICE falhou - tentando fallback...');
+                    // Cancelar timeout se falhou
+                    if (window.iceTimeout) {
+                        clearTimeout(window.iceTimeout);
+                        window.iceTimeout = null;
+                    }
+                    tryServerStreaming(offer.device_id);
+                } else if (peerConnection.iceConnectionState === 'checking') {
+                    console.log('⏳ ICE Connection State: checking - aguardando conexão...');
+                    // Definir timeout para forçar fallback se demorar muito
+                    if (!window.iceTimeout) {
+                        window.iceTimeout = setTimeout(() => {
+                            console.log('⏰ Timeout ICE - ativando fallback para streaming via servidor');
+                            tryServerStreaming(offer.device_id);
+                        }, 8000); // 8 segundos de timeout
+                    }
+                }
+            };
+                
+                peerConnection.onicegatheringstatechange = () => {
+                    console.log('🔗 ICE Gathering State:', peerConnection.iceGatheringState);
+                };
+                
+                await peerConnection.setRemoteDescription(offer.offer_data);
+                
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                await sendCommand(offer.device_id, 'answer', { answer: answer });
+                
+                console.log(`✅ Answer enviado via P2P para dispositivo REAL: ${offer.device_id}`);
+                console.log('📡 Answer data:', answer);
+                
+            } catch (error) {
+                console.error('❌ Erro ao processar offer:', error);
+            }
+        }
+        
+        // Atualizar UI do stream
+        function updateStreamUI(status, deviceName) {
+            const statusElement = document.querySelector('.stream-status');
+            const nameElement = document.querySelector('.stream-name');
+            const stopBtn = document.querySelector('.control-btn.stop');
+            
+            if (statusElement) statusElement.textContent = status;
+            if (nameElement) nameElement.textContent = deviceName;
+            
+            if (stopBtn) {
+                stopBtn.style.display = status === 'streaming' ? 'inline-block' : 'none';
+            }
+        }
+        
+        // Atualizar dispositivos
+        function refreshDevices() {
+            updateDevices();
+        }
+        
+        // Inicializar
+        async function init() {
+            console.log('🎥 Inicializando Live Stream Panel...');
+            await connectSupabase();
+            await updateDevices();
+            
+            // Atualizar dispositivos a cada 3 segundos
+            setInterval(updateDevices, 3000);
+            
+            console.log('✅ Live Stream Panel inicializado');
+        }
+        
+        // Inicializar quando página carregar
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
