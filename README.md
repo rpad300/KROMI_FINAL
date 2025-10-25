@@ -107,9 +107,110 @@ Precisão: 5m
 - ✅ Edge 79+
 - ✅ Mobile browsers (iOS Safari, Chrome Mobile)
 
+## Deploy em Servidor
+
+### Pré-requisitos
+
+- **Node.js 18+** ou **Docker**
+- **Google Cloud API Keys** configuradas
+- **Supabase** (opcional, para funcionalidades avançadas)
+
+### Deploy com Docker (Recomendado)
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/rpad300/KROMI_FINAL.git
+   cd KROMI_FINAL
+   ```
+
+2. **Configure as variáveis de ambiente:**
+   ```bash
+   cp env.production.example .env
+   # Edite o arquivo .env com suas configurações
+   ```
+
+3. **Execute o deploy:**
+   ```bash
+   # Linux/Mac
+   chmod +x deploy.sh
+   ./deploy.sh
+   
+   # Windows
+   deploy.bat
+   ```
+
+4. **Acesse a aplicação:**
+   - Local: `https://localhost:1144`
+   - Rede: `https://SEU_IP:1144`
+
+### Deploy Manual
+
+1. **Instalar dependências:**
+   ```bash
+   npm install --production
+   ```
+
+2. **Gerar certificados SSL:**
+   ```bash
+   npm run generate-cert
+   ```
+
+3. **Configurar variáveis de ambiente:**
+   ```bash
+   cp env.production.example .env
+   # Configure suas API keys no .env
+   ```
+
+4. **Iniciar o servidor:**
+   ```bash
+   npm start
+   ```
+
+### Deploy em Produção com Nginx
+
+1. **Use o docker-compose com perfil de produção:**
+   ```bash
+   docker-compose --profile production up -d
+   ```
+
+2. **Configure seu domínio:**
+   - Aponte seu domínio para o IP do servidor
+   - Atualize `CORS_ORIGINS` no `.env`
+   - Configure certificados SSL válidos
+
+### Monitoramento
+
+- **Logs:** `docker-compose logs -f`
+- **Status:** `docker-compose ps`
+- **Health Check:** `curl -k https://localhost:1144/api/config`
+
+### Troubleshooting
+
+- **Porta ocupada:** Mude a `PORT` no `.env`
+- **Certificados:** Execute `npm run generate-cert`
+- **API Keys:** Verifique se estão corretas no `.env`
+- **Firewall:** Abra a porta 1144 (ou a configurada)
+
 ## Desenvolvimento
 
 Para desenvolvimento local, você pode usar a simulação de detecção que está implementada como fallback quando a API não está disponível.
+
+### Desenvolvimento Local
+
+```bash
+# Instalar dependências
+npm install
+
+# Gerar certificados SSL
+npm run generate-cert
+
+# Configurar ambiente
+cp env.example .env
+# Edite o .env com suas configurações
+
+# Iniciar em modo desenvolvimento
+npm run dev
+```
 
 ## Licença
 

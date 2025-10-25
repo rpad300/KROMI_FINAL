@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+
+# Test files
+test-*
+*test*
+
+# SQL files (not needed in container)
+*.sql
+
+# Development files
+.env.example
+env.production.example
+
+# Deploy scripts (not needed in container)
+deploy.sh
+deploy.bat
+nginx.conf
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
