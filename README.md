@@ -2,6 +2,24 @@
 
 Uma webapp que utiliza o Vertex AI Vision do Google para detectar números de dorsais em tempo real através da câmera, registrando automaticamente o número, hora de passagem e coordenadas GPS.
 
+## 📁 Estrutura do Projeto
+
+```
+visionkrono/
+├── docs/          # Documentação completa (209 ficheiros)
+├── sql/           # Scripts SQL e migrações (122 ficheiros)
+├── src/           # Código fonte da aplicação (115 ficheiros)
+├── scripts/       # Utilitários e automação (7 ficheiros)
+├── infra/         # Docker, nginx, IaC (4 ficheiros)
+├── config/        # Configurações
+├── tests/         # Testes automatizados
+├── data/          # Dados de exemplo
+└── notebooks/     # Notebooks Jupyter
+```
+
+> 📖 Ver [docs/MIGRATION-2025-10-27.md](docs/MIGRATION-2025-10-27.md) para detalhes da estrutura  
+> 📋 Ver [docs/PROJECT_RULES.md](docs/PROJECT_RULES.md) para regras e convenções
+
 ## Funcionalidades
 
 - 🎥 **Acesso à câmera em tempo real** - A câmera ocupa toda a área da tela
@@ -47,7 +65,7 @@ O Supabase permite dashboard em tempo real e sincronização entre dispositivos:
    - Anote a URL e ANON KEY
 
 2. **Configure a base de dados:**
-   - Execute o script "`../sql/supabase-setup.sql" no SQL Editor
+   - Execute o script `sql/supabase-setup.sql` no SQL Editor
    - Isso criará a tabela `detections` e políticas necessárias
 
 3. **Configure no arquivo .env:**
