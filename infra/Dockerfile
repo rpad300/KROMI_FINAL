@@ -13,18 +13,24 @@ RUN npm ci --only=production
 # Copy application files
 COPY . .
 
-# Create certificates directory
-RUN mkdir -p certs
+# Create necessary directories
+RUN mkdir -p certs data logs src/certs
 
 # Generate self-signed certificates for HTTPS
-RUN npm run generate-cert
+# Generate in both root certs and src/certs for compatibility
+RUN if [ ! -f certs/cert.pem ] || [ ! -f certs/key.pem ]; then \
+        npm run generate-cert; \
+        cp certs/*.pem src/certs/ 2>/dev/null || true; \
+    fi
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S visionkrono -u 1001
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S visionkrono -u 1001
 
 # Change ownership of the app directory
 RUN chown -R visionkrono:nodejs /app
+
+# Switch to non-root user
 USER visionkrono
 
 # Expose port
