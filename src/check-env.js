@@ -5,7 +5,8 @@
  * Uso: node check-env.js
  */
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 console.log('\n🔍 Diagnóstico de Variáveis de Ambiente\n');
 console.log('==========================================\n');

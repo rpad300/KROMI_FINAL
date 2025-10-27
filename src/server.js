@@ -1,5 +1,5 @@
 const path = require('path');
-const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '.env') });
+const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '../.env') });
 console.log('Carregamento do .env:', dotenvResult.error ? 'ERRO: ' + dotenvResult.error : 'SUCESSO');
 console.log('Parsed:', dotenvResult.parsed);
 console.log('GOOGLE_VISION_API_KEY carregada:', process.env.GOOGLE_VISION_API_KEY ? 'SIM' : 'NÃO');
@@ -42,8 +42,8 @@ app.use(express.urlencoded({ extended: true })); // Parser de form data
 // Middleware de sessão em todas as rotas
 app.use(createSessionMiddleware(sessionManager));
 
-// Servir arquivos estáticos
-app.use(express.static('.'));
+// Servir arquivos estáticos a partir da raiz do projeto
+app.use(express.static(path.join(__dirname, '..')));
 
 // Rota para debug - escrever logs no terminal
 app.post('/api/debug', express.json(), (req, res) => {

@@ -1,6 +1,6 @@
 // Teste simples e direto do Supabase
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 async function testSupabaseSimple() {
     console.log('🧪 Teste Simples do Supabase');
