@@ -138,6 +138,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index-kromi.html'));
 });
 
+// Rota de login
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 // Rota legada
 app.get('/index-old', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
