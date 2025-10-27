@@ -42,7 +42,7 @@ Reorganização do projeto por tipo de artefacto. Atualização de referências 
 
 ### Exemplos de Referências Atualizadas
 - Ficheiros em `src/` que liam SQL: "`../sql/query.sql" → `../sql/query.sql`
-- Links em Markdown: `[Setup](docs/setup.md)` → `[Setup](docs/docs/setup.md)`
+- Links em Markdown: `[Setup](docs/docs/setup.md)` → `[Setup](docs/docs/docs/setup.md)`
 - Imports relativos atualizados conforme nova estrutura
 
 ## Estatísticas
