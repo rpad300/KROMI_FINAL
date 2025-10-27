@@ -42,8 +42,9 @@ app.use(express.urlencoded({ extended: true })); // Parser de form data
 // Middleware de sessão em todas as rotas
 app.use(createSessionMiddleware(sessionManager));
 
-// Servir arquivos estáticos a partir da raiz do projeto
-app.use(express.static(path.join(__dirname, '..')));
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, '..'))); // Raiz do projeto (icons, manifest, etc)
+app.use(express.static(path.join(__dirname))); // src/ (HTML, CSS, JS)
 
 // Rota para debug - escrever logs no terminal
 app.post('/api/debug', express.json(), (req, res) => {
