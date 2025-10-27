@@ -2,7 +2,7 @@
 
 ## Estrutura
 - `docs/` para toda a documentação.
-- `../sql/` para scripts SQL e migrações.
+- `sql/` para scripts SQL e migrações.
 - `src/` para código.
 - `tests/` para testes.
 - `config/` para configuração.
