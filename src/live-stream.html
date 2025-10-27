@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Stream REAL - VisionKrono</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/src/navigation-component.css?v=2025102701">
+    
     <style>
         body {
             margin: 0;
@@ -267,7 +275,10 @@
         }
     </style>
 </head>
-<body>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
     <div class="header">
         <h1>🎥 Live Stream REAL - VisionKrono</h1>
         <div class="header-info">
@@ -321,8 +332,21 @@
         </div>
     </div>
     
-    <script src="/supabase.js"></script>
-    <script>
+    <!-- Scripts Core -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/supabase.js" defer></script>
+    <script src="/auth-client.js" defer></script>
+    <script src="/auth-helper.js" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="/src/navigation-config.js?v=2025102701" defer></script>
+    <script src="/src/navigation-service.js?v=2025102701" defer></script>
+    <script src="/src/navigation-component.js?v=2025102701" defer></script>
+    <script src="/src/navigation-init.js?v=2025102701" defer></script>
+    
+    <script src="/universal-route-protection.js" defer></script>
+    
+    <script defer>
         // Variáveis globais
         var currentDeviceId = null;
         var peerConnection = null;
@@ -1153,16 +1177,60 @@
             updateDevices();
         }
         
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        
         // Inicializar
         async function init() {
-            console.log('🎥 Inicializando Live Stream Panel...');
-            await connectSupabase();
-            await updateDevices();
-            
-            // Atualizar dispositivos a cada 3 segundos
-            setInterval(updateDevices, 3000);
-            
-            console.log('✅ Live Stream Panel inicializado');
+            try {
+                console.log('🎥 Inicializando Live Stream Panel...');
+                
+                // Aguardar Supabase
+                if (window.supabaseClient?.init) {
+                    await window.supabaseClient.init();
+                    await window.supabaseClient.ready();
+                }
+                
+                // Verificar autenticação
+                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager']);
+                if (!autenticado) {
+                    console.warn('⚠️ Sem permissão');
+                    return;
+                }
+                
+                // Aguardar navegação estar pronta
+                await waitForNavigation();
+                console.log('✅ Navegação pronta');
+                
+                // Obter eventId da URL (se aplicável)
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                
+                if (eventId && window.navigationService) {
+                    window.navigationService.setEventContext(eventId, 'Live Stream');
+                    console.log('✅ Contexto de evento definido:', eventId);
+                }
+                
+                // Conectar Supabase para livestream
+                await connectSupabase();
+                await updateDevices();
+                
+                // Atualizar dispositivos a cada 3 segundos
+                setInterval(updateDevices, 3000);
+                
+                console.log('✅ Live Stream Panel inicializado');
+                
+            } catch (error) {
+                console.error('❌ Erro na inicialização:', error);
+            }
         }
         
         // Inicializar quando página carregar

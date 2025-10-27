@@ -189,6 +189,15 @@ const NavigationConfig = {
             }
         },
         {
+            id: 'live-stream',
+            label: 'Live Stream',
+            icon: '📹',
+            route: 'src/live-stream.html',
+            type: 'event',
+            roles: ['admin', 'moderator', 'event_manager'],
+            description: 'Transmissão ao vivo dos dispositivos'
+        },
+        {
             id: 'image-processor',
             label: 'Processador IA',
             icon: '🤖',
@@ -225,7 +234,8 @@ const NavigationConfig = {
      */
     roleAliases: {
         'event_manager': 'moderator',
-        'participant': 'user'
+        'participant': 'user',
+        'guest': 'user'  // Guest vê menus de user (básicos)
     },
 
     /**

@@ -3,6 +3,7 @@
    ============================================================================
    Estilos consistentes para o sidebar em TODAS as páginas
    Baseado no index-kromi.html como referência
+   Inclui suporte COMPLETO para mobile
    ============================================================================ */
 
 /* Sidebar Header */
@@ -22,34 +23,10 @@
     gap: var(--spacing-2);
 }
 
-.sidebar-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: var(--spacing-2);
-    border-radius: var(--radius-base);
-    transition: all var(--transition-base);
-}
-
-.sidebar-toggle:hover {
-    background: var(--bg-primary);
-    color: var(--primary);
-}
-
-.sidebar-toggle span {
-    display: block;
-    width: 20px;
-    height: 2px;
-    background: currentColor;
-    margin: 3px 0;
-    transition: all var(--transition-base);
-}
-
 /* Sidebar Navigation */
 .sidebar-nav {
     flex: 1;
+    padding: 0 var(--spacing-3);
 }
 
 .nav-list {
@@ -114,7 +91,7 @@
     padding: var(--spacing-3) var(--spacing-4);
     border-radius: var(--radius-lg);
     background: var(--danger);
-    color: var(--text-dark);
+    color: white;
     border: none;
     cursor: pointer;
     transition: all var(--transition-base);
@@ -123,36 +100,75 @@
 }
 
 .btn-logout:hover {
-    background: var(--danger-dark);
+    background: var(--danger-dark, #dc2626);
     transform: translateY(-1px);
 }
 
-/* Sidebar Collapsed State */
-.sidebar.collapsed {
-    transform: translateX(-280px);
+/* Header Structure */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-4);
 }
 
-/* Mobile Responsive */
-@media (max-width: 1024px) {
-    .sidebar-toggle {
-        display: block;
-    }
-    
-    .sidebar {
-        transform: translateX(-280px);
-    }
-    
-    .sidebar.active,
-    .sidebar.sidebar-open {
-        transform: translateX(0);
-    }
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    flex: 1;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.header-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+/* Menu Toggle Button (hambúrguer) */
+#menuToggle,
+.menu-toggle-btn {
+    display: none; /* Escondido em desktop */
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: var(--spacing-2);
+    border-radius: var(--radius-base);
+    transition: all var(--transition-base);
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xl);
+}
+
+#menuToggle:hover,
+.menu-toggle-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+#menuToggle i,
+.menu-toggle-btn i {
+    font-style: normal;
+    font-size: 1.5rem;
+    line-height: 1;
 }
 
 /* Event Info Panel (para páginas de eventos) */
 #eventInfoPanel {
     padding: var(--spacing-4);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: var(--spacing-4);
+    border-top: 1px solid var(--border-color);
+    margin-top: var(--spacing-4);
     background: rgba(252, 107, 3, 0.05);
     border-radius: var(--radius-lg);
 }
@@ -174,3 +190,266 @@
     color: var(--text-primary);
 }
 
+/* Bottom Navigation (Mobile) */
+.app-bottom-nav {
+    display: none; /* Escondido em desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    z-index: 1045;
+    padding: var(--spacing-2);
+    justify-content: space-around;
+    align-items: center;
+}
+
+.nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-1);
+    padding: var(--spacing-2);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-base);
+    transition: all var(--transition-base);
+    min-width: 60px;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+    color: var(--primary);
+    background: rgba(252, 107, 3, 0.1);
+}
+
+.nav-btn i {
+    font-size: var(--font-size-xl);
+}
+
+.nav-btn span {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE (max-width: 1024px)
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    /* Sidebar escondido por padrão em mobile */
+    .layout-with-sidebar .sidebar,
+    .sidebar {
+        transform: translateX(-100%) !important;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        position: fixed !important;
+        z-index: 1060 !important; /* Acima de tudo */
+    }
+    
+    /* Sidebar aberto quando tem classe sidebar-open */
+    .layout-with-sidebar .sidebar.sidebar-open,
+    .sidebar.sidebar-open {
+        transform: translateX(0) !important;
+    }
+    
+    /* Overlay quando sidebar está aberto */
+    .sidebar-overlay {
+        display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        z-index: 1055 !important;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .sidebar-overlay.active {
+        opacity: 1 !important;
+        pointer-events: all !important;
+    }
+    
+    /* Header ocupa toda a largura */
+    .layout-with-sidebar .header,
+    body .layout-with-sidebar .header {
+        left: 0 !important;
+        width: 100% !important;
+        right: 0 !important;
+    }
+    
+    /* Main content ocupa toda a largura */
+    .layout-with-sidebar .main,
+    body .layout-with-sidebar .main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding-bottom: 80px !important; /* Espaço para bottom nav */
+    }
+    
+    /* MOSTRAR botão hambúrguer - CRÍTICO */
+    #menuToggle,
+    .menu-toggle-btn {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    /* Garantir que o botão aparece na posição correta */
+    .header-left #menuToggle,
+    .header-left .menu-toggle-btn {
+        order: -1; /* Sempre primeiro */
+        margin-right: var(--spacing-3);
+    }
+    
+    /* Mostrar bottom navigation */
+    .app-bottom-nav {
+        display: flex !important;
+    }
+    
+    /* Ajustar padding do conteúdo */
+    #mainContent {
+        padding: var(--spacing-4) !important;
+    }
+    
+    /* Header mais compacto */
+    .header-title {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    /* Botões menores */
+    .header-right .btn {
+        padding: var(--spacing-1) var(--spacing-2) !important;
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    /* Garantir que sidebar não é afetado por scroll */
+    .sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ============================================================================
+   TABLETS (max-width: 768px)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .header-title {
+        font-size: var(--font-size-lg) !important;
+    }
+    
+    /* Esconder texto de botões, mostrar só ícones */
+    .header-right .btn span:not(:first-child) {
+        display: none;
+    }
+    
+    .header-right .btn {
+        padding: var(--spacing-2) !important;
+        min-width: 36px;
+    }
+}
+
+/* ============================================================================
+   MOBILE SMALL (max-width: 480px)
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    .header {
+        padding: 0 var(--spacing-3) !important;
+    }
+    
+    .header-title {
+        font-size: var(--font-size-base) !important;
+    }
+    
+    #menuToggle {
+        width: 36px;
+        height: 36px;
+        font-size: var(--font-size-lg);
+    }
+    
+    #mainContent {
+        padding: var(--spacing-3) !important;
+    }
+    
+    .sidebar {
+        width: 280px !important; /* Manter largura fixa mesmo em mobile pequeno */
+    }
+}
+
+/* ============================================================================
+   FIX PARA SAFARI iOS
+   ============================================================================ */
+
+@supports (-webkit-touch-callout: none) {
+    /* Fix para height 100vh no iOS Safari */
+    .layout-with-sidebar .sidebar {
+        height: -webkit-fill-available !important;
+    }
+    
+    .layout-with-sidebar .main {
+        min-height: -webkit-fill-available !important;
+    }
+}
+
+/* ============================================================================
+   DARK MODE ESPECÍFICO
+   ============================================================================ */
+
+[data-theme="dark"] .sidebar {
+    background: var(--bg-secondary, #1a1a1a);
+    border-right-color: var(--border-color, #2a2a2a);
+}
+
+[data-theme="dark"] .nav-link {
+    color: var(--text-secondary, #9ca3af);
+}
+
+[data-theme="dark"] .nav-link:hover {
+    background: rgba(252, 107, 3, 0.1);
+    color: var(--primary, #fc6b03);
+}
+
+[data-theme="dark"] .nav-link.active {
+    background: var(--primary, #fc6b03);
+    color: #000;
+}
+
+/* ============================================================================
+   ACESSIBILIDADE
+   ============================================================================ */
+
+/* Focus visible para navegação por teclado */
+.nav-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+#menuToggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Reduzir movimento para quem preferir */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .nav-link,
+    .btn-logout,
+    #menuToggle {
+        transition: none !important;
+    }
+}

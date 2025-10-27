@@ -48,8 +48,17 @@ class NavigationService {
      */
     async waitForAuthSystem() {
         return new Promise((resolve) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 segundos max
+            
             const tick = () => {
+                attempts++;
+                
                 if (window.authSystem?.currentUser !== undefined) {
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    // Timeout - continuar sem autenticação (para páginas como detection)
+                    console.warn('[NAV-SERVICE] AuthSystem não inicializou - continuando sem autenticação');
                     resolve();
                 } else {
                     setTimeout(tick, 100);
@@ -63,8 +72,12 @@ class NavigationService {
      * Carregar dados do utilizador atual
      */
     async loadCurrentUser() {
-        if (!this.authSystem) {
-            throw new Error('AuthSystem não disponível');
+        if (!this.authSystem || !this.authSystem.currentUser) {
+            // Sem autenticação - usar defaults para páginas públicas
+            console.log('[NAV-SERVICE] Sem autenticação - usando defaults');
+            this.currentUser = null;
+            this.currentRole = 'guest';
+            return;
         }
 
         this.currentUser = this.authSystem.currentUser;

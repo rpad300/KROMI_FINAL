@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Demo Mobile Navigation - VisionKrono</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        /* Demo específico */
+        .demo-info {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-3);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            z-index: 2000;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .demo-step {
+            background: var(--bg-secondary);
+            padding: var(--spacing-4);
+            margin: var(--spacing-4) 0;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+        
+        .demo-step h3 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        
+        .demo-controls {
+            display: flex;
+            gap: var(--spacing-2);
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (será renderizado pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">🏃 VisionKrono</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <span class="nav-icon">🏃</span>
+                        <span class="nav-text">Eventos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Utilizadores</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <span class="nav-icon">🔐</span>
+                        <span class="nav-text">Perfis & Permissões</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Configurações</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-logout">
+                <span>🚪</span>
+                <span>Terminar Sessão</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <!-- Botão será criado aqui automaticamente pelo navigation-init.js -->
+            <h1 class="header-title">📱 Demo Mobile Navigation</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-sm btn-primary" id="testBtn">
+                <span>🧪</span>
+                Teste
+            </button>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+            
+            <div class="demo-step">
+                <h3>📱 Como Funciona o Mobile Navigation</h3>
+                <p>Esta página demonstra como o sidebar funciona em dispositivos móveis.</p>
+                <p><strong>Redimensione a janela para menos de 1024px</strong> ou use DevTools (F12 → Device Toolbar) para testar.</p>
+            </div>
+            
+            <div class="demo-step">
+                <h3>✅ O Que Deve Acontecer Automaticamente:</h3>
+                <ol>
+                    <li><strong>Botão ☰ aparece</strong> no canto superior esquerdo do header</li>
+                    <li><strong>Sidebar esconde</strong> automaticamente</li>
+                    <li><strong>Conteúdo ocupa 100%</strong> da largura da tela</li>
+                    <li><strong>Bottom navigation</strong> aparece no fundo (se existir)</li>
+                </ol>
+            </div>
+            
+            <div class="demo-step">
+                <h3>🎯 Interações:</h3>
+                <ul>
+                    <li><strong>Tocar no ☰</strong> → Sidebar desliza da esquerda</li>
+                    <li><strong>Overlay escuro</strong> aparece sobre o conteúdo</li>
+                    <li><strong>Tocar no overlay</strong> → Sidebar fecha</li>
+                    <li><strong>Tocar em X</strong> (dentro da sidebar) → Sidebar fecha</li>
+                    <li><strong>Tocar num link</strong> → Navega e sidebar fecha</li>
+                </ul>
+            </div>
+            
+            <div class="demo-step">
+                <h3>🧪 Teste Manual:</h3>
+                <div class="demo-controls">
+                    <button class="btn btn-primary" onclick="testToggle()">
+                        Testar Toggle
+                    </button>
+                    <button class="btn btn-secondary" onclick="checkSetup()">
+                        Verificar Setup
+                    </button>
+                    <button class="btn btn-secondary" onclick="showDimensions()">
+                        Ver Dimensões
+                    </button>
+                    <button class="btn btn-secondary" onclick="testOverlay()">
+                        Testar Overlay
+                    </button>
+                </div>
+            </div>
+            
+            <div class="demo-step">
+                <h3>📊 Informações do Dispositivo:</h3>
+                <div id="deviceInfo" style="font-family: monospace; font-size: 0.9rem;">
+                    Carregando...
+                </div>
+            </div>
+            
+            <div class="demo-step">
+                <h3>🐛 Log de Eventos:</h3>
+                <div id="eventLog" style="font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; background: var(--bg-primary); padding: var(--spacing-3); border-radius: var(--radius-base);">
+                    <!-- Logs aparecem aqui -->
+                </div>
+            </div>
+            
+        </div>
+    </main>
+    
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="app-bottom-nav">
+        <button class="nav-btn active">
+            <i>🏠</i>
+            <span>Início</span>
+        </button>
+        <button class="nav-btn">
+            <i>🏃</i>
+            <span>Eventos</span>
+        </button>
+        <button class="nav-btn">
+            <i>📱</i>
+            <span>Demo</span>
+        </button>
+        <button class="nav-btn">
+            <i>👤</i>
+            <span>Perfil</span>
+        </button>
+    </nav>
+    
+    <!-- Scripts -->
+    <script src="/navigation-config.js?v=2025102601" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    
+    <script defer>
+        // Log helper
+        function log(message, type = 'info') {
+            const eventLog = document.getElementById('eventLog');
+            const time = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            eventLog.innerHTML += `<div>[${time}] ${icon} ${message}</div>`;
+            eventLog.scrollTop = eventLog.scrollHeight;
+            console.log(`[DEMO] ${message}`);
+        }
+        
+        // Update device info
+        function updateDeviceInfo() {
+            const info = document.getElementById('deviceInfo');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isMobile = width < 1024;
+            
+            info.innerHTML = `
+                <strong>Largura:</strong> ${width}px<br>
+                <strong>Altura:</strong> ${height}px<br>
+                <strong>Modo:</strong> ${isMobile ? '📱 MOBILE' : '💻 DESKTOP'}<br>
+                <strong>User Agent:</strong> ${navigator.userAgent.substring(0, 50)}...<br>
+                <strong>Tela Touch:</strong> ${('ontouchstart' in window) ? 'Sim ✅' : 'Não ❌'}
+            `;
+        }
+        
+        // Test toggle
+        function testToggle() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (!menuToggle) {
+                log('❌ menuToggle não encontrado!', 'error');
+                return;
+            }
+            
+            if (!sidebar) {
+                log('❌ sidebar não encontrado!', 'error');
+                return;
+            }
+            
+            log('Simulando click no botão ☰...', 'info');
+            menuToggle.click();
+            
+            setTimeout(() => {
+                const isOpen = sidebar.classList.contains('sidebar-open');
+                log(isOpen ? '✅ Sidebar ABERTO' : '⚠️ Sidebar FECHADO', isOpen ? 'success' : 'error');
+            }, 100);
+        }
+        
+        // Check setup
+        function checkSetup() {
+            log('=== VERIFICAÇÃO DO SETUP ===', 'info');
+            
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const headerLeft = document.querySelector('.header-left');
+            const isMobile = window.innerWidth < 1024;
+            
+            log(`1. Largura: ${window.innerWidth}px ${isMobile ? '(MOBILE)' : '(DESKTOP)'}`, 'info');
+            log(`2. menuToggle existe? ${!!menuToggle ? '✅' : '❌'}`, menuToggle ? 'success' : 'error');
+            
+            if (menuToggle) {
+                const display = getComputedStyle(menuToggle).display;
+                log(`3. menuToggle display: ${display} ${display !== 'none' ? '✅' : '❌'}`, display !== 'none' ? 'success' : 'error');
+            }
+            
+            log(`4. sidebar existe? ${!!sidebar ? '✅' : '❌'}`, sidebar ? 'success' : 'error');
+            log(`5. header-left existe? ${!!headerLeft ? '✅' : '❌'}`, headerLeft ? 'success' : 'error');
+            log(`6. NavigationUtils? ${!!window.NavigationUtils ? '✅' : '❌'}`, window.NavigationUtils ? 'success' : 'error');
+            
+            // Check CSS
+            const cssFiles = Array.from(document.styleSheets)
+                .map(s => s.href)
+                .filter(h => h)
+                .map(h => h.split('/').pop());
+            
+            log(`7. CSS carregados: ${cssFiles.join(', ')}`, 'info');
+            
+            const requiredCSS = ['unified-sidebar-styles.css', 'navigation-component.css'];
+            requiredCSS.forEach(css => {
+                const loaded = cssFiles.some(f => f.includes(css));
+                log(`   - ${css}: ${loaded ? '✅' : '❌'}`, loaded ? 'success' : 'error');
+            });
+        }
+        
+        // Show dimensions
+        function showDimensions() {
+            log(`Largura: ${window.innerWidth}px, Altura: ${window.innerHeight}px`, 'info');
+            updateDeviceInfo();
+        }
+        
+        // Test overlay
+        function testOverlay() {
+            const overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                log('✅ Overlay existe', 'success');
+                log(`   Ativo? ${overlay.classList.contains('active') ? 'Sim' : 'Não'}`, 'info');
+            } else {
+                log('ℹ️ Overlay será criado quando sidebar abrir', 'info');
+            }
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            updateDeviceInfo();
+            log('Demo carregada', 'success');
+            log('Redimensione para <1024px para testar mobile', 'info');
+            
+            // Monitor resize
+            window.addEventListener('resize', () => {
+                updateDeviceInfo();
+                log(`Redimensionado para ${window.innerWidth}px`, 'info');
+            });
+            
+            // Monitor sidebar changes
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'class') {
+                            const isOpen = sidebar.classList.contains('sidebar-open');
+                            log(`Sidebar ${isOpen ? 'ABERTO ✅' : 'FECHADO ❌'}`, isOpen ? 'success' : 'info');
+                        }
+                    });
+                });
+                observer.observe(sidebar, { attributes: true });
+            }
+        });
+    </script>
+</body>
+</html>
+

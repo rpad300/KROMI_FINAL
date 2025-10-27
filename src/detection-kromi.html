@@ -14,43 +14,26 @@
     
     <!-- KROMI Design System -->
     <link rel="stylesheet" href="/kromi-design-system.css">
-    <link rel="stylesheet" href="/kromi-layout.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
     <link rel="stylesheet" href="/kromi-mobile.css">
     <link rel="stylesheet" href="/kromi-mobile-ios.css">
     <link rel="stylesheet" href="/kromi-mobile-android.css">
     <link rel="stylesheet" href="/kromi-camera.css">
     
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
     <!-- Capability Detection -->
     <script src="/kromi-capability-detection.js"></script>
-    
-    <!-- Legacy scripts -->
-    <script src="/kromi-sidebar-toggle.js"></script>
     
     <!-- Additional inline styles kept minimal for runtime overrides -->
 </head>
 <body data-theme="dark">
     <!-- App Container -->
     <div class="layout-with-sidebar">
-        <!-- Sidebar -->
-        <nav class="sidebar" id="sidebar">
-            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
-                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
-                    📱 Detecção
-                </h1>
-            </div>
-            
-            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
-                <!-- Será preenchido por navigation.js -->
-            </div>
-            
-            <!-- Event Info Panel -->
-            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
-                <div class="nav-category">Evento Atual</div>
-                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
-                    <!-- Será preenchido dinamicamente -->
-                </div>
-            </div>
-        </nav>
+        <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+        <div class="sidebar" id="sidebar"></div>
         
         <!-- Header -->
         <header class="header">
@@ -193,8 +176,18 @@
     </div>
     
     <!-- Scripts -->
-    <script src="/supabase.js"></script>
-    <script src="/navigation.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="/supabase.js?v=2025102605" defer></script>
+    <script src="/auth-client.js?v=2025102616" defer></script>
+    <script src="/auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="/navigation-config.js?v=2025102601" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- NOTA: Detection NÃO tem proteção de rotas - acesso via PIN do dispositivo -->
     
     <!-- Detection Logic -->
     <script>
@@ -394,7 +387,7 @@
             
             if (menuToggle && sidebar) {
                 menuToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('active');
+                    sidebar.classList.toggle('sidebar-open');
                 });
             }
         }
@@ -448,17 +441,8 @@
                     console.error(`  Ativas: ${activeSessions}`);
                     console.error(`  Máximo: ${maxSessions}`);
                     
-                    // Mostrar mensagem com opções
-                    const retry = confirm(`⚠️ Limite de Sessões Atingido!\n\nEste dispositivo permite apenas ${maxSessions} sessão(ões).\nAtualmente ${activeSessions} sessão(ões) ativa(s).\n\n🔄 Limpar sessões inativas?\n(Sessões sem heartbeat há mais de 5 minutos serão removidas)`);
-                    
-                    if (retry) {
-                        // Tentar limpar sessões inativas
-                        await cleanupInactiveSessions();
-                        // Tentar novamente
-                        await requestDevicePin();
-                    } else {
-                        setTimeout(() => window.history.back(), 1000);
-                    }
+                    // Mostrar modal de confirmação com PIN para libertar sessão
+                    await showSessionConflictModal(deviceData);
                     return;
                 }
                 
@@ -501,6 +485,184 @@
                 console.error('❌ Erro ao carregar PIN:', error);
                 // Se falhar, permitir acesso
                 requestCameraPermission();
+            }
+        }
+        
+        async function showSessionConflictModal(deviceData) {
+            return new Promise((resolve) => {
+                // Criar modal de confirmação
+                const modal = document.createElement('div');
+                modal.id = 'sessionConflictModal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    padding: var(--spacing-4);
+                `;
+                
+                modal.innerHTML = `
+                    <div style="
+                        background: var(--bg-secondary);
+                        border-radius: var(--radius-lg);
+                        padding: var(--spacing-6);
+                        max-width: 500px;
+                        width: 100%;
+                        box-shadow: var(--shadow-2xl);
+                    ">
+                        <h2 style="color: var(--danger); margin: 0 0 var(--spacing-4) 0; display: flex; align-items: center; gap: var(--spacing-2);">
+                            <span style="font-size: 2rem;">⚠️</span>
+                            Dispositivo em Uso
+                        </h2>
+                        
+                        <p style="color: var(--text-primary); margin: 0 0 var(--spacing-4) 0; line-height: 1.6;">
+                            Este dispositivo já tem <strong>${deviceData.active_sessions}</strong> sessão(ões) ativa(s).<br>
+                            Limite máximo: <strong>${deviceData.max_sessions}</strong> sessão(ões).
+                        </p>
+                        
+                        <div style="background: rgba(252, 107, 3, 0.1); padding: var(--spacing-4); border-radius: var(--radius-base); border-left: 3px solid var(--primary); margin: 0 0 var(--spacing-5) 0;">
+                            <p style="margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                <strong>🔐 Tem a certeza que deseja assumir este dispositivo?</strong><br><br>
+                                Para libertar a sessão atual e criar uma nova, introduza o PIN do dispositivo:
+                            </p>
+                        </div>
+                        
+                        <div style="margin: 0 0 var(--spacing-4) 0;">
+                            <input 
+                                type="password" 
+                                id="conflictPinInput"
+                                placeholder="Digite o PIN do dispositivo"
+                                autocomplete="off"
+                                style="
+                                    width: 100%;
+                                    padding: var(--spacing-3);
+                                    font-size: var(--font-size-lg);
+                                    text-align: center;
+                                    letter-spacing: 0.5em;
+                                    border: 2px solid var(--border-color);
+                                    border-radius: var(--radius-base);
+                                    background: var(--bg-primary);
+                                    color: var(--text-primary);
+                                "
+                            />
+                            <div id="conflictPinError" style="color: var(--danger); margin-top: var(--spacing-2); display: none;"></div>
+                        </div>
+                        
+                        <div style="display: flex; gap: var(--spacing-3);">
+                            <button 
+                                id="confirmReleaseBtn"
+                                class="btn btn-primary"
+                                style="flex: 1;"
+                            >
+                                🔓 Libertar e Assumir
+                            </button>
+                            <button 
+                                id="cancelReleaseBtn"
+                                class="btn btn-secondary"
+                                style="flex: 1;"
+                            >
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                const pinInput = modal.querySelector('#conflictPinInput');
+                const errorDiv = modal.querySelector('#conflictPinError');
+                const confirmBtn = modal.querySelector('#confirmReleaseBtn');
+                const cancelBtn = modal.querySelector('#cancelReleaseBtn');
+                
+                pinInput.focus();
+                
+                // Enter no input = confirmar
+                pinInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        confirmBtn.click();
+                    }
+                });
+                
+                // Confirmar com PIN
+                confirmBtn.addEventListener('click', async () => {
+                    const inputPin = pinInput.value.trim();
+                    
+                    if (!inputPin) {
+                        errorDiv.textContent = '⚠️ Digite o PIN do dispositivo';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+                    
+                    if (inputPin !== deviceData.device_pin) {
+                        errorDiv.textContent = '❌ PIN incorreto. Tente novamente.';
+                        errorDiv.style.display = 'block';
+                        pinInput.value = '';
+                        pinInput.focus();
+                        return;
+                    }
+                    
+                    // PIN correto! Libertar sessões antigas e criar nova
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '⏳ Libertando sessão...';
+                    
+                    // Libertar todas as sessões deste dispositivo
+                    await releaseAllDeviceSessions();
+                    
+                    // Remover modal
+                    modal.remove();
+                    resolve(true);
+                    
+                    // Continuar com fluxo normal (mostrar tela de PIN padrão)
+                    devicePin = deviceData.device_pin;
+                    document.getElementById('pinPanel').style.display = 'flex';
+                    document.getElementById('pinInput').focus();
+                });
+                
+                // Cancelar
+                cancelBtn.addEventListener('click', () => {
+                    modal.remove();
+                    resolve(false);
+                    setTimeout(() => window.history.back(), 500);
+                });
+            });
+        }
+        
+        async function releaseAllDeviceSessions() {
+            try {
+                console.log('🔓 Libertando todas as sessões do dispositivo...');
+                
+                // Decrementar contador de sessões ativas
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .update({ active_sessions: 0 })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', currentDevice);
+                
+                if (error) {
+                    console.error('❌ Erro ao libertar sessões:', error);
+                } else {
+                    console.log('✅ Sessões libertadas com sucesso');
+                }
+                
+                // Se existir função RPC para limpar sessões
+                try {
+                    await window.supabaseClient.supabase
+                        .rpc('end_all_device_sessions', {
+                            p_device_id: currentDevice,
+                            p_event_id: currentEvent.id
+                        });
+                } catch (rpcError) {
+                    console.log('ℹ️ RPC end_all_device_sessions não disponível (opcional)');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao libertar sessões:', error);
             }
         }
         
@@ -752,20 +914,106 @@
         }
         
         // Encerrar sessão ao sair (automático)
-        window.addEventListener('beforeunload', async () => {
+        // Libertação automática ao navegar para outra página
+        window.addEventListener('beforeunload', async (e) => {
             if (sessionId && pinValidated) {
-                try {
-                    // Usar sendBeacon para garantir que envia antes de sair
-                    const url = window.supabaseClient.supabase.rest.url + '/rpc/end_device_session';
-                    const payload = JSON.stringify({ p_session_id: sessionId });
+                // Libertar dispositivo automaticamente
+                await releaseDeviceOnExit();
+            }
+        });
+        
+        // Interceptar navegação via sidebar/links
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('a.nav-link, .nav-btn');
+            
+            if (link) {
+                const href = link.getAttribute('href');
+                
+                // Se está a navegar para outra página (não é hash ou mesma página)
+                if (href && !href.startsWith('#') && !href.includes('detection')) {
+                    e.preventDefault();
                     
-                    navigator.sendBeacon(url, payload);
-                    console.log('👋 Sessão encerrada (beforeunload)');
-                } catch (error) {
-                    console.error('❌ Erro ao encerrar:', error);
+                    console.log('🔄 Navegação detectada para página protegida...');
+                    
+                    // 1. Libertar dispositivo se tiver sessão ativa
+                    if (sessionId && pinValidated) {
+                        console.log('🚪 Libertando dispositivo...');
+                        await releaseDeviceOnExit();
+                    }
+                    
+                    // 2. Verificar se página de destino requer autenticação
+                    const requiresAuth = !href.includes('login') && !href.includes('register');
+                    
+                    if (requiresAuth) {
+                        // Verificar se está autenticado
+                        const isAuthenticated = window.authSystem?.currentUser;
+                        
+                        if (!isAuthenticated) {
+                            console.log('🔐 Página protegida - redirecionando para login...');
+                            
+                            // Salvar URL de destino para voltar após login
+                            sessionStorage.setItem('returnUrl', href);
+                            
+                            // Redirecionar para login
+                            window.location.href = '/login.html?returnUrl=' + encodeURIComponent(href);
+                            return;
+                        }
+                    }
+                    
+                    // 3. Continuar navegação
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 300);
                 }
             }
         });
+        
+        async function releaseDeviceOnExit() {
+            try {
+                console.log('🚪 Libertando dispositivo ao sair...');
+                
+                // Parar detecção
+                if (isDetecting) {
+                    stopDetection();
+                }
+                
+                // Parar câmera
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Decrementar sessões ativas usando sendBeacon para garantir
+                const updateData = {
+                    event_id: currentEvent.id,
+                    device_id: currentDevice
+                };
+                
+                // Tentar via sendBeacon primeiro
+                try {
+                    const { data: currentData } = await window.supabaseClient.supabase
+                        .from('event_devices')
+                        .select('active_sessions')
+                        .eq('event_id', currentEvent.id)
+                        .eq('device_id', currentDevice)
+                        .single();
+                    
+                    const newCount = Math.max(0, (currentData?.active_sessions || 1) - 1);
+                    
+                    await window.supabaseClient.supabase
+                        .from('event_devices')
+                        .update({ active_sessions: newCount })
+                        .eq('event_id', currentEvent.id)
+                        .eq('device_id', currentDevice);
+                    
+                    console.log(`✅ Dispositivo libertado (sessões: ${currentData?.active_sessions} → ${newCount})`);
+                } catch (error) {
+                    console.error('❌ Erro ao libertar:', error);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro em releaseDeviceOnExit:', error);
+            }
+        }
         
         function requestCameraPermission() {
             // Show permission panel

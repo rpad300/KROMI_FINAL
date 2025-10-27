@@ -147,5 +147,121 @@
 
     console.log('[NAV-INIT] Utilidades de navegação disponíveis em window.NavigationUtils');
 
+    /**
+     * Configurar funcionalidade de toggle mobile
+     */
+    function setupMobileToggle() {
+        const sidebar = document.getElementById('sidebar');
+        
+        if (!sidebar) {
+            console.log('[NAV-INIT] Sidebar não encontrado (ainda)');
+            return;
+        }
+        
+        // 1. Criar ou obter botão menuToggle no header
+        let menuToggle = document.getElementById('menuToggle');
+        
+        if (!menuToggle) {
+            // Criar botão automaticamente se não existir
+            const headerLeft = document.querySelector('.header-left');
+            if (headerLeft) {
+                menuToggle = document.createElement('button');
+                menuToggle.id = 'menuToggle';
+                menuToggle.className = 'btn btn-icon btn-secondary';
+                menuToggle.style.display = 'none';
+                menuToggle.innerHTML = '<i>☰</i>';
+                menuToggle.setAttribute('aria-label', 'Abrir menu');
+                
+                // Inserir como primeiro filho
+                headerLeft.insertBefore(menuToggle, headerLeft.firstChild);
+                console.log('[NAV-INIT] ✅ Botão menuToggle criado automaticamente');
+            }
+        }
+        
+        // 2. Configurar toggle do header (menuToggle)
+        if (menuToggle && !menuToggle.dataset.toggleInit) {
+            menuToggle.dataset.toggleInit = 'true';
+            
+            menuToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isOpen = sidebar.classList.toggle('sidebar-open');
+                console.log('[NAV-INIT] Sidebar', isOpen ? 'aberto' : 'fechado');
+                toggleOverlay(isOpen);
+            });
+            
+            console.log('[NAV-INIT] ✅ menuToggle configurado');
+        }
+        
+        // 3. Configurar toggle dentro da sidebar (sidebarToggle)
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle && !sidebarToggle.dataset.toggleInit) {
+            sidebarToggle.dataset.toggleInit = 'true';
+            
+            sidebarToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                sidebar.classList.remove('sidebar-open');
+                console.log('[NAV-INIT] Sidebar fechado (botão interno)');
+                toggleOverlay(false);
+            });
+            
+            console.log('[NAV-INIT] ✅ sidebarToggle configurado');
+        }
+        
+        console.log('[NAV-INIT] ✅ Toggle mobile completo');
+    }
+    
+    /**
+     * Criar/remover overlay quando sidebar abre
+     */
+    function toggleOverlay(show) {
+        const existingOverlay = document.getElementById('sidebar-overlay');
+        
+        if (show) {
+            if (!existingOverlay) {
+                const overlay = document.createElement('div');
+                overlay.id = 'sidebar-overlay';
+                overlay.className = 'sidebar-overlay active';
+                overlay.addEventListener('click', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar) {
+                        sidebar.classList.remove('sidebar-open');
+                    }
+                    toggleOverlay(false);
+                });
+                document.body.appendChild(overlay);
+            } else {
+                existingOverlay.classList.add('active');
+            }
+        } else {
+            if (existingOverlay) {
+                existingOverlay.classList.remove('active');
+                setTimeout(() => existingOverlay.remove(), 300);
+            }
+        }
+    }
+    
+    /**
+     * Inicializar toggle após navegação estar pronta
+     */
+    window.addEventListener('navigationReady', () => {
+        // Aguardar um tick para garantir que o DOM está completo
+        setTimeout(() => {
+            setupMobileToggle();
+        }, 100);
+    });
+    
+    // Tentar configurar também quando DOM carregar (fallback)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(setupMobileToggle, 500);
+        });
+    } else {
+        setTimeout(setupMobileToggle, 500);
+    }
+
 })();
 
