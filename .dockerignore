@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment files (will be mounted as volume)
+.env
+.env.local
+.env.development.local
+
+# Logs
+logs/
+
+# Git
+.git/
+.gitignore
+
+# Docker setup files (not needed inside container)
+infra/
+
+# Development files (keep env.example for reference)
+.env.example
+env.production.example
+
+# Documentation
+docs/
+*.md
+README.md
+
+# Test files
+tests/
+test-*/
+
+# Notebooks
+notebooks/
+
+# Deploy scripts
+scripts/
+
