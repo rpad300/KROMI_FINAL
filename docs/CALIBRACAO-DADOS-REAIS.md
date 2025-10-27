@@ -121,7 +121,7 @@ Criadas tabelas especializadas no Supabase:
 ### **📁 Arquivos Criados/Modificados**
 
 #### **Novos Arquivos**
-- `create-calibration-tables.sql`: Estrutura completa do banco
+- "`../sql/create-calibration-tables.sql": Estrutura completa do banco
 - `docs/CALIBRACAO-DADOS-REAIS.md`: Esta documentação
 
 #### **Arquivos Modificados**
@@ -129,7 +129,7 @@ Criadas tabelas especializadas no Supabase:
 
 ### **🚀 Próximos Passos**
 
-1. **Executar SQL**: Rodar `create-calibration-tables.sql` no Supabase
+1. **Executar SQL**: Rodar "`../sql/create-calibration-tables.sql" no Supabase
 2. **Testar Calibração**: Verificar se modal mostra imagem real
 3. **Validar Persistência**: Confirmar salvamento no banco
 4. **Testar Fluxo**: Verificar continuidade de calibrações existentes
@@ -144,3 +144,5 @@ Para usar o sistema completo, execute no Supabase:
 ```
 
 O sistema agora usa **100% dados reais** sem simulações! 🎯
+
+

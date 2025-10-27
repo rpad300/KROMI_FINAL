@@ -159,3 +159,5 @@ function initSidebarToggle() {
 4. Veja a adaptação completa da página
 5. Redimensione para desktop (>768px)
 6. Botão desaparece, sidebar fica sempre visível
+
+

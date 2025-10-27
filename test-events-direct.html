@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Direto - Eventos</title>
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: monospace;
+        }
+        .test-section {
+            background: var(--bg-secondary);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .result {
+            background: var(--bg-primary);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .warning { border-left: 4px solid #f59e0b; }
+        button {
+            background: var(--primary);
+            color: var(--text-dark);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body data-theme="dark">
+    <h1>🔍 Teste Direto de Eventos</h1>
+    
+    <div class="test-section">
+        <h2>1️⃣ Testar API REST</h2>
+        <button onclick="testRestAPI()">Testar /api/events/list</button>
+        <div id="restResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2️⃣ Testar Supabase Direto</h2>
+        <button onclick="testSupabaseDirect()">Testar Supabase</button>
+        <div id="supabaseResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3️⃣ Verificar User e Permissões</h2>
+        <button onclick="checkUserPermissions()">Verificar User</button>
+        <div id="userResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4️⃣ Testar RLS (Row Level Security)</h2>
+        <button onclick="testRLS()">Testar RLS</button>
+        <div id="rlsResult" class="result"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth-client.js"></script>
+    
+    <script>
+        // Aguardar auth estar pronto
+        async function waitForAuth() {
+            while (!window.authSystem?.currentUser) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+        
+        // Teste 1: API REST
+        async function testRestAPI() {
+            const result = document.getElementById('restResult');
+            result.textContent = 'Testando...';
+            
+            try {
+                const res = await fetch('/api/events/list', {
+                    credentials: 'include'
+                });
+                
+                const status = res.status;
+                const text = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    json = null;
+                }
+                
+                result.className = status === 200 ? 'result success' : 'result error';
+                result.textContent = `
+Status: ${status}
+Headers: ${JSON.stringify([...res.headers.entries()], null, 2)}
+
+Response Text:
+${text}
+
+Parsed JSON:
+${json ? JSON.stringify(json, null, 2) : 'Não é JSON válido'}
+
+Eventos encontrados: ${json?.events?.length || json?.data?.length || 0}
+                `.trim();
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Erro: ${error.message}\n\nStack:\n${error.stack}`;
+            }
+        }
+        
+        // Teste 2: Supabase Direto
+        async function testSupabaseDirect() {
+            const result = document.getElementById('supabaseResult');
+            result.textContent = 'Testando...';
+            
+            try {
+                await waitForAuth();
+                
+                if (!window.supabaseClient) {
+                    throw new Error('window.supabaseClient não existe');
+                }
+                
+                await window.supabaseClient.init();
+                const supabase = window.supabaseClient.supabase;
+                
+                if (!supabase) {
+                    throw new Error('Supabase client não inicializado');
+                }
+                
+                // Testar query direto
+                const { data, error, count } = await supabase
+                    .from('events')
+                    .select('*', { count: 'exact' })
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                result.className = 'result success';
+                result.textContent = `
+✅ Supabase conectado!
+
+Total de eventos: ${count}
+Eventos retornados: ${data?.length || 0}
+
+Dados:
+${JSON.stringify(data, null, 2)}
+                `.trim();
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `❌ Erro: ${error.message}\n\nStack:\n${error.stack}`;
+            }
+        }
+        
+        // Teste 3: Verificar User
+        async function checkUserPermissions() {
+            const result = document.getElementById('userResult');
+            result.textContent = 'Verificando...';
+            
+            try {
+                await waitForAuth();
+                
+                const user = window.authSystem.currentUser;
+                const profile = window.authSystem.userProfile;
+                
+                result.className = 'result success';
+                result.textContent = `
+User Info:
+${JSON.stringify({
+    id: user.id,
+    email: user.email,
+    role: profile?.role,
+    profile: profile
+}, null, 2)}
+
+Navigation Service:
+- Role detectado: ${window.navigationService?.currentRole}
+- Escopo de eventos: ${window.navigationService?.getEventDataScope()}
+                `.trim();
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Erro: ${error.message}`;
+            }
+        }
+        
+        // Teste 4: RLS
+        async function testRLS() {
+            const result = document.getElementById('rlsResult');
+            result.textContent = 'Testando RLS...';
+            
+            try {
+                await waitForAuth();
+                await window.supabaseClient.init();
+                const supabase = window.supabaseClient.supabase;
+                const user = window.authSystem.currentUser;
+                const profile = window.authSystem.userProfile;
+                
+                // Testar diferentes queries
+                const tests = [];
+                
+                // 1. Query sem filtros
+                const test1 = await supabase.from('events').select('id,name');
+                tests.push({
+                    nome: 'Sem filtros',
+                    resultado: test1.error ? `❌ ${test1.error.message}` : `✅ ${test1.data?.length} eventos`,
+                    data: test1.data
+                });
+                
+                // 2. Query com is_active
+                const test2 = await supabase.from('events').select('id,name').eq('is_active', true);
+                tests.push({
+                    nome: 'Com is_active=true',
+                    resultado: test2.error ? `❌ ${test2.error.message}` : `✅ ${test2.data?.length} eventos`,
+                    data: test2.data
+                });
+                
+                // 3. Query com organizer_id (se moderator)
+                if (profile.role === 'moderator' || profile.role === 'event_manager') {
+                    const test3 = await supabase.from('events').select('id,name,organizer_id').eq('organizer_id', user.id);
+                    tests.push({
+                        nome: `Com organizer_id=${user.id}`,
+                        resultado: test3.error ? `❌ ${test3.error.message}` : `✅ ${test3.data?.length} eventos`,
+                        data: test3.data
+                    });
+                }
+                
+                // 4. Query para ver TODOS organizer_ids
+                const test4 = await supabase.from('events').select('id,name,organizer_id');
+                tests.push({
+                    nome: 'Todos organizer_ids',
+                    resultado: test4.error ? `❌ ${test4.error.message}` : `✅ ${test4.data?.length} eventos`,
+                    data: test4.data?.map(e => ({ id: e.id, name: e.name, organizer_id: e.organizer_id }))
+                });
+                
+                result.className = 'result warning';
+                result.textContent = `
+User ID: ${user.id}
+Role: ${profile.role}
+
+Testes RLS:
+${tests.map(t => `
+${t.nome}:
+${t.resultado}
+${t.data ? JSON.stringify(t.data, null, 2) : ''}
+`).join('\n---\n')}
+                `.trim();
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Erro: ${error.message}\n\n${error.stack}`;
+            }
+        }
+        
+        // Auto-inicializar
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Aguardando auth...');
+            await waitForAuth();
+            console.log('Auth pronto!');
+            
+            // Auto-executar testes
+            setTimeout(async () => {
+                await testRestAPI();
+                await testSupabaseDirect();
+                await checkUserPermissions();
+                await testRLS();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

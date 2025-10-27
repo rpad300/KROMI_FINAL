@@ -69,7 +69,7 @@ Permitir que o usuário escolha entre diferentes tipos de processadores de IA pa
 
 #### **5. 🗄️ Base de Dados**
 
-##### **Arquivo**: `add-processor-config.sql`
+##### **Arquivo**: "`../sql/add-processor-config.sql"
 
 ##### **Tabela**: `event_configurations`
 - **`processor_type`**: Tipo de processador
@@ -202,7 +202,7 @@ GOOGLE_VISION_API_KEY=your_vision_key_here
 - **Validação**: API keys e configurações
 
 #### **Base de Dados**
-- `add-processor-config.sql` - Schema e funções
+- "`../sql/add-processor-config.sql" - Schema e funções
 - **Tabela**: `event_configurations`
 - **Funções**: RPC para configuração
 
@@ -249,3 +249,5 @@ O sistema agora permite **escolha completa do processador de IA**:
 5. **📊 Monitoramento**: Logs detalhados do processador ativo
 
 O usuário pode agora **escolher o melhor processador** para cada evento, balanceando **precisão, velocidade e custo** conforme suas necessidades! 🎯✨
+
+

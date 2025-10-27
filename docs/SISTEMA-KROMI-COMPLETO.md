@@ -156,3 +156,5 @@ app.get('/platform-config', (req, res) => res.sendFile('platform-config.html'));
 - ✅ **Experiência de usuário** consistente
 
 **Status: ✅ CONCLUÍDO - Todas as páginas usam KROMI!**
+
+

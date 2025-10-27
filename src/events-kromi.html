@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <!-- VERSÃO ATUALIZADA: 2025-10-26 21:00 - Server-Side First (100% REST API) -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Gestão de Eventos</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VisionKrono">
+    <meta name="description" content="Sistema de gestão de eventos VisionKrono">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles gerenciados por:
+           - navigation-component.css
+           - kromi-layout-fixes.css
+           Não duplicar estilos aqui para evitar conflitos */
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Events specific styles */
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .event-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-fast);
+            cursor: pointer;
+        }
+        
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        
+        /* Compatibilidade com estilos do kromi-layout-fixes.css - não duplicar */
+        
+        .event-card h3 {
+            margin: 0 0 var(--spacing-2) 0;
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .event-card .event-date {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-3);
+        }
+        
+        .event-card .event-status {
+            display: inline-block;
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: var(--spacing-3);
+        }
+        
+        .event-card .event-status.active {
+            background: var(--success);
+            color: white;
+        }
+        
+        .event-card .event-status.inactive {
+            background: var(--muted);
+            color: white;
+        }
+        
+        .event-metrics {
+            display: flex;
+            gap: var(--spacing-4);
+            margin-top: var(--spacing-3);
+        }
+        
+        .event-metric {
+            text-align: center;
+        }
+        
+        .event-metric .number {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .event-metric .label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+        
+        .stat-card .stat-number {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .stat-card .stat-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-with-sidebar">
+        <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+        <nav class="sidebar" id="sidebar"></nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    🏃 Eventos
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-primary" id="newEventBtn">
+                    <i>➕</i> Novo Evento
+                </button>
+                <button class="btn btn-sm btn-secondary" id="refreshBtn">
+                    <i>🔄</i> Atualizar
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Estatísticas gerais -->
+                <section class="stats-section" style="margin-bottom: var(--spacing-6);">
+                    <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin-bottom: var(--spacing-4); color: var(--text-primary);">
+                        📊 Estatísticas Gerais
+                    </h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalEvents">0</div>
+                            <div class="stat-label">Eventos Ativos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalDevices">0</div>
+                            <div class="stat-label">Dispositivos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalDetections">0</div>
+                            <div class="stat-label">Total Detecções</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Lista de eventos -->
+                <section class="events-section">
+                    <h2 style="font-size: var(--font-size-xl); font-weight: 600; margin-bottom: var(--spacing-4); color: var(--text-primary);">
+                        📅 Eventos
+                    </h2>
+                    <div class="events-grid" id="eventsGrid">
+                        <div class="loading" style="text-align: center; padding: var(--spacing-8); color: var(--text-secondary);">
+                            Carregando eventos...
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        
+        <!-- Modal para criar/editar evento -->
+        <div id="eventModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Novo Evento</h2>
+                    <button id="closeModalBtn" class="close-btn">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="eventForm">
+                        <div class="form-group">
+                            <label for="eventName">Nome do Evento *</label>
+                            <input type="text" id="eventName" name="name" required placeholder="Ex: Maratona do Porto 2025">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="eventDescription">Descrição</label>
+                            <textarea id="eventDescription" name="description" placeholder="Descrição do evento..."></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventDate">Data do Evento</label>
+                                <input type="date" id="eventDate" name="event_date">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="eventLocation">Localização</label>
+                                <input type="text" id="eventLocation" name="location" placeholder="Porto, Portugal">
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="cancelBtn" class="btn secondary">Cancelar</button>
+                            <button type="submit" class="btn primary">Criar Evento</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de detalhes do evento -->
+        <div id="eventDetailsModal" class="modal" style="display: none;">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h2 id="eventDetailsTitle">Detalhes do Evento</h2>
+                    <button id="closeDetailsBtn" class="close-btn">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div id="eventDetailsContent">
+                        <!-- Conteúdo será preenchido dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- Fim .layout-with-sidebar -->
+    
+    <!-- Scripts de Autenticação - ORDEM IMPORTANTE -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js?v=2025102620"></script>
+    <script src="auth-client.js?v=2025102620"></script>
+    <script src="auth-helper.js?v=2025102620"></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Events Logic -->
+    <script>
+        // Global variables
+        let events = [];
+        
+        // Comandos de debug disponíveis no console
+        window.debugEvents = function() {
+            console.log('📊 Debug de Eventos:');
+            console.log('- Total de eventos:', events?.length || 0);
+            console.log('- Eventos:', events);
+            console.log('- Primeiro evento:', events?.[0]);
+            console.log('- Role atual:', window.navigationService?.currentRole);
+            console.log('- User:', window.authSystem?.currentUser?.email);
+            console.log('- User ID:', window.authSystem?.currentUser?.id);
+            console.log('- Supabase conectado:', window.supabaseClient?.isConnected);
+            
+            if (events?.length > 0) {
+                console.table(events.map(e => ({
+                    ID: e.id,
+                    Nome: e.name,
+                    Data: e.event_date,
+                    Status: e.status,
+                    Local: e.location
+                })));
+            }
+        };
+        
+        // Testar API diretamente
+        window.testAPI = async function() {
+            console.log('🧪 Testando API /api/events/list...');
+            try {
+                const res = await fetch('/api/events/list', { credentials: 'include' });
+                console.log('Status:', res.status);
+                const json = await res.json();
+                console.log('Response:', json);
+                console.log('Eventos:', json.events || json.data || json.items || []);
+                return json;
+            } catch (e) {
+                console.error('Erro:', e);
+                return null;
+            }
+        };
+        
+        // Testar Supabase direto
+        window.testSupabase = async function() {
+            console.log('🧪 Testando Supabase direto...');
+            try {
+                if (!window.supabaseClient?.supabase) {
+                    console.error('Supabase não inicializado');
+                    return;
+                }
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('Erro Supabase:', error);
+                    return null;
+                }
+                
+                console.log('Eventos do Supabase:', data);
+                console.log('Total:', data?.length);
+                
+                // Verificar organizer_ids
+                if (data && data.length > 0) {
+                    console.table(data.map(e => ({
+                        ID: e.id,
+                        Nome: e.name,
+                        'Organizer ID': e.organizer_id,
+                        'Meu ID': window.authSystem?.currentUser?.id,
+                        'Match': e.organizer_id === window.authSystem?.currentUser?.id ? '✅' : '❌'
+                    })));
+                }
+                
+                return data;
+            } catch (e) {
+                console.error('Erro:', e);
+                return null;
+            }
+        };
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Inicializando página de eventos...');
+            
+            try {
+                // 1. PRIMEIRO: Inicializar Supabase (não bloquear se falhar)
+                console.log('🔑 Passo 1: Inicializando Supabase...');
+                try {
+                    await window.supabaseClient.init();
+                    await window.supabaseClient.ready();
+                    console.log('✅ Supabase pronto:', window.supabaseClient.isConnected);
+                } catch (e) {
+                    console.warn('⚠️ Supabase init falhou, continuando com REST API:', e);
+                }
+                
+                // 2. SEGUNDO: Verificar autenticação
+                console.log('🔐 Passo 2: Verificando autenticação...');
+                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager']);
+                console.log('🔐 Resultado autenticação:', autenticado);
+                
+                if (!autenticado) {
+                    console.warn('⚠️ Não autenticado - mostrando painel de acesso negado');
+                    
+                    // Mostrar painel de acesso negado
+                    const mainContent = document.getElementById('mainContent') || document.querySelector('.main');
+                    if (mainContent) {
+                        mainContent.innerHTML = `
+                            <div style="text-align: center; padding: var(--spacing-12); max-width: 500px; margin: 0 auto;">
+                                <div style="font-size: 64px; margin-bottom: var(--spacing-4);">🔒</div>
+                                <h2 style="color: var(--text-primary); margin-bottom: var(--spacing-3);">Sem Sessão ou Permissões</h2>
+                                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-6);">
+                                    Não tem sessão ativa ou não tem permissões para aceder a esta página.
+                                    Esta página requer perfil de Admin ou Moderador.
+                                </p>
+                                <button onclick="window.location.href='./login.html'" class="btn btn-primary">
+                                    🔐 Iniciar Sessão
+                                </button>
+                            </div>
+                        `;
+                    }
+                    return;
+                }
+                
+                console.log('✅ Autenticado! Continuando inicialização...');
+            
+                // 3. TERCEIRO: Aguardar navegação estar pronta (renderizada pelo NavigationComponent)
+                console.log('📍 Passo 3: Aguardando navegação...');
+                await waitForNavigation();
+                console.log('✅ Navegação pronta');
+                
+                // 4. QUARTO: Configurar event listeners
+                console.log('🔧 Passo 4: Configurando event listeners...');
+                setupEventListeners();
+                console.log('✅ Event listeners configurados');
+                
+                // 5. QUINTO: Carregar dados
+                console.log('📊 Passo 5: Carregando eventos e estatísticas...');
+                await loadEvents();
+                await loadStats();
+                console.log('✅ Página completamente inicializada');
+                
+            } catch (error) {
+                console.error('❌ Erro fatal na inicialização:', error);
+                
+                // Mostrar erro ao utilizador
+                const mainContent = document.getElementById('mainContent') || document.querySelector('.main');
+                if (mainContent) {
+                    mainContent.innerHTML = `
+                        <div style="text-align: center; padding: var(--spacing-12);">
+                            <div style="font-size: 64px; margin-bottom: var(--spacing-4);">⚠️</div>
+                            <h2 style="color: var(--danger);">Erro ao Carregar Página</h2>
+                            <p style="color: var(--text-secondary); margin: var(--spacing-4) 0;">
+                                ${error.message}
+                            </p>
+                            <pre style="color: var(--text-secondary); font-size: 12px; text-align: left; background: var(--bg-secondary); padding: var(--spacing-3); border-radius: var(--radius-md); max-width: 600px; margin: var(--spacing-4) auto; overflow-x: auto;">
+${error.stack || 'Sem stack trace disponível'}
+                            </pre>
+                            <button onclick="window.location.reload()" class="btn btn-primary">
+                                🔄 Recarregar Página
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        function setupEventListeners() {
+            // Botão novo evento
+            const newEventBtn = document.getElementById('newEventBtn');
+            if (newEventBtn) {
+                newEventBtn.addEventListener('click', showNewEventModal);
+            }
+            
+            // Botão atualizar
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    loadEvents();
+                    loadStats();
+                });
+            }
+            
+            // Modal eventos
+            const eventModal = document.getElementById('eventModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', hideEventModal);
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', hideEventModal);
+            }
+            
+            // Formulário de evento
+            const eventForm = document.getElementById('eventForm');
+            if (eventForm) {
+                eventForm.addEventListener('submit', handleEventSubmit);
+            }
+            
+            // Modal detalhes
+            const eventDetailsModal = document.getElementById('eventDetailsModal');
+            const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+            
+            if (closeDetailsBtn) {
+                closeDetailsBtn.addEventListener('click', hideEventDetailsModal);
+            }
+        }
+        
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        
+        async function loadEvents() {
+            console.log('📊 [loadEvents] Iniciando carregamento de eventos...');
+            
+            const eventsGrid = document.getElementById('eventsGrid');
+            if (eventsGrid) {
+                eventsGrid.innerHTML = `
+                    <div class="loading" style="text-align:center;padding:var(--spacing-8);color:var(--text-secondary);">
+                        Carregando eventos...
+                    </div>`;
+            }
+            
+            try {
+                console.log('📊 [loadEvents] Chamando GET /api/events/list...');
+                
+                // Se API estiver noutro host, configurar aqui
+                const apiBase = window.__API_BASE__ || '';
+                const res = await fetch(`${apiBase}/api/events/list`, {
+                    credentials: 'include' // Importante: envia cookies de sessão
+                });
+                
+                console.log('📊 [loadEvents] Response status:', res.status);
+                
+                // Tratar erros HTTP
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        console.warn('⚠️ [loadEvents] 401 - Sem sessão, redirecionando para login');
+                        window.location.href = './login.html';
+                        return;
+                    }
+                    
+                    if (res.status === 403) {
+                        throw new Error('Sem permissão para aceder aos eventos');
+                    }
+                    
+                    throw new Error(`Erro HTTP ${res.status}`);
+                }
+                
+                const json = await res.json();
+                console.log('📊 [loadEvents] Payload completo:', json);
+                
+                // Aceita várias formas: {events}, {data}, {items}, {rows}
+                const rawList = json.events ?? json.data ?? json.items ?? json.rows ?? [];
+                
+                if (json.success === false) {
+                    throw new Error(json.error || 'Falha ao carregar eventos');
+                }
+                
+                // Normalizar campos que a UI usa
+                events = rawList.map(e => ({
+                    id: e.id ?? e.event_id ?? e.uuid ?? e.slug,
+                    name: e.name ?? e.title ?? e.event_name ?? 'Evento',
+                    event_date: e.event_date ?? e.date ?? e.start_date ?? null,
+                    status: e.status ?? e.state ?? (e.is_active ? 'active' : 'inactive'),
+                    description: e.description ?? '',
+                    location: e.location ?? e.city ?? e.place ?? ''
+                }));
+                
+                console.log(`✅ [loadEvents] ${events.length} evento(s) carregado(s)`);
+                if (events.length > 0) {
+                    console.log('📊 [loadEvents] Primeiro evento normalizado:', events[0]);
+                }
+                
+                renderEvents();
+                
+            } catch (error) {
+                console.error('❌ [loadEvents] Erro REST:', error);
+                
+                // Fallback: tentar carregar direto do Supabase
+                try {
+                    console.warn('⚠️ [loadEvents] REST falhou, tentando Supabase direto...');
+                    await loadEventsFromSupabaseFallback();
+                    return;
+                } catch (e2) {
+                    console.error('❌ Fallback Supabase também falhou:', e2);
+                }
+                
+                // Mostrar erro ao utilizador
+                if (eventsGrid) {
+                    eventsGrid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: var(--spacing-8);">
+                            <div style="font-size: 48px; margin-bottom: var(--spacing-4);">❌</div>
+                            <h3 style="color: var(--danger); margin-bottom: var(--spacing-2);">Erro ao Carregar Eventos</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                                ${error.message}
+                            </p>
+                            <button onclick="loadEvents()" class="btn btn-primary" style="margin-top: var(--spacing-4);">
+                                🔄 Tentar Novamente
+                            </button>
+                        </div>
+                    `;
+                }
+            } finally {
+                console.log('📊 [loadEvents] Fim');
+            }
+        }
+        
+        // Fallback: carregar direto do Supabase se REST falhar
+        async function loadEventsFromSupabaseFallback() {
+            if (!window.supabaseClient?.supabase) {
+                throw new Error('Supabase não inicializado');
+            }
+            
+            console.log('📊 [Fallback] Carregando eventos direto do Supabase...');
+            
+            const { data, error } = await window.supabaseClient.supabase
+                .from('events')
+                .select('id,name,event_date,status,is_active,description,location')
+                .order('event_date', { ascending: false });
+            
+            if (error) throw error;
+            
+            events = (data || []).map(e => ({
+                id: e.id,
+                name: e.name,
+                event_date: e.event_date,
+                status: e.status ?? (e.is_active ? 'active' : 'inactive'),
+                description: e.description,
+                location: e.location
+            }));
+            
+            console.log(`✅ [Fallback] ${events.length} evento(s) carregado(s) do Supabase`);
+            renderEvents();
+        }
+        
+        function renderEvents() {
+            const eventsGrid = document.getElementById('eventsGrid');
+            if (!eventsGrid) return;
+            
+            if (events.length === 0) {
+                eventsGrid.innerHTML = `
+                    <div style="text-align: center; padding: var(--spacing-8); color: var(--text-secondary);">
+                        Nenhum evento encontrado.<br>
+                        <button class="btn btn-primary" onclick="showNewEventModal()" style="margin-top: var(--spacing-3);">
+                            <i>➕</i> Criar Primeiro Evento
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            eventsGrid.innerHTML = events.map(event => `
+                <div class="event-card" data-event-id="${event.id}">
+                    <h3>${event.name}</h3>
+                    <div class="event-date">${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Data não definida'}</div>
+                    <div class="event-status ${event.status === 'active' ? 'active' : 'inactive'}">
+                        ${event.status === 'active' ? 'ATIVO' : 'INATIVO'}
+                    </div>
+                    <div class="event-metrics">
+                        <div class="event-metric">
+                            <div class="number">1</div>
+                            <div class="label">Dispositivos</div>
+                        </div>
+                        <div class="event-metric">
+                            <div class="number">1</div>
+                            <div class="label">Detecções</div>
+                        </div>
+                        <div class="event-metric">
+                            <div class="number">2</div>
+                            <div class="label">Participantes</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--spacing-3); text-align: center; color: var(--text-secondary); font-size: var(--font-size-xs);">
+                        Clique para abrir o evento
+                    </div>
+                </div>
+            `).join('');
+            
+            // Adicionar event listeners para os cards
+            document.querySelectorAll('.event-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const eventId = this.getAttribute('data-event-id');
+                    console.log('🖱️ Card clicado:', eventId);
+                    openEvent(eventId);
+                });
+            });
+        }
+        
+        async function loadStats() {
+            try {
+                console.log('📊 [loadStats] Chamando GET /api/events/stats...');
+                
+                const response = await fetch('/api/events/stats', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.warn('⚠️ [loadStats] Sem sessão');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const { success, stats, error } = await response.json();
+                
+                if (!success || error) {
+                    throw new Error(error || 'Erro ao carregar estatísticas');
+                }
+                
+                console.log('✅ [loadStats] Estatísticas carregadas:', stats);
+                
+                // Atualizar UI
+                const totalEventsEl = document.getElementById('totalEvents');
+                const totalDevicesEl = document.getElementById('totalDevices');
+                const totalDetectionsEl = document.getElementById('totalDetections');
+                
+                if (totalEventsEl) totalEventsEl.textContent = stats.totalEvents;
+                if (totalDevicesEl) totalDevicesEl.textContent = stats.totalDevices;
+                if (totalDetectionsEl) totalDetectionsEl.textContent = stats.totalDetections;
+                
+            } catch (error) {
+                console.error('❌ [loadStats] Erro ao carregar estatísticas:', error);
+            }
+        }
+        
+        function showNewEventModal() {
+            const modal = document.getElementById('eventModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const eventForm = document.getElementById('eventForm');
+            
+            if (modalTitle) modalTitle.textContent = 'Novo Evento';
+            if (eventForm) eventForm.reset();
+            if (modal) modal.style.display = 'block';
+        }
+        
+        function hideEventModal() {
+            const modal = document.getElementById('eventModal');
+            if (modal) modal.style.display = 'none';
+        }
+        
+        function showEventDetails(eventId) {
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+            
+            const modal = document.getElementById('eventDetailsModal');
+            const modalTitle = document.getElementById('eventDetailsTitle');
+            const modalContent = document.getElementById('eventDetailsContent');
+            
+            if (modalTitle) modalTitle.textContent = event.name;
+            if (modalContent) {
+                modalContent.innerHTML = `
+                    <div style="margin-bottom: var(--spacing-4);">
+                        <strong>Nome:</strong> ${event.name}<br>
+                        <strong>Data:</strong> ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        <strong>Localização:</strong> ${event.location || 'Não definida'}<br>
+                        <strong>Status:</strong> ${event.status === 'active' ? 'Ativo' : 'Inativo'}<br>
+                        <strong>Descrição:</strong> ${event.description || 'Sem descrição'}
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-2);">
+                        <button class="btn btn-primary" onclick="openEvent('${event.id}')">
+                            <i>🚀</i> Abrir Evento
+                        </button>
+                        <button class="btn btn-secondary" onclick="editEvent('${event.id}')">
+                            <i>✏️</i> Editar
+                        </button>
+                    </div>
+                `;
+            }
+            if (modal) modal.style.display = 'block';
+        }
+        
+        function hideEventDetailsModal() {
+            const modal = document.getElementById('eventDetailsModal');
+            if (modal) modal.style.display = 'none';
+        }
+        
+        function openEvent(eventId) {
+            console.log('🚀 Abrindo evento:', eventId, typeof eventId);
+            console.log('📋 Total de eventos disponíveis:', events?.length || 0);
+            
+            if (!events || events.length === 0) {
+                console.error('❌ Lista de eventos vazia ou não carregada');
+                alert('Eventos ainda não foram carregados. Tente novamente em alguns segundos.');
+                return;
+            }
+            
+            // Comparação robusta (string vs uuid vs number)
+            const event = events.find(e => String(e.id) === String(eventId));
+            
+            if (!event) {
+                console.error('❌ Evento não encontrado:', eventId);
+                console.log('🔍 IDs disponíveis:', events.map(e => ({ id: e.id, tipo: typeof e.id, name: e.name })));
+                alert(`Evento ${eventId} não encontrado. Recarregue a página e tente novamente.`);
+                return;
+            }
+            
+            console.log('✅ Evento encontrado:', event.name, 'ID:', event.id);
+            
+            const eventName = encodeURIComponent(event.name || 'Evento');
+            const url = `/config?event=${eventId}&eventName=${eventName}`;
+            
+            console.log('🔗 Navegando para:', url);
+            
+            try {
+                window.location.href = url;
+            } catch (error) {
+                console.error('❌ Erro ao navegar:', error);
+                alert('Erro ao navegar para o evento. Verifique o console para mais detalhes.');
+            }
+        }
+        
+        function editEvent(eventId) {
+            // Implementar edição de evento
+            console.log('Editar evento:', eventId);
+        }
+        
+        async function handleEventSubmit(e) {
+            e.preventDefault();
+            
+            // Obter valores diretamente dos campos
+            const eventData = {
+                name: document.getElementById('eventName').value,
+                description: document.getElementById('eventDescription').value || null,
+                event_date: document.getElementById('eventDate').value || null,
+                location: document.getElementById('eventLocation').value || null
+            };
+            
+            console.log('📝 [handleEventSubmit] Criando evento:', eventData);
+            
+            try {
+                console.log('📝 [handleEventSubmit] Chamando POST /api/events/create...');
+                
+                const response = await fetch('/api/events/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(eventData)
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Sessão expirada. Por favor, faça login novamente.');
+                        window.location.href = './login.html';
+                        return;
+                    }
+                    
+                    if (response.status === 403) {
+                        alert('Sem permissão para criar eventos.');
+                        return;
+                    }
+                    
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+                }
+                
+                const { success, event, error, message } = await response.json();
+                
+                if (!success || error) {
+                    throw new Error(error || 'Erro ao criar evento');
+                }
+                
+                console.log('✅ [handleEventSubmit] Evento criado:', event);
+                alert(message || 'Evento criado com sucesso!');
+                
+                hideEventModal();
+                
+                // Recarregar eventos e estatísticas
+                await loadEvents();
+                await loadStats();
+                
+            } catch (error) {
+                console.error('❌ [handleEventSubmit] Erro:', error);
+                alert(`Erro ao criar evento: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

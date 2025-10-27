@@ -115,3 +115,5 @@ Criado `test-menu-button.html` para teste isolado da funcionalidade.
 6. ✅ **Transições suaves** com CSS
 
 **Teste agora clicando no botão ☰ e verifique o console para logs de debug!** 🎉
+
+

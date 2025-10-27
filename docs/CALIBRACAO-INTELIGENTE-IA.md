@@ -193,3 +193,5 @@ O sistema de calibração agora é **inteligente e automatizado**:
 6. **📊 Mostra Confiança**: Transparência sobre as sugestões da IA
 
 O fluxo agora é **muito mais intuitivo e eficiente**! 🎯
+
+

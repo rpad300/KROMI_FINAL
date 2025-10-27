@@ -1,0 +1,52 @@
+==========================================
+INSTRUÇÕES: Adicionar Service Role Key
+==========================================
+
+1. Abrir o arquivo: .env
+
+2. Adicionar esta linha NOVA (depois da SUPABASE_PUBLISHABLE_KEY):
+
+SUPABASE_SERVICE_ROLE_KEY=
+
+
+3. Obter a key:
+   - Ir para: https://supabase.com/dashboard
+   - Abrir projeto VisionKrono
+   - Settings → API
+   - Procurar "service_role" (NÃO é a "anon"!)
+   - Clicar em "Reveal" ou "Copy"
+   - Colar após o "="
+
+4. O .env deve ficar assim:
+
+GOOGLE_VISION_API_KEY=AIza...
+NEXT_PUBLIC_SUPABASE_URL=https://...supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+SUPABASE_PUBLISHABLE_KEY=eyJhbGciOi...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...    ← NOVA LINHA!
+GEMINI_API_KEY=AIza...
+
+
+5. Salvar o arquivo .env
+
+6. Reiniciar o servidor Node.js:
+   - Parar: Ctrl+C
+   - Iniciar: npm start
+
+7. Verificar nos logs ao iniciar:
+   ✅ Cliente Supabase (service role) inicializado - RLS bypassed
+
+8. Recarregar página: Ctrl+F5
+
+9. Eventos devem aparecer!
+
+==========================================
+SEGURANÇA
+==========================================
+
+⚠️ NUNCA commitar o .env no git!
+⚠️ Service role tem poderes de admin total!
+⚠️ Apenas usar no servidor, NUNCA no browser!
+
+==========================================
+

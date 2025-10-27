@@ -304,10 +304,10 @@ Status: **SISTEMA COMPLETAMENTE OPERACIONAL**
 
 ## 📚 Scripts SQL Criados
 
-1. `create-checkpoint-types.sql` - Sistema de checkpoints
-2. `add-checkpoint-order.sql` - Adicionar coluna
-3. `buffer-system.sql` - Sistema de buffer
-4. `events-simple.sql` - Setup básico
+1. "`../sql/create-checkpoint-types.sql" - Sistema de checkpoints
+2. "`../sql/add-checkpoint-order.sql" - Adicionar coluna
+3. "`../sql/buffer-system.sql" - Sistema de buffer
+4. "`../sql/events-simple.sql" - Setup básico
 5. Vários scripts de fix e manutenção
 
 ---
@@ -358,4 +358,6 @@ Todas as funcionalidades críticas e secundárias foram implementadas e testadas
 ---
 
 **Desenvolvido com ❤️ para cronometragem esportiva profissional**
+
+
 

@@ -150,14 +150,14 @@
 
 ## 📋 Scripts SQL Criados
 
-1. `create-checkpoint-types.sql` - Sistema de checkpoints
-2. `add-checkpoint-order.sql` - Adicionar checkpoint_order
-3. `add-device-pin.sql` - Sistema de PIN
-4. `add-device-sessions.sql` - Sistema de sessões
-5. `add-participant-fields.sql` - Email e phone + RLS
-6. `buffer-system.sql` - Sistema de buffer
-7. `fix-rls-policies.sql` - Corrigir permissões
-8. `test-buffer-count.sql` - Verificar buffer
+1. "`../sql/create-checkpoint-types.sql" - Sistema de checkpoints
+2. "`../sql/add-checkpoint-order.sql" - Adicionar checkpoint_order
+3. "`../sql/add-device-pin.sql" - Sistema de PIN
+4. "`../sql/add-device-sessions.sql" - Sistema de sessões
+5. "`../sql/add-participant-fields.sql" - Email e phone + RLS
+6. "`../sql/buffer-system.sql" - Sistema de buffer
+7. "`../sql/fix-rls-policies.sql" - Corrigir permissões
+8. "`../sql/test-buffer-count.sql" - Verificar buffer
 
 ---
 
@@ -275,4 +275,6 @@
 ---
 
 **Desenvolvido com ❤️ para cronometragem esportiva profissional**
+
+
 

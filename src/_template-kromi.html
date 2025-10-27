@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - [PAGE_TITLE]</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+        <div class="sidebar" id="sidebar"></div>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" style="display: none;">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    [PAGE_TITLE]
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <!-- Ações específicas da página -->
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                <!-- Conteúdo específico da página -->
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/events'">
+                <i>🏃</i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/image-processor'">
+                <i>🤖</i>
+                <span>Processar</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/database-management'">
+                <i>🗄️</i>
+                <span>BD</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    
+    <!-- Página específica -->
+    <script defer>
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 1) Aguardar navegação estar pronta
+                await waitForNavigation();
+                
+                // 2) Verificar autenticação
+                const autenticado = await verificarAutenticacao(['admin', 'event_manager', 'user']);
+                if (!autenticado) return;
+                
+                // 3) Seu código aqui...
+                
+            } catch (error) {
+                console.error('[PAGE] Erro na inicialização:', error);
+            }
+        });
+        
+        // Código específico da página abaixo...
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+            
+            // Código específico da página aqui...
+        });
+    </script>
+    
+    <style>
+        /* Layout adaptations */
+        .layout-with-sidebar {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+        }
+        
+        /* Mobile */
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                z-index: var(--z-modal);
+                box-shadow: var(--shadow-2xl);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            #menuToggle {
+                display: flex !important;
+            }
+            
+            .main #mainContent {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
+</body>
+</html>
+

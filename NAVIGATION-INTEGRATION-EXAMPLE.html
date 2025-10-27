@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    
+    <title>VisionKrono - Exemplo de Integração de Navegação</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    
+    <!-- Scripts Core (ordem crítica!) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js?v=2025102603" defer></script>
+    <script src="terminal-debug.js?v=2025102603" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação (depois do auth) -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de rotas e outros -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    
+    <style>
+        /* Estilos específicos da página */
+        .page-content {
+            padding: var(--spacing-6);
+        }
+        
+        .example-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .example-section h2 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .code-example {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            padding: var(--spacing-4);
+            font-family: 'Courier New', monospace;
+            font-size: var(--font-size-sm);
+            overflow-x: auto;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: var(--spacing-3);
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: var(--primary);
+            color: var(--text-dark);
+            border: none;
+            padding: var(--spacing-3) var(--spacing-4);
+            border-radius: var(--radius-lg);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+        }
+        
+        .status-box {
+            background: rgba(252, 107, 3, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-base);
+            padding: var(--spacing-4);
+            margin-top: var(--spacing-4);
+        }
+    </style>
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (será renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar">
+        <!-- A navegação será injetada aqui automaticamente -->
+        <div class="nav-loading">
+            Carregando navegação...
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">Exemplo de Integração - Sistema de Navegação</h1>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-content">
+            
+            <!-- Seção 1: Status do Sistema -->
+            <div class="example-section">
+                <h2>📊 Status do Sistema de Navegação</h2>
+                <div id="systemStatus" class="status-box">
+                    Verificando...
+                </div>
+            </div>
+            
+            <!-- Seção 2: Testar Contexto de Evento -->
+            <div class="example-section">
+                <h2>🏃 Testar Contexto de Evento</h2>
+                <p>Simular navegação para um evento específico:</p>
+                
+                <div class="btn-group">
+                    <button class="btn" onclick="testGoToEvent()">
+                        📍 Ir para Evento 123
+                    </button>
+                    <button class="btn" onclick="testGoToEvent2()">
+                        📍 Ir para Evento 456
+                    </button>
+                    <button class="btn btn-secondary" onclick="testBackToGlobal()">
+                        ◀️ Voltar ao Dashboard Global
+                    </button>
+                </div>
+                
+                <div id="eventContextStatus" class="status-box" style="margin-top: var(--spacing-4);">
+                    Contexto atual: <span id="currentEventId">Nenhum</span>
+                </div>
+            </div>
+            
+            <!-- Seção 3: Informações de Permissões -->
+            <div class="example-section">
+                <h2>🔐 Informações de Permissões</h2>
+                <div id="permissionsInfo">
+                    <p>Carregando...</p>
+                </div>
+            </div>
+            
+            <!-- Seção 4: Exemplos de Código -->
+            <div class="example-section">
+                <h2>💻 Exemplos de Uso</h2>
+                
+                <h3 style="margin-top: var(--spacing-4); margin-bottom: var(--spacing-2);">Navegar para Evento</h3>
+                <div class="code-example">
+// Navegar para evento com ID e nome<br>
+NavigationUtils.goToEvent('event-123', 'Maratona de Lisboa');
+                </div>
+                
+                <h3 style="margin-top: var(--spacing-4); margin-bottom: var(--spacing-2);">Voltar ao Dashboard Global</h3>
+                <div class="code-example">
+// Limpar contexto de evento e voltar<br>
+NavigationUtils.goToGlobalDashboard();
+                </div>
+                
+                <h3 style="margin-top: var(--spacing-4); margin-bottom: var(--spacing-2);">Obter Contexto Atual</h3>
+                <div class="code-example">
+// Obter informações do evento atual<br>
+const context = NavigationUtils.getCurrentEvent();<br>
+console.log(context);<br>
+// { eventId: '123', eventName: 'Nome', hasEvent: true }
+                </div>
+                
+                <h3 style="margin-top: var(--spacing-4); margin-bottom: var(--spacing-2);">Recarregar Navegação</h3>
+                <div class="code-example">
+// Útil após mudanças de permissões<br>
+NavigationUtils.reloadNavigation();
+                </div>
+            </div>
+            
+        </div>
+    </main>
+    
+    <script>
+        // Funções de exemplo e testes
+        
+        // Aguardar navegação estar pronta
+        window.addEventListener('navigationReady', function() {
+            console.log('✅ Navegação pronta!');
+            updateSystemStatus();
+            updatePermissionsInfo();
+            updateEventContext();
+        });
+        
+        // Escutar mudanças de contexto
+        window.addEventListener('eventContextChanged', function(e) {
+            console.log('📍 Contexto de evento mudou:', e.detail);
+            updateEventContext();
+        });
+        
+        window.addEventListener('eventContextCleared', function() {
+            console.log('🧹 Contexto de evento limpo');
+            updateEventContext();
+        });
+        
+        // Testar navegação para evento
+        function testGoToEvent() {
+            NavigationUtils.goToEvent('event-123', 'Maratona de Lisboa 2025');
+        }
+        
+        function testGoToEvent2() {
+            NavigationUtils.goToEvent('event-456', 'Trail Running Porto');
+        }
+        
+        // Voltar ao dashboard global
+        function testBackToGlobal() {
+            NavigationUtils.clearEventContext();
+            // Não redirecionar, apenas limpar contexto para demonstração
+        }
+        
+        // Atualizar status do sistema
+        function updateSystemStatus() {
+            const status = document.getElementById('systemStatus');
+            
+            const checks = {
+                'NavigationConfig': !!window.NavigationConfig,
+                'NavigationService': !!window.navigationService,
+                'NavigationComponent': !!window.navigationComponent,
+                'NavigationUtils': !!window.NavigationUtils,
+                'AuthSystem': !!window.authSystem,
+                'SupabaseClient': !!window.supabaseClient
+            };
+            
+            let html = '<h3>Status dos Componentes:</h3><ul style="list-style: none; padding: 0;">';
+            for (const [name, status] of Object.entries(checks)) {
+                const icon = status ? '✅' : '❌';
+                html += `<li style="padding: 0.25rem 0;">${icon} ${name}</li>`;
+            }
+            html += '</ul>';
+            
+            status.innerHTML = html;
+        }
+        
+        // Atualizar informações de permissões
+        function updatePermissionsInfo() {
+            const info = document.getElementById('permissionsInfo');
+            
+            if (!window.navigationService) {
+                info.innerHTML = '<p>❌ NavigationService não disponível</p>';
+                return;
+            }
+            
+            const globalMenu = window.navigationService.getGlobalMenu();
+            const eventMenu = window.navigationService.getEventMenu();
+            const scope = window.navigationService.getEventDataScope();
+            
+            const html = `
+                <div style="display: grid; gap: 1rem;">
+                    <div>
+                        <strong>Role Atual:</strong> ${window.navigationService.currentRole || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Email:</strong> ${window.navigationService.currentUser?.email || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Itens Menu Global Visíveis:</strong> ${globalMenu.length}
+                    </div>
+                    <div>
+                        <strong>Itens Menu Evento Disponíveis:</strong> ${eventMenu.length}
+                    </div>
+                    <div>
+                        <strong>Escopo de Dados (Eventos):</strong> ${scope}
+                    </div>
+                </div>
+            `;
+            
+            info.innerHTML = html;
+        }
+        
+        // Atualizar contexto de evento
+        function updateEventContext() {
+            const context = NavigationUtils.getCurrentEvent();
+            const el = document.getElementById('currentEventId');
+            
+            if (context?.hasEvent) {
+                el.innerHTML = `
+                    <strong>${context.eventName || context.eventId}</strong>
+                    <span style="color: var(--text-secondary); font-size: 0.875rem; margin-left: 0.5rem;">
+                        (ID: ${context.eventId})
+                    </span>
+                `;
+            } else {
+                el.textContent = 'Nenhum (Dashboard Global)';
+            }
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Página de exemplo carregada');
+            
+            // Se navegação já estiver pronta, atualizar
+            if (window.NavigationUtils) {
+                setTimeout(() => {
+                    updateSystemStatus();
+                    updatePermissionsInfo();
+                    updateEventContext();
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>
+

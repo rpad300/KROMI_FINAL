@@ -33,7 +33,7 @@ O sistema está mostrando inconsistência entre contadores e sessões reais:
 
 ### ✅ **1. Script de Correção Imediata:**
 
-Execute `fix-session-counters.sql` para:
+Execute "`../sql/fix-session-counters.sql" para:
 1. **Ver estado atual** - Comparar contadores vs sessões reais
 2. **Executar limpeza** - `cleanup_inactive_sessions()`
 3. **Corrigir contadores** - UPDATE manual dos contadores
@@ -42,7 +42,7 @@ Execute `fix-session-counters.sql` para:
 
 ### ✅ **2. Função Melhorada:**
 
-Execute `fix-start-device-session-function.sql` para atualizar `start_device_session` com:
+Execute "`../sql/fix-start-device-session-function.sql" para atualizar `start_device_session` com:
 
 **ANTES:**
 ```sql
@@ -83,12 +83,12 @@ IF current_active_count >= max_sessions_allowed THEN
 ## 🎯 **FLUXO DE CORREÇÃO:**
 
 ### ✅ **Correção Imediata:**
-1. **Execute `fix-session-counters.sql`** - Corrige inconsistências existentes
+1. **Execute "`../sql/fix-session-counters.sql"** - Corrige inconsistências existentes
 2. **Teste login** - Tente fazer login novamente
 3. **Verifique logs** - Confirme que funciona
 
 ### ✅ **Correção Permanente:**
-1. **Execute `fix-start-device-session-function.sql`** - Atualiza função
+1. **Execute "`../sql/fix-start-device-session-function.sql"** - Atualiza função
 2. **Teste completo** - Login, logout, múltiplas sessões
 3. **Monitor logs** - Verifique se correções automáticas funcionam
 
@@ -101,7 +101,7 @@ IF current_active_count >= max_sessions_allowed THEN
 - **Tratamento de erros** - `EXCEPTION` para capturar erros de banco
 
 ### ✅ **Monitoramento:**
-- **Scripts de verificação** - `verify-session-cleanup.sql` para monitorar
+- **Scripts de verificação** - "`../sql/verify-session-cleanup.sql" para monitorar
 - **Logs de correção** - Notificações quando corrige inconsistências
 - **Alertas visuais** - Interface mostra quando há problemas
 
@@ -116,3 +116,5 @@ IF current_active_count >= max_sessions_allowed THEN
 - ✅ **Scripts de correção** - Para resolver problemas existentes
 
 **Execute os scripts de correção e o sistema funcionará corretamente!** 🎉
+
+

@@ -238,3 +238,5 @@ A página de detecção tinha problemas em mobile:
 - ✅ **UX melhorada** - Experiência fluida em mobile
 
 **A página de detecção agora é totalmente funcional e otimizada para mobile!** 🎉
+
+

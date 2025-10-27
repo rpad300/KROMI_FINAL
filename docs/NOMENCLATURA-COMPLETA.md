@@ -254,3 +254,5 @@ Resultado: A001, B002, C003
 ## Conclusão
 
 O sistema de nomenclatura completo do VisionKrono oferece máxima flexibilidade para diferentes tipos de eventos esportivos, permitindo configurações precisas e detecção inteligente de dorsais com prefixos, sufixos e separadores personalizáveis.
+
+

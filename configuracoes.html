@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - VisionKrono</title>
+    
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">⚙️ Configurações do Sistema</h1>
+        </div>
+        <div class="header-right">
+            <!-- Ações do header se necessário -->
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+                <div class="section">
+                    <h3>🔒 Sessões</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Timeout de Inatividade</label>
+                            <input type="number" value="45" readonly> minutos
+                            <span class="helper-text">Tempo máximo de inatividade antes de expirar sessão</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Vida Máxima da Sessão</label>
+                            <input type="number" value="12" readonly> horas
+                            <span class="helper-text">Tempo máximo absoluto de uma sessão</span>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Sessões Ativas</label>
+                            <div id="activeSessionsCount">Carregando...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>🛡️ Segurança</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" checked disabled>
+                                CSRF Protection Ativo
+                            </label>
+                            <span class="helper-text">Proteção contra Cross-Site Request Forgery</span>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" checked disabled>
+                                Cookies HttpOnly
+                            </label>
+                            <span class="helper-text">Proteção contra XSS</span>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" checked disabled>
+                                HTTPS Obrigatório
+                            </label>
+                            <span class="helper-text">Conexões seguras apenas</span>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" checked disabled>
+                                Auditoria Ativa
+                            </label>
+                            <span class="helper-text">Todos os eventos são registados</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>📊 Estatísticas do Sistema</h3>
+                    <div id="systemStats">Carregando...</div>
+                </div>
+                
+                <div class="section">
+                    <h3>🔑 Configurações de API</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                        Configure todas as chaves de API necessárias para o funcionamento da plataforma.
+                    </p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Google Gemini API Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="geminiApiKey" placeholder="Digite sua chave da API Gemini">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('geminiApiKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave para processamento com IA Gemini</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Google Vision API Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="googleVisionApiKey" placeholder="Digite sua chave da API Google Vision">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('googleVisionApiKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave para processamento com Google Vision</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Supabase URL</label>
+                            <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+                            <span class="helper-text">URL do seu projeto Supabase</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Supabase Anon Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="supabaseAnonKey" placeholder="Digite sua chave anônima do Supabase">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('supabaseAnonKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave anônima do Supabase</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Supabase Service Role Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="supabaseServiceKey" placeholder="Digite sua chave de serviço do Supabase">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('supabaseServiceKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave de serviço do Supabase (para operações administrativas)</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <button class="btn btn-primary" onclick="saveApiConfigurations()">
+                                💾 Salvar Configurações de API
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>🤖 Configurações de Processador</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                        Configure o comportamento padrão dos processadores para toda a plataforma.
+                    </p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tipo de Processador Padrão</label>
+                            <select id="defaultProcessorType">
+                                <option value="gemini">🤖 Gemini AI</option>
+                                <option value="google-vision">👁️ Google Vision</option>
+                                <option value="ocr">📄 OCR Tradicional</option>
+                                <option value="hybrid">🔄 Sistema Híbrido</option>
+                                <option value="manual">✋ Processamento Manual</option>
+                            </select>
+                            <span class="helper-text">Processador usado por padrão em novos eventos</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Velocidade Padrão</label>
+                            <select id="defaultProcessorSpeed">
+                                <option value="fast">⚡ Rápido</option>
+                                <option value="balanced">⚖️ Equilibrado</option>
+                                <option value="accurate">🎯 Preciso</option>
+                            </select>
+                            <span class="helper-text">Balanceamento entre velocidade e precisão</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Confiança Padrão: <span id="defaultConfidenceValue">70%</span></label>
+                            <input type="range" id="defaultProcessorConfidence" min="0.1" max="1.0" step="0.1" value="0.7">
+                            <span class="helper-text">Nível de confiança mínimo para aceitar detecções automáticas</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <button class="btn btn-primary" onclick="saveProcessorSettings()">
+                                💾 Salvar Configurações de Processador
+                            </button>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </main>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    
+    <style>
+        /* Estilos para API Key Inputs */
+        .api-key-input {
+            position: relative;
+        }
+        
+        .api-key-input input {
+            padding-right: 3rem;
+        }
+        
+        .api-key-toggle {
+            position: absolute;
+            right: var(--spacing-3);
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: var(--font-size-lg);
+            padding: var(--spacing-1);
+        }
+        
+        .api-key-toggle:hover {
+            color: var(--text-primary);
+        }
+        
+        /* Seção de configurações */
+        .section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            border: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-5);
+        }
+        
+        .section h3 {
+            margin: 0 0 var(--spacing-4) 0;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .section p {
+            margin-bottom: var(--spacing-4);
+        }
+        
+        /* Range inputs */
+        input[type="range"] {
+            width: 100%;
+            margin: var(--spacing-2) 0;
+        }
+        
+        /* Botões */
+        .btn {
+            padding: var(--spacing-3) var(--spacing-6);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            border: none;
+            font-family: var(--font-family-base);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-primary-lg);
+        }
+        
+        /* Form group improvements */
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group select {
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            width: 100%;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const autenticado = await verificarAutenticacao(['admin']);
+            if (!autenticado) return;
+            
+            loadSystemStats();
+            loadApiConfigurations();
+            loadProcessorSettings();
+        });
+        
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/api/auth/stats', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.stats;
+                    
+                    document.getElementById('activeSessionsCount').innerHTML = `
+                        <div>Total: ${stats.total}</div>
+                        <div>Ativas: ${stats.active}</div>
+                        <div>Expiradas: ${stats.expired}</div>
+                    `;
+                    
+                    document.getElementById('systemStats').innerHTML = `
+                        <p>Timeout Inatividade: ${stats.inactivityTimeout} minutos</p>
+                        <p>Vida Máxima: ${stats.maxLifetime} horas</p>
+                        <p>Sessões Totais: ${stats.total}</p>
+                        <p>Sessões Ativas: ${stats.active}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+        
+        function logout() {
+            if (window.authSystem) {
+                window.authSystem.signOut();
+            }
+        }
+        
+        // ==================== CONFIGURAÇÕES DE API ====================
+        
+        async function loadApiConfigurations() {
+            try {
+                console.log('📥 Carregando configurações de API...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível, usando configurações padrão');
+                    loadDefaultConfigurations();
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase.rpc('get_platform_config', {
+                    config_key_param: null
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar configurações:', error);
+                    loadDefaultConfigurations();
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    data.forEach(config => {
+                        const fieldMap = {
+                            'GEMINI_API_KEY': 'geminiApiKey',
+                            'GOOGLE_VISION_API_KEY': 'googleVisionApiKey',
+                            'SUPABASE_URL': 'supabaseUrl',
+                            'SUPABASE_ANON_KEY': 'supabaseAnonKey',
+                            'SUPABASE_SERVICE_ROLE_KEY': 'supabaseServiceKey'
+                        };
+                        
+                        const fieldId = fieldMap[config.config_key];
+                        if (fieldId) {
+                            const input = document.getElementById(fieldId);
+                            if (input) {
+                                input.value = config.config_value;
+                            }
+                        }
+                    });
+                    console.log('✅ Configurações de API carregadas da base de dados');
+                } else {
+                    console.log('ℹ️ Nenhuma configuração encontrada na base de dados, usando valores padrão');
+                    loadDefaultConfigurations();
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar configurações de API:', error);
+                loadDefaultConfigurations();
+            }
+        }
+        
+        function loadDefaultConfigurations() {
+            const defaultConfigs = {
+                'supabaseUrl': 'https://mdrvgbztadnluhrrnlob.supabase.co',
+                'geminiApiKey': 'AIzaSyASJoaDUnVZLWQHavMWn7nmFR3qYbUdDQA',
+                'googleVisionApiKey': 'AIzaSyBHR5jz1iVxlcoE8oDbbT3u6Y391FJ4Uds',
+                'supabaseAnonKey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnZnYnp0YWRubHVocnJubG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTQ1MDUsImV4cCI6MjA3NjU3MDUwNX0.x2po57tZOQ443NLVURBWDIYQnYbJ4D6O45FlZ5qwmp4',
+                'supabaseServiceKey': 'sb_publishable_r5xSTAYcxfVh5zrvZPUafg_Dp-QgsTkG'
+            };
+            
+            Object.entries(defaultConfigs).forEach(([fieldId, value]) => {
+                const input = document.getElementById(fieldId);
+                if (input && !input.value) {
+                    input.value = value;
+                }
+            });
+            
+            console.log('✅ Configurações padrão carregadas');
+        }
+        
+        async function saveApiConfigurations() {
+            try {
+                console.log('💾 Salvando configurações de API...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    alert('❌ Supabase não disponível. Não foi possível salvar as configurações.');
+                    return;
+                }
+                
+                const apiConfigs = [
+                    { key: 'GEMINI_API_KEY', value: document.getElementById('geminiApiKey').value },
+                    { key: 'GOOGLE_VISION_API_KEY', value: document.getElementById('googleVisionApiKey').value },
+                    { key: 'SUPABASE_URL', value: document.getElementById('supabaseUrl').value },
+                    { key: 'SUPABASE_ANON_KEY', value: document.getElementById('supabaseAnonKey').value },
+                    { key: 'SUPABASE_SERVICE_ROLE_KEY', value: document.getElementById('supabaseServiceKey').value }
+                ];
+                
+                let savedCount = 0;
+                for (const config of apiConfigs) {
+                    if (config.value.trim()) {
+                        const { error } = await window.supabaseClient.supabase.rpc('set_platform_config', {
+                            config_key_param: config.key,
+                            config_value_param: config.value,
+                            config_type_param: 'api_key',
+                            is_encrypted_param: true,
+                            description_param: `Chave da API ${config.key}`
+                        });
+                        
+                        if (error) {
+                            console.error(`❌ Erro ao salvar ${config.key}:`, error);
+                        } else {
+                            savedCount++;
+                        }
+                    }
+                }
+                
+                alert(`✅ Configurações salvas com sucesso! (${savedCount} configurações)`);
+                console.log('✅ Configurações de API salvas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar configurações de API:', error);
+                alert('❌ Erro ao salvar configurações: ' + error.message);
+            }
+        }
+        
+        // ==================== CONFIGURAÇÕES DE PROCESSADOR ====================
+        
+        async function loadProcessorSettings() {
+            try {
+                console.log('📥 Carregando configurações de processador...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível para configurações de processador');
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase.rpc('get_global_processor_setting', {
+                    setting_key_param: null
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar configurações de processador:', error);
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    data.forEach(setting => {
+                        switch (setting.setting_key) {
+                            case 'default_processor_type':
+                                const typeSelect = document.getElementById('defaultProcessorType');
+                                if (typeSelect) typeSelect.value = setting.setting_value;
+                                break;
+                            case 'default_processor_speed':
+                                const speedSelect = document.getElementById('defaultProcessorSpeed');
+                                if (speedSelect) speedSelect.value = setting.setting_value;
+                                break;
+                            case 'default_processor_confidence':
+                                const confidenceRange = document.getElementById('defaultProcessorConfidence');
+                                const confidenceValue = document.getElementById('defaultConfidenceValue');
+                                if (confidenceRange) {
+                                    confidenceRange.value = setting.setting_value;
+                                    if (confidenceValue) {
+                                        confidenceValue.textContent = Math.round(parseFloat(setting.setting_value) * 100) + '%';
+                                    }
+                                }
+                                break;
+                        }
+                    });
+                }
+                
+                // Adicionar listener para range de confiança
+                const confidenceRange = document.getElementById('defaultProcessorConfidence');
+                const confidenceValue = document.getElementById('defaultConfidenceValue');
+                
+                if (confidenceRange && confidenceValue) {
+                    confidenceRange.addEventListener('input', function() {
+                        confidenceValue.textContent = Math.round(this.value * 100) + '%';
+                    });
+                }
+                
+                console.log('✅ Configurações de processador carregadas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar configurações de processador:', error);
+            }
+        }
+        
+        async function saveProcessorSettings() {
+            try {
+                console.log('💾 Salvando configurações de processador...');
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    alert('❌ Supabase não disponível. Não foi possível salvar as configurações.');
+                    return;
+                }
+                
+                const settings = [
+                    { key: 'default_processor_type', value: document.getElementById('defaultProcessorType').value },
+                    { key: 'default_processor_speed', value: document.getElementById('defaultProcessorSpeed').value },
+                    { key: 'default_processor_confidence', value: document.getElementById('defaultProcessorConfidence').value }
+                ];
+                
+                let savedCount = 0;
+                for (const setting of settings) {
+                    const { error } = await window.supabaseClient.supabase.rpc('set_global_processor_setting', {
+                        setting_key_param: setting.key,
+                        setting_value_param: setting.value,
+                        description_param: `Configuração: ${setting.key}`
+                    });
+                    
+                    if (error) {
+                        console.error(`❌ Erro ao salvar ${setting.key}:`, error);
+                    } else {
+                        savedCount++;
+                    }
+                }
+                
+                alert(`✅ Configurações de processador salvas com sucesso! (${savedCount} configurações)`);
+                console.log('✅ Configurações de processador salvas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar configurações de processador:', error);
+                alert('❌ Erro ao salvar configurações: ' + error.message);
+            }
+        }
+        
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+    </script>
+</body>
+</html>
+

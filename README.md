@@ -47,7 +47,7 @@ O Supabase permite dashboard em tempo real e sincronização entre dispositivos:
    - Anote a URL e ANON KEY
 
 2. **Configure a base de dados:**
-   - Execute o script `supabase-setup.sql` no SQL Editor
+   - Execute o script "`../sql/supabase-setup.sql" no SQL Editor
    - Isso criará a tabela `detections` e políticas necessárias
 
 3. **Configure no arquivo .env:**

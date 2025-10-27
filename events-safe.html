@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos - MODO SEGURO</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .log {
+            background: #2a2a2a;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { color: #00ff88; }
+        .error { color: #ff4444; }
+        .warning { color: #ffaa00; }
+        .info { color: #00aaff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 EVENTS - MODO SEGURO (DEBUG)</h1>
+    <div id="logs"></div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(div);
+            console.log(message);
+        }
+
+        async function testSupabase() {
+            try {
+                log('🚀 INICIANDO TESTE DE EMERGÊNCIA', 'success');
+                
+                // Teste 1: Carregar config
+                log('📡 Teste 1: Carregando configuração...', 'info');
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                log('✅ Teste 1: Configuração carregada', 'success');
+                
+                // Teste 2: Criar cliente Supabase
+                log('📡 Teste 2: Criando cliente Supabase...', 'info');
+                log('🔍 Config recebida: ' + JSON.stringify(config, null, 2), 'info');
+                
+                const { createClient } = supabase;
+                
+                // Verificar formato da config
+                const supabaseUrl = config.supabaseUrl || config.SUPABASE_URL;
+                const supabaseAnonKey = config.supabaseAnonKey || config.SUPABASE_ANON_KEY;
+                
+                log('🔍 URL: ' + supabaseUrl, 'info');
+                log('🔍 Key: ' + (supabaseAnonKey ? 'PRESENTE' : 'AUSENTE'), 'info');
+                
+                if (!supabaseUrl || !supabaseAnonKey) {
+                    throw new Error('Configuração inválida: URL ou Key ausente');
+                }
+                
+                const client = createClient(supabaseUrl, supabaseAnonKey);
+                log('✅ Teste 2: Cliente criado', 'success');
+                
+                // Teste 3: Verificar sessão (COM TIMEOUT)
+                log('📡 Teste 3: Verificando sessão...', 'info');
+                log('⏱️ Timeout de 3 segundos configurado', 'info');
+                
+                const sessionPromise = client.auth.getSession();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('TIMEOUT: getSession() bloqueou por mais de 3 segundos')), 3000)
+                );
+                
+                try {
+                    const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]);
+                    
+                    if (sessionError) {
+                        log('❌ Teste 3: Erro ao verificar sessão: ' + sessionError.message, 'error');
+                    } else if (session) {
+                        log('✅ Teste 3: Sessão encontrada - Email: ' + session.user.email, 'success');
+                    } else {
+                        log('⚠️ Teste 3: Sem sessão ativa', 'warning');
+                    }
+                } catch (timeoutError) {
+                    log('💥 Teste 3: BLOQUEADO! ' + timeoutError.message, 'error');
+                    log('🔍 DIAGNÓSTICO: IndexedDB do Supabase está TRAVADO!', 'error');
+                    log('🔧 SOLUÇÃO: Limpar dados do site', 'warning');
+                    throw timeoutError;
+                }
+                
+                // Teste 4: Carregar eventos
+                log('📡 Teste 4: Carregando eventos...', 'info');
+                const { data: events, error: eventsError } = await client
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (eventsError) {
+                    log('❌ Teste 4: Erro ao carregar eventos: ' + eventsError.message, 'error');
+                } else {
+                    log('✅ Teste 4: Eventos carregados: ' + events.length, 'success');
+                    events.forEach(event => {
+                        log(`  - ${event.name} (ID: ${event.id})`, 'info');
+                    });
+                }
+                
+                log('🎉 TODOS OS TESTES CONCLUÍDOS!', 'success');
+                log('', 'info');
+                log('📋 CONCLUSÃO:', 'success');
+                log('Se chegaste aqui, o problema NÃO é o Supabase!', 'warning');
+                log('O problema está no código do events.js ou events.html', 'warning');
+                log('', 'info');
+                log('🔍 PRÓXIMOS PASSOS:', 'success');
+                log('1. Fecha esta aba', 'info');
+                log('2. Partilha estes logs com o desenvolvedor', 'info');
+                log('3. Vamos identificar o código bloqueante', 'info');
+                
+            } catch (error) {
+                log('💥 ERRO CRÍTICO: ' + error.message, 'error');
+                log('Stack: ' + error.stack, 'error');
+            }
+        }
+
+        // Executar teste ao carregar
+        window.addEventListener('DOMContentLoaded', () => {
+            log('🎯 DOMContentLoaded disparado', 'success');
+            testSupabase();
+        });
+    </script>
+</body>
+</html>
+

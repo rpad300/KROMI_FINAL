@@ -208,3 +208,5 @@ VALUES ('custom', 'Meu Tipo', '🎯', '#9333ea', true, 90);
 - ✅ **Escalável:** Suporta eventos com múltiplos checkpoints
 - ✅ **Intuitivo:** UI amigável para configuração
 
+
+

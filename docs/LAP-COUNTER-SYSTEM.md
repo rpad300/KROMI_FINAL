@@ -170,3 +170,5 @@ Quando uma detecção é feita em um dispositivo com checkpoint "Contador de Vol
 - Interface dinâmica que se adapta à configuração do evento
 
 **Status**: ✅ **IMPLEMENTADO E FUNCIONAL**
+
+

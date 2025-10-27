@@ -1,0 +1,393 @@
+/**
+ * ==========================================
+ * KROMI MOBILE ANDROID - Android-Specific Adjustments
+ * ==========================================
+ * 
+ * Special handling for Android Chrome and PWA
+ * Targets class: os-android
+ * 
+ * Features:
+ * - Gesture navigation bar compensation
+ * - Android Chrome address bar handling
+ * - Material Design touches
+ * - Android-specific performance optimizations
+ * 
+ * Versão: 2.0
+ * ========================================== */
+
+/* ==========================================
+   ANDROID: GESTURE NAVIGATION BAR
+   ========================================== */
+
+.os-android .camera-container {
+    /* Respect gesture navigation bar */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.os-android .main-camera-controls {
+    /* Add extra padding for gesture bar on Android */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--spacing-4));
+    margin-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.os-android .back-button-mobile {
+    /* Position with safe area on Android */
+    top: calc(env(safe-area-inset-top, 0px) + var(--spacing-2));
+    left: calc(env(safe-area-inset-left, 0px) + var(--spacing-2));
+}
+
+.os-android .camera-info {
+    top: calc(env(safe-area-inset-top, 0px) + var(--spacing-4));
+    left: calc(env(safe-area-inset-left, 0px) + var(--spacing-4));
+    right: calc(env(safe-area-inset-right, 0px) + var(--spacing-4));
+}
+
+/* ==========================================
+   ANDROID: CHROME ADDRESS BAR
+   ========================================== */
+
+.os-android .layout-with-sidebar .main {
+    /* Use dvh for dynamic viewport on Chrome Android */
+    height: 100dvh;
+}
+
+.os-android .camera-container {
+    /* Handle Chrome address bar appearing/disappearing */
+    height: 100dvh;
+    min-height: 100%;
+}
+
+/* ==========================================
+   ANDROID: STANDALONE PWA MODE
+   ========================================== */
+
+.os-android.standalone .camera-container {
+    /* Android PWA uses full screen */
+    height: 100vh;
+    height: 100dvh;
+}
+
+.os-android.standalone .layout-with-sidebar .main {
+    /* No browser UI in standalone */
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* ==========================================
+   ANDROID: MATERIAL DESIGN TOUCH FEEDBACK
+   ========================================== */
+
+.os-android .btn {
+    /* Material Design ripple effect */
+    position: relative;
+    overflow: hidden;
+}
+
+.os-android .btn:active {
+    /* Visual feedback similar to Material */
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* ==========================================
+   ANDROID: TOUCH TARGETS
+   ========================================== */
+
+.os-android button,
+.os-android .btn {
+    /* Ensure minimum touch targets on Android */
+    min-width: 48px;
+    min-height: 48px;
+    -webkit-tap-highlight-color: rgba(252, 107, 3, 0.2);
+}
+
+.os-android .form-input {
+    /* Android-friendly input sizing */
+    min-height: 48px;
+}
+
+/* ==========================================
+   ANDROID: GESTURE NAVIGATION
+   ========================================== */
+
+.os-android .camera-overlay {
+    /* Prevent back gesture from interfering */
+    overscroll-behavior-x: none;
+}
+
+.os-android .main-camera-controls,
+.os-android .side-controls {
+    /* Ensure controls are always accessible */
+    z-index: 100;
+}
+
+/* ==========================================
+   ANDROID: PERFORMANCE OPTIMIZATIONS
+   ========================================== */
+
+.os-android .detection-stats,
+.os-android .event-info {
+    /* Reduce GPU layer creation on Android */
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.os-android .camera-video {
+    /* Hardware acceleration for video on Android */
+    transform: scaleX(-1) translateZ(0);
+    -webkit-transform: scaleX(-1) translateZ(0);
+}
+
+/* ==========================================
+   ANDROID: REDUCED EFFECTS
+   ========================================== */
+
+.os-android.reduced-effects .detection-stats,
+.os-android.reduced-effects .event-info {
+    /* Simpler rendering on low-end devices */
+    backdrop-filter: none;
+    background: rgba(0, 0, 0, 0.95);
+}
+
+.os-android.reduced-effects .camera-video {
+    /* Disable hardware acceleration if causing issues */
+    transform: scaleX(-1);
+}
+
+/* ==========================================
+   ANDROID: KEYBOARD HANDLING
+   ========================================== */
+
+.os-android .permission-content {
+    /* Handle Android keyboard */
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.os-android .pin-entry-panel {
+    /* Ensure keyboard doesn't cover input */
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+/* ==========================================
+   ANDROID: BOTTOM NAVIGATION
+   ========================================== */
+
+.os-android .app-bottom-nav {
+    /* Compensate for gesture bar */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ==========================================
+   ANDROID: ORIENTATION CHANGES
+   ========================================== */
+
+.os-android.portrait .main-camera-controls {
+    /* Portrait layout */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--spacing-4));
+}
+
+.os-android.landscape .main-camera-controls {
+    /* Landscape layout - more compact */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--spacing-2));
+    flex-direction: row;
+    gap: var(--spacing-2);
+}
+
+.os-android.landscape .main-camera-controls .btn {
+    /* Smaller buttons in landscape */
+    min-width: clamp(80px, 10vw, 100px);
+    padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 14px);
+}
+
+/* ==========================================
+   ANDROID: SYSTEM UI VISIBILITY
+   ========================================== */
+
+/* Hide Android system bars in fullscreen (controlled by JS) */
+.os-android.fullscreen .camera-container {
+    /* Android can hide system UI completely */
+    height: 100vh;
+}
+
+/* ==========================================
+   ANDROID: TORCH SUPPORT DETECTION
+   ========================================== */
+
+/* Flash icon only shows if has-torch class exists */
+.os-android:not(.has-torch) #toggleFlash,
+.os-android:not(.has-torch) .btn[data-flash] {
+    display: none;
+}
+
+/* ==========================================
+   ANDROID: INPUT FOCUS
+   ========================================== */
+
+.os-android .form-input:focus {
+    /* Android-specific focus styling */
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.os-android input[type="password"] {
+    /* Prevent autofill styling */
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* ==========================================
+   ANDROID: SCROLLING
+   ========================================== */
+
+.os-android body {
+    /* Smooth scrolling on Android */
+    -webkit-overflow-scrolling: touch;
+}
+
+.os-android .camera-overlay {
+    /* Prevent accidental scrolling */
+    overscroll-behavior: none;
+}
+
+/* ==========================================
+   ANDROID: MULTI-WINDOW MODE
+   ========================================== */
+
+/* Android multi-window mode would be handled by media queries */
+@media (max-width: 600px) and (max-height: 400px) {
+    .os-android .camera-info {
+        /* Compact in multi-window */
+        flex-direction: row;
+        top: var(--spacing-2);
+    }
+    
+    .os-android .main-camera-controls {
+        /* Smaller controls in multi-window */
+        bottom: var(--spacing-2);
+        gap: var(--spacing-1);
+    }
+    
+    .os-android .main-camera-controls .btn {
+        min-width: clamp(60px, 15vw, 80px);
+        padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 10px);
+    }
+}
+
+/* ==========================================
+   ANDROID: DARK MODE
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+    .os-android .permission-panel {
+        background: rgba(0, 0, 0, 0.95);
+    }
+    
+    .os-android .permission-content {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+}
+
+/* ==========================================
+   ANDROID: ACCESSIBILITY
+   ========================================== */
+
+.os-android .btn:focus-visible {
+    /* Focus indication for keyboard navigation */
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   ANDROID: TALKBACK SUPPORT
+   ========================================== */
+
+.os-android .btn {
+    /* Ensure TalkBack can read buttons */
+    min-height: 48px;
+}
+
+.os-android .sr-only {
+    /* Screen reader only content */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ==========================================
+   ANDROID: BATTERY SAVER MODE
+   ========================================== */
+
+.os-android.reduced-effects .detection-area.active {
+    /* Disable animations in battery saver */
+    animation: none;
+}
+
+.os-android.reduced-effects .camera-video {
+    /* Reduce video quality hints */
+    filter: brightness(1);
+}
+
+/* ==========================================
+   ANDROID: WEBVIEW CONSIDERATIONS
+   ========================================== */
+
+/* Some Android apps use WebView - ensure compatibility */
+.os-android .camera-container {
+    /* Prevent issues in WebView */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* ==========================================
+   ANDROID: PIXEL DENSITY ADJUSTMENTS
+   ========================================== */
+
+@media (min-resolution: 2dppx) {
+    .os-android .detection-stats,
+    .os-android .event-info {
+        /* Crisp text on high DPI Android screens */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ==========================================
+   ANDROID: KEYBOARD TYPES
+   ========================================== */
+
+.os-android input[inputmode="numeric"] {
+    /* Numeric keypad on Android */
+    font-size: 16px; /* Prevent zoom */
+}
+
+.os-android input[type="password"] {
+    /* Password fields on Android */
+    font-size: 16px; /* Prevent zoom */
+}
+
+/* ==========================================
+   ANDROID: SWIPE GESTURES
+   ========================================== */
+
+.os-android .camera-overlay {
+    /* Prevent Android navigation gestures */
+    touch-action: none;
+}
+
+.os-android .side-controls,
+.os-android .main-camera-controls {
+    /* Allow touch on controls */
+    touch-action: manipulation;
+}
+

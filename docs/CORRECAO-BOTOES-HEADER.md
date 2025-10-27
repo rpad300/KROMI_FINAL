@@ -56,3 +56,5 @@ body.sidebar-hidden .header #headerActions,
 5. ✅ **Sem espaços em branco** quando sidebar está oculto
 
 **Os botões "Novo Evento" e "Atualizar" agora permanecem sempre visíveis!** 🎉
+
+

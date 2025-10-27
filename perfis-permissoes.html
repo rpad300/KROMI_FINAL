@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfis & Permissões - VisionKrono</title>
+    
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">🔐 Perfis & Permissões</h1>
+        </div>
+        <div class="header-right">
+            <!-- Ações do header se necessário -->
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">👑</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="adminCount">0</div>
+                            <div class="stat-label">Administradores</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="moderatorCount">0</div>
+                            <div class="stat-label">Moderadores</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👤</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="userCount">0</div>
+                            <div class="stat-label">Utilizadores</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Descrição dos Perfis</h3>
+                    
+                    <div class="role-description">
+                        <h4>👑 Administrador</h4>
+                        <p>Acesso total ao sistema. Pode gerir utilizadores, eventos, configurações e todas as funcionalidades.</p>
+                        <ul>
+                            <li>✅ Gestão de Utilizadores</li>
+                            <li>✅ Gestão de Perfis e Permissões</li>
+                            <li>✅ Configurações do Sistema</li>
+                            <li>✅ Auditoria e Logs</li>
+                            <li>✅ Gestão de Eventos</li>
+                            <li>✅ Todas as funcionalidades</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="role-description">
+                        <h4>⚙️ Moderador (Gestor de Eventos)</h4>
+                        <p>Pode criar e gerir eventos, configurar dispositivos e gerir participantes.</p>
+                        <ul>
+                            <li>✅ Criar e Editar Eventos</li>
+                            <li>✅ Configurar Dispositivos</li>
+                            <li>✅ Gerir Participantes</li>
+                            <li>✅ Ver Classificações</li>
+                            <li>❌ Gestão de Utilizadores</li>
+                            <li>❌ Configurações do Sistema</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="role-description">
+                        <h4>👤 Utilizador (Participante)</h4>
+                        <p>Pode ver classificações e gerir sua própria inscrição.</p>
+                        <ul>
+                            <li>✅ Ver Classificações</li>
+                            <li>✅ Ver Participantes</li>
+                            <li>✅ Editar Próprio Perfil</li>
+                            <li>❌ Criar Eventos</li>
+                            <li>❌ Configurar Sistema</li>
+                            <li>❌ Gerir Outros Utilizadores</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const autenticado = await verificarAutenticacao(['admin']);
+            if (!autenticado) return;
+            
+            loadRoleStats();
+        });
+        
+        async function loadRoleStats() {
+            if (!window.authSystem || !window.authSystem.supabase) return;
+            
+            try {
+                // Usar Supabase para contar por role
+                const { data, error } = await window.supabase
+                    .from('user_profiles')
+                    .select('role');
+                
+                if (error) throw error;
+                
+                const counts = {
+                    admin: 0,
+                    moderator: 0,
+                    user: 0
+                };
+                
+                data.forEach(profile => {
+                    if (counts.hasOwnProperty(profile.role)) {
+                        counts[profile.role]++;
+                    }
+                });
+                
+                document.getElementById('adminCount').textContent = counts.admin;
+                document.getElementById('moderatorCount').textContent = counts.moderator;
+                document.getElementById('userCount').textContent = counts.user;
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+        
+        function logout() {
+            if (window.authSystem) {
+                window.authSystem.signOut();
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -54,3 +54,5 @@ window.location.href = '/';
 - ✅ **UX melhorada** - Fluxo de saída claro e intuitivo
 
 **O botão "Terminar" agora redireciona corretamente para a home page após encerrar a sessão!** 🎉
+
+

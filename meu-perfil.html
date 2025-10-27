@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - VisionKrono</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">👤 Meu Perfil</h1>
+        </div>
+        <div class="header-right">
+            <!-- Ações do header se necessário -->
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+                <div class="user-profile-section">
+                    <div class="profile-header">
+                        <div class="profile-avatar" id="profileAvatar">U</div>
+                        <div class="profile-info">
+                            <h4 id="profileName">Nome do Utilizador</h4>
+                            <p id="profileEmail">email@exemplo.com</p>
+                            <span class="profile-badge" id="profileRole">admin</span>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-details">
+                        <h3>Informações Pessoais</h3>
+                        
+                        <form id="profileEditForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="profileEditName">Nome Completo</label>
+                                    <input type="text" id="profileEditName" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileEditEmail">Email</label>
+                                    <input type="email" id="profileEditEmail" name="email" readonly>
+                                    <span class="helper-text">Email não pode ser alterado</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileEditPhone">Telefone</label>
+                                    <input type="tel" id="profileEditPhone" name="phone" placeholder="+351 912 345 678">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileEditOrganization">Organização</label>
+                                    <input type="text" id="profileEditOrganization" name="organization">
+                                </div>
+                            </div>
+                            
+                            <!-- Alterar Password -->
+                            <div class="password-section">
+                                <h4>🔑 Alterar Palavra-passe</h4>
+                                <div class="password-toggle">
+                                    <input type="checkbox" id="changeMyPassword">
+                                    <label for="changeMyPassword">Quero alterar minha palavra-passe</label>
+                                </div>
+                                <div id="myPasswordFields" style="display: none;">
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="currentPassword">Palavra-passe Atual</label>
+                                            <input type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="newPassword">Nova Palavra-passe</label>
+                                            <input type="password" id="newPassword" name="newPassword" autocomplete="new-password" minlength="8">
+                                        </div>
+                                        <div class="form-group full-width">
+                                            <label for="confirmPassword">Confirmar Nova Palavra-passe</label>
+                                            <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" minlength="8">
+                                            <span class="helper-text">Mínimo 8 caracteres</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="modal-footer">
+                                <button type="submit" class="btn-primary">💾 Guardar Alterações</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Sessões Ativas -->
+                    <div class="profile-sessions">
+                        <h3>🔒 Sessões Ativas</h3>
+                        <div id="sessionslist"></div>
+                        <button type="button" class="btn-secondary" onclick="logoutOthers()">
+                            🗑️ Terminar Outras Sessões
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Verificar autenticação (todos os perfis podem ver seu próprio perfil)
+            const autenticado = await verificarAutenticacao(['admin', 'moderator', 'user']);
+            if (!autenticado) return;
+            
+            loadProfileData();
+            loadActiveSessions();
+            
+            // Toggle password fields
+            const changePasswordCheckbox = document.getElementById('changeMyPassword');
+            const passwordFields = document.getElementById('myPasswordFields');
+            
+            if (changePasswordCheckbox && passwordFields) {
+                changePasswordCheckbox.addEventListener('change', function() {
+                    passwordFields.style.display = this.checked ? 'block' : 'none';
+                });
+            }
+            
+            // Form submit
+            const profileForm = document.getElementById('profileEditForm');
+            if (profileForm) {
+                profileForm.addEventListener('submit', handleProfileUpdate);
+            }
+        });
+        
+        function loadProfileData() {
+            if (!window.authSystem || !window.authSystem.userProfile) return;
+            
+            const profile = window.authSystem.userProfile;
+            const user = window.authSystem.currentUser;
+            
+            document.getElementById('profileName').textContent = profile.name || user.email;
+            document.getElementById('profileEmail').textContent = user.email;
+            document.getElementById('profileRole').textContent = profile.role || 'user';
+            
+            document.getElementById('profileEditName').value = profile.name || '';
+            document.getElementById('profileEditEmail').value = user.email;
+            document.getElementById('profileEditPhone').value = profile.phone || '';
+            document.getElementById('profileEditOrganization').value = profile.organization || '';
+            
+            const avatar = document.getElementById('profileAvatar');
+            const name = profile.name || user.email;
+            avatar.textContent = name.charAt(0).toUpperCase();
+        }
+        
+        async function loadActiveSessions() {
+            if (!window.authSystem) return;
+            
+            try {
+                const sessions = await window.authSystem.getUserSessions();
+                const container = document.getElementById('sessionsList');
+                
+                if (!container) return;
+                
+                if (sessions.length === 0) {
+                    container.innerHTML = '<p>Apenas esta sessão ativa</p>';
+                } else {
+                    container.innerHTML = sessions.map(session => `
+                        <div class="session-item">
+                            <div>
+                                <strong>Sessão:</strong> ${session.id}<br>
+                                <small>Criada: ${new Date(session.createdAt).toLocaleString('pt-PT')}</small><br>
+                                <small>Última atividade: ${new Date(session.lastActivity).toLocaleString('pt-PT')}</small>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar sessões:', error);
+            }
+        }
+        
+        async function handleProfileUpdate(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const changePassword = document.getElementById('changeMyPassword').checked;
+            
+            // TODO: Implementar atualização de perfil
+            console.log('Atualizar perfil:', {
+                name: formData.get('name'),
+                phone: formData.get('phone'),
+                organization: formData.get('organization'),
+                changePassword: changePassword
+            });
+            
+            alert('Funcionalidade em desenvolvimento');
+        }
+        
+        async function logoutOthers() {
+            if (!window.authSystem) return;
+            
+            if (confirm('Tem certeza que deseja terminar todas as outras sessões?')) {
+                const success = await window.authSystem.logoutOthers();
+                
+                if (success) {
+                    alert('Outras sessões terminadas com sucesso!');
+                    await loadActiveSessions();
+                }
+            }
+        }
+        
+        function logout() {
+            if (window.authSystem) {
+                window.authSystem.signOut();
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Detecção de Dorsais</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout.css">
+    <link rel="stylesheet" href="kromi-mobile.css">
+    <link rel="stylesheet" href="kromi-mobile-ios.css">
+    <link rel="stylesheet" href="kromi-mobile-android.css">
+    <link rel="stylesheet" href="kromi-camera.css">
+    
+    <!-- Capability Detection -->
+    <script src="kromi-capability-detection.js"></script>
+    
+    <!-- Legacy scripts -->
+    <script src="kromi-sidebar-toggle.js"></script>
+    
+    <!-- Additional inline styles kept minimal for runtime overrides -->
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div style="padding: var(--spacing-5); border-bottom: 1px solid var(--border-color);">
+                <h1 style="font-size: var(--font-size-xl); color: var(--primary); font-weight: 600; margin: 0;">
+                    📱 Detecção
+                </h1>
+            </div>
+            
+            <div class="nav-menu" style="padding: var(--spacing-4);" id="navigationMenu">
+                <!-- Será preenchido por navigation.js -->
+            </div>
+            
+            <!-- Event Info Panel -->
+            <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
+                <div class="nav-category">Evento Atual</div>
+                <div id="currentEventInfo" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    📱 Detecção de Dorsais
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-secondary" id="toggleFullscreen">
+                    <i>⛶</i> Fullscreen
+                </button>
+                <button class="btn btn-sm btn-secondary" id="toggleFlash">
+                    <i>💡</i> Flash
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div class="camera-container" id="cameraContainer">
+                <!-- Back Button (Mobile Only) -->
+                <button class="back-button-mobile" id="backButton" title="Voltar ao Evento">
+                    ←
+                </button>
+                
+                <!-- Camera Video -->
+                <video id="cameraVideo" class="camera-video" autoplay muted playsinline></video>
+                
+                <!-- Camera Overlay -->
+                <div class="camera-overlay" id="cameraOverlay">
+                    <!-- Detection areas will be added here -->
+                </div>
+                
+                <!-- Camera Info -->
+                <div class="camera-info">
+                    <div class="detection-stats" id="detectionStats">
+                        <div style="font-weight: 600; margin-bottom: var(--spacing-1);">📊 Detecções</div>
+                        <div id="detectionCount">0</div>
+                    </div>
+                    
+                    <div class="event-info" id="eventInfo">
+                        <div style="font-weight: 600; margin-bottom: var(--spacing-1);">🏃 Evento</div>
+                        <div id="eventName">Nenhum evento selecionado</div>
+                    </div>
+                    
+                    <!-- Botão Terminar Sessão -->
+                    <button id="endSessionBtn" onclick="endSession()" 
+                        style="position: absolute; top: var(--spacing-4); right: var(--spacing-4); background: rgba(239, 68, 68, 0.9); color: white; border: 2px solid var(--danger); padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-full); font-size: var(--font-size-sm); font-weight: 600; cursor: pointer; backdrop-filter: blur(10px); z-index: 25; display: none;">
+                        🚪 Terminar Sessão
+                    </button>
+                </div>
+                
+                <!-- Side Controls (Left Side) -->
+                <div class="side-controls">
+                    <button class="btn btn-sm btn-warning" id="toggleFlash">
+                        <i>⚡</i> Flash
+                    </button>
+                    <button class="btn btn-sm btn-danger" id="switchCamera">
+                        <i>🔄</i> Trocar
+                    </button>
+                    <button class="btn btn-sm btn-danger" id="endSessionBtn2" onclick="endSession()" style="display: none;">
+                        <i>🚪</i> Terminar
+                    </button>
+                </div>
+                
+                <!-- Main Camera Controls (Center Bottom) -->
+                <div class="main-camera-controls">
+                    <button class="btn btn-lg btn-primary" id="startDetection">
+                        <i>▶️</i> Iniciar Detecção
+                    </button>
+                    <button class="btn btn-lg btn-secondary" id="stopDetection" style="display: none;">
+                        <i>⏹️</i> Parar Detecção
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/events'">
+                <i>🏃</i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-btn active">
+                <i>📱</i>
+                <span>Detecção</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/classifications'">
+                <i>🏆</i>
+                <span>Rankings</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Permission Panel -->
+    <!-- PIN Panel (aparece primeiro) -->
+    <div class="permission-panel" id="pinPanel" style="display: none;">
+        <div class="permission-content">
+            <h3>🔐 PIN de Segurança</h3>
+            <p>Digite o PIN do dispositivo para acessar a detecção.</p>
+            <div style="margin: var(--spacing-5) 0;">
+                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinInput" 
+                    placeholder="Digite o PIN"
+                    style="width: 100%; padding: var(--spacing-4); font-size: var(--font-size-2xl); text-align: center; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-primary); font-weight: 700; letter-spacing: 8px;">
+                <div id="pinError" style="color: var(--danger); margin-top: var(--spacing-2); font-size: var(--font-size-sm); text-align: center; display: none;"></div>
+            </div>
+            <div class="permission-actions">
+                <button class="btn btn-primary" id="validatePin">
+                    <i>🔓</i> Validar PIN
+                </button>
+                <button class="btn btn-secondary" onclick="window.history.back()">
+                    <i>↩️</i> Voltar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camera Permission Panel (aparece depois do PIN) -->
+    <div class="permission-panel" id="permissionPanel" style="display: none;">
+        <div class="permission-content">
+            <h3>📷 Acesso à Câmera</h3>
+            <p>O VisionKrono precisa acessar sua câmera para detectar dorsais automaticamente.</p>
+            <div class="permission-actions">
+                <button class="btn btn-primary" id="requestCamera">
+                    <i>📷</i> Permitir Câmera
+                </button>
+                <button class="btn btn-secondary" onclick="window.location.href='/'">
+                    <i>↩️</i> Voltar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="supabase.js"></script>
+    <script src="navigation.js"></script>
+    
+    <!-- Detection Logic -->
+    <script>
+        // Global variables
+        let cameraStream = null;
+        let isDetecting = false;
+        let detectionCount = 0;
+        let currentEvent = null;
+        let currentDevice = null;
+        let sessionId = null;
+        let captureInterval = null;
+        let currentPosition = null;
+        let devicePin = null;
+        let pinValidated = false;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Supabase
+            if (window.supabaseClient) {
+                await window.supabaseClient.init();
+            }
+            
+            // Initialize navigation
+            if (window.Navigation) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                let deviceId = urlParams.get('device');
+                const eventName = urlParams.get('eventName');
+                
+                console.log('🔗 Parâmetros URL:');
+                console.log('  Event:', eventId);
+                console.log('  Device:', deviceId);
+                console.log('  EventName:', eventName);
+                
+                // Se não tem deviceId, buscar primeiro dispositivo do evento
+                if (eventId && !deviceId) {
+                    console.log('⚠️ Device ID não especificado, buscando dispositivos do evento...');
+                    
+                    const { data: devices, error } = await window.supabaseClient.supabase
+                        .from('event_devices')
+                        .select('device_id, checkpoint_name')
+                        .eq('event_id', eventId)
+                        .order('checkpoint_order', { ascending: true })
+                        .limit(1);
+                    
+                    if (devices && devices.length > 0) {
+                        deviceId = devices[0].device_id;
+                        console.log('✅ Usando primeiro dispositivo:', deviceId, devices[0].checkpoint_name);
+                        
+                        // Atualizar URL
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.set('device', deviceId);
+                        window.history.replaceState({}, '', newUrl);
+                    } else {
+                        console.error('❌ Nenhum dispositivo encontrado para este evento');
+                        showError('Nenhum dispositivo configurado para este evento. Configure em /devices');
+                        setTimeout(() => window.location.href = `/devices?event=${eventId}&eventName=${eventName}`, 3000);
+                        return;
+                    }
+                }
+                
+                currentEvent = { id: eventId, name: eventName };
+                currentDevice = deviceId;
+                sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                console.log('🔗 Parâmetros finais:');
+                console.log('  Event:', eventId);
+                console.log('  Device:', deviceId);
+                console.log('  Session:', sessionId);
+                
+                // Atualizar contexto de evento
+                if (window.navigationService) {
+                    window.navigationService.setEventContext(eventId, eventName);
+                }
+                
+                if (eventId) {
+                    loadEventInfo(eventId, eventName);
+                }
+                
+                // Register device
+                if (eventId && deviceId) {
+                    await registerDevice(eventId, deviceId);
+                }
+            }
+            
+            // Get current location
+            await getCurrentLocation();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Request PIN sempre (se tem device)
+            console.log('🔐 Verificando se deve pedir PIN...');
+            console.log('  currentDevice:', currentDevice);
+            
+            if (currentDevice) {
+                console.log('✅ Device especificado, pedindo PIN...');
+                await requestDevicePin();
+            } else {
+                console.error('❌ Device não especificado');
+                showError('Dispositivo não especificado');
+                setTimeout(() => window.location.href = '/events', 3000);
+            }
+            
+            console.log('✅ Inicialização completa');
+        });
+        
+        function setupEventListeners() {
+            // PIN validation
+            document.getElementById('validatePin')?.addEventListener('click', validatePin);
+            document.getElementById('pinInput')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    validatePin();
+                }
+            });
+            
+            // Camera permission
+            document.getElementById('requestCamera').addEventListener('click', startCamera);
+            
+            // Detection controls - COM VERIFICAÇÕES DE SEGURANÇA E DELAY
+            setTimeout(() => {
+                const startDetectionBtn = document.getElementById('startDetection');
+                const stopDetectionBtn = document.getElementById('stopDetection');
+                const switchCameraBtn = document.getElementById('switchCamera');
+                const toggleFlashBtn = document.getElementById('toggleFlash');
+                const endSessionBtn2 = document.getElementById('endSessionBtn2');
+                
+                console.log('🔍 Procurando botões...');
+                console.log('startDetectionBtn:', startDetectionBtn);
+                console.log('stopDetectionBtn:', stopDetectionBtn);
+                console.log('switchCameraBtn:', switchCameraBtn);
+                console.log('toggleFlashBtn:', toggleFlashBtn);
+                console.log('endSessionBtn2:', endSessionBtn2);
+                
+                if (startDetectionBtn) {
+                    startDetectionBtn.addEventListener('click', startDetection);
+                    console.log('✅ Event listener adicionado: startDetection');
+                } else {
+                    console.error('❌ Botão startDetection não encontrado');
+                }
+                
+                if (stopDetectionBtn) {
+                    stopDetectionBtn.addEventListener('click', stopDetection);
+                    console.log('✅ Event listener adicionado: stopDetection');
+                } else {
+                    console.error('❌ Botão stopDetection não encontrado');
+                }
+                
+                if (switchCameraBtn) {
+                    switchCameraBtn.addEventListener('click', switchCamera);
+                    console.log('✅ Event listener adicionado: switchCamera');
+                } else {
+                    console.error('❌ Botão switchCamera não encontrado');
+                }
+                
+                if (toggleFlashBtn) {
+                    toggleFlashBtn.addEventListener('click', toggleFlash);
+                    console.log('✅ Event listener adicionado: toggleFlash');
+                } else {
+                    console.error('❌ Botão toggleFlash não encontrado');
+                }
+                
+                if (endSessionBtn2) {
+                    // Remove onclick inline e adiciona event listener
+                    endSessionBtn2.removeAttribute('onclick');
+                    endSessionBtn2.addEventListener('click', endSession);
+                    console.log('✅ Event listener adicionado: endSessionBtn2');
+                } else {
+                    console.error('❌ Botão endSessionBtn2 não encontrado');
+                }
+            }, 100);
+            
+            // Fullscreen toggle
+            document.getElementById('toggleFullscreen').addEventListener('click', toggleFullscreen);
+            
+            // Back button (mobile)
+            const backButton = document.getElementById('backButton');
+            if (backButton) {
+                backButton.addEventListener('click', () => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const eventId = urlParams.get('event');
+                    const eventName = urlParams.get('eventName');
+                    
+                    if (eventId) {
+                        // Voltar para a página do evento (classifications)
+                        window.location.href = `/classifications?event=${eventId}${eventName ? '&eventName=' + encodeURIComponent(eventName) : ''}`;
+                    } else {
+                        // Voltar para eventos
+                        window.location.href = '/events';
+                    }
+                });
+            }
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+        }
+        
+        async function requestDevicePin() {
+            try {
+                console.log('🔐 requestDevicePin: Iniciando...');
+                console.log('  Event ID:', currentEvent.id);
+                console.log('  Device ID:', currentDevice);
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('❌ Supabase não disponível');
+                    showError('Supabase não conectado');
+                    return;
+                }
+                
+                console.log('📊 Buscando dados do dispositivo no Supabase...');
+                
+                // Carregar dados do dispositivo (PIN e limites de sessão)
+                const { data: deviceData, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('device_pin, checkpoint_name, max_sessions, active_sessions')
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', currentDevice)
+                    .single();
+                
+                console.log('📊 Resultado:');
+                console.log('  Data:', deviceData);
+                console.log('  Error:', error);
+                
+                if (error || !deviceData) {
+                    console.warn('⚠️ Device não encontrado, pulando PIN');
+                    console.warn('  Possível causa: device não está em event_devices');
+                    console.warn('  Execute: SELECT * FROM event_devices WHERE device_id = \'' + currentDevice + '\'');
+                    requestCameraPermission();
+                    return;
+                }
+                
+                console.log('✅ Device encontrado:', deviceData);
+                
+                // Verificar limite de sessões
+                const activeSessions = deviceData.active_sessions || 0;
+                const maxSessions = deviceData.max_sessions || 1;
+                
+                console.log(`📊 Sessões: ${activeSessions}/${maxSessions}`);
+                console.log(`📊 Verificando limite: ${activeSessions} >= ${maxSessions} ?`);
+                console.log(`📊 Resultado: ${activeSessions >= maxSessions}`);
+                
+                if (activeSessions >= maxSessions) {
+                    console.error('❌❌❌ LIMITE DE SESSÕES ATINGIDO! ❌❌❌');
+                    console.error(`  Ativas: ${activeSessions}`);
+                    console.error(`  Máximo: ${maxSessions}`);
+                    
+                    // Mostrar mensagem com opções
+                    const retry = confirm(`⚠️ Limite de Sessões Atingido!\n\nEste dispositivo permite apenas ${maxSessions} sessão(ões).\nAtualmente ${activeSessions} sessão(ões) ativa(s).\n\n🔄 Limpar sessões inativas?\n(Sessões sem heartbeat há mais de 5 minutos serão removidas)`);
+                    
+                    if (retry) {
+                        // Tentar limpar sessões inativas
+                        await cleanupInactiveSessions();
+                        // Tentar novamente
+                        await requestDevicePin();
+                    } else {
+                        setTimeout(() => window.history.back(), 1000);
+                    }
+                    return;
+                }
+                
+                devicePin = deviceData.device_pin;
+                
+                console.log('🔐 PIN requerido para este dispositivo');
+                console.log('  PIN existe:', !!devicePin);
+                console.log('  PIN valor:', devicePin ? '****' : 'Nenhum');
+                console.log('📍 Checkpoint:', deviceData.checkpoint_name || 'Não configurado');
+                
+                // Se não tem PIN configurado, ir direto para câmera
+                if (!devicePin) {
+                    console.log('⚠️ Dispositivo sem PIN, pulando validação');
+                    requestCameraPermission();
+                    return;
+                }
+                
+                // Mostrar tela de PIN
+                console.log('🔐 Mostrando tela de PIN...');
+                const pinPanel = document.getElementById('pinPanel');
+                if (pinPanel) {
+                    pinPanel.style.display = 'flex';
+                    console.log('✅ Tela de PIN exibida');
+                } else {
+                    console.error('❌ Elemento pinPanel não encontrado');
+                }
+                
+                // Focus no input
+                setTimeout(() => {
+                    const pinInput = document.getElementById('pinInput');
+                    if (pinInput) {
+                        pinInput.focus();
+                        console.log('✅ Focus no input PIN');
+                    } else {
+                        console.error('❌ Input PIN não encontrado');
+                    }
+                }, 300);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar PIN:', error);
+                // Se falhar, permitir acesso
+                requestCameraPermission();
+            }
+        }
+        
+        async function validatePin() {
+            const inputPin = document.getElementById('pinInput').value;
+            const errorDiv = document.getElementById('pinError');
+            
+            if (!inputPin) {
+                errorDiv.textContent = 'Digite o PIN';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (inputPin === devicePin) {
+                // PIN correto! Tentar iniciar sessão
+                console.log('✅ PIN validado com sucesso');
+                pinValidated = true;
+                
+                // Criar sessão no Supabase
+                const sessionCreated = await createDeviceSession();
+                
+                if (!sessionCreated) {
+                    errorDiv.textContent = '❌ Limite de sessões atingido. Aguarde.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Esconder tela de PIN
+                document.getElementById('pinPanel').style.display = 'none';
+                
+                // Mostrar botão terminar sessão (mobile e desktop)
+                const endBtn = document.getElementById('endSessionBtn');
+                const endBtn2 = document.getElementById('endSessionBtn2');
+                if (endBtn) endBtn.style.display = 'block';
+                if (endBtn2) endBtn2.style.display = 'inline-flex';
+                
+                // Mostrar tela de permissão de câmera
+                requestCameraPermission();
+                
+                // Iniciar heartbeat
+                startSessionHeartbeat();
+                
+            } else {
+                // PIN errado
+                console.error('❌ PIN incorreto');
+                errorDiv.textContent = '❌ PIN incorreto. Tente novamente.';
+                errorDiv.style.display = 'block';
+                
+                // Limpar input
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+                
+                // Shake animation
+                const panel = document.querySelector('#pinPanel .permission-content');
+                panel.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    panel.style.animation = '';
+                }, 500);
+            }
+        }
+        
+        async function cleanupInactiveSessions() {
+            try {
+                console.log('🧹 Limpando sessões inativas...');
+                
+                const { data, error } = await window.supabaseClient.supabase
+                    .rpc('cleanup_inactive_sessions');
+                
+                if (error) {
+                    console.error('❌ Erro ao limpar:', error);
+                    showError('Erro ao limpar sessões');
+                    return false;
+                }
+                
+                console.log(`✅ ${data || 0} sessões inativas removidas`);
+                alert(`✅ ${data || 0} sessões inativas foram removidas. Tente novamente.`);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                showError('Função cleanup não disponível. Execute add-device-sessions.sql');
+                return false;
+            }
+        }
+        
+        async function createDeviceSession() {
+            try {
+                console.log('📝 Criando sessão...');
+                
+                const { data, error } = await window.supabaseClient.supabase
+                    .rpc('start_device_session', {
+                        p_event_id: currentEvent.id,
+                        p_device_id: currentDevice,
+                        p_session_id: sessionId,
+                        p_user_agent: navigator.userAgent
+                    });
+                
+                console.log('📊 Resultado criar sessão:');
+                console.log('  Data:', data);
+                console.log('  Error:', error);
+                
+                if (error) {
+                    console.error('❌ Erro ao criar sessão:', error);
+                    console.error('  Possível causa: Função start_device_session não existe');
+                    console.error('  Execute: add-device-sessions.sql no Supabase');
+                    
+                    // Permitir acesso mesmo sem sessões (fallback)
+                    console.warn('⚠️ Continuando sem controle de sessões...');
+                    return true;
+                }
+                
+                if (!data?.success) {
+                    console.error('❌ Sessão não criada:', data);
+                    if (data?.error === 'Max sessions exceeded') {
+                        showError(`Limite de ${data.max_allowed} sessões atingido!`);
+                    }
+                    return false;
+                }
+                
+                console.log('✅ Sessão criada com sucesso!');
+                console.log(`  Sessão ID: ${data.session_id}`);
+                console.log(`  Ativas agora: ${data.current_active}/${data.max_allowed}`);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Erro geral:', error);
+                // Permitir acesso em caso de erro (para não bloquear)
+                return true;
+            }
+        }
+        
+        function startSessionHeartbeat() {
+            // Enviar heartbeat a cada 30 segundos
+            setInterval(async () => {
+                try {
+                    await window.supabaseClient.supabase
+                        .rpc('update_session_heartbeat', {
+                            p_session_id: sessionId
+                        });
+                    console.log('💓 Heartbeat enviado');
+                } catch (error) {
+                    console.error('❌ Erro no heartbeat:', error);
+                }
+            }, 30000);
+        }
+        
+        async function endSession() {
+            if (!confirm('Tem certeza que deseja terminar a sessão? Isto irá libertar o dispositivo para outro operador.')) {
+                return;
+            }
+            
+            try {
+                console.log('🚪 Encerrando sessão...');
+                console.log('  Session ID:', sessionId);
+                console.log('  Device ID:', currentDevice);
+                console.log('  Event ID:', currentEvent.id);
+                
+                // Parar detecção se estiver ativa
+                if (isDetecting) {
+                    stopDetection();
+                    console.log('✅ Detecção parada');
+                }
+                
+                // Parar câmera
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    console.log('✅ Câmera desligada');
+                }
+                
+                // DECREMENTAR active_sessions MANUALMENTE (fallback se função não existir)
+                console.log('📉 Decrementando active_sessions...');
+                const { error: decrementError } = await window.supabaseClient.supabase
+                    .rpc('decrement', {
+                        table_name: 'event_devices',
+                        column_name: 'active_sessions',
+                        row_id: null
+                    });
+                
+                // Alternativa: UPDATE direto
+                const { data: currentData } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('active_sessions')
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', currentDevice)
+                    .single();
+                
+                const newCount = Math.max(0, (currentData?.active_sessions || 1) - 1);
+                
+                console.log(`📉 Atualizando: ${currentData?.active_sessions} → ${newCount}`);
+                
+                const { error: updateError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .update({ active_sessions: newCount })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', currentDevice);
+                
+                if (updateError) {
+                    console.error('❌ Erro ao decrementar:', updateError);
+                } else {
+                    console.log('✅ Contador decrementado');
+                }
+                
+                // Encerrar sessão no Supabase (se função existir)
+                if (sessionId && pinValidated) {
+                    try {
+                        console.log('🔄 Chamando end_device_session com sessionId:', sessionId);
+                        const { data, error } = await window.supabaseClient.supabase
+                            .rpc('end_device_session', {
+                                p_session_id: sessionId
+                            });
+                        
+                        if (error) {
+                            console.error('❌ Erro ao encerrar sessão via RPC:', error);
+                        } else {
+                            console.log('✅ Sessão encerrada via RPC:', data);
+                        }
+                    } catch (rpcError) {
+                        console.error('❌ Erro ao chamar RPC end_device_session:', rpcError);
+                    }
+                } else {
+                    console.warn('⚠️ sessionId ou pinValidated não disponível:', { sessionId, pinValidated });
+                }
+                
+                // Limpar sessões inativas
+                try {
+                    console.log('🧹 Limpando sessões inativas...');
+                    const { data: cleanupData, error: cleanupError } = await window.supabaseClient.supabase
+                        .rpc('cleanup_inactive_sessions');
+                    
+                    if (cleanupError) {
+                        console.error('❌ Erro ao limpar sessões inativas:', cleanupError);
+                    } else {
+                        console.log('✅ Sessões inativas limpas:', cleanupData);
+                    }
+                } catch (cleanupRpcError) {
+                    console.error('❌ Erro ao chamar cleanup_inactive_sessions:', cleanupRpcError);
+                }
+                
+                // Mostrar mensagem
+                alert('✅ Sessão encerrada com sucesso! O dispositivo foi libertado.');
+                
+                // Redirecionar para a home page
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('❌ Erro ao encerrar sessão:', error);
+                showError('Erro ao encerrar sessão');
+            }
+        }
+        
+        // Encerrar sessão ao sair (automático)
+        window.addEventListener('beforeunload', async () => {
+            if (sessionId && pinValidated) {
+                try {
+                    // Usar sendBeacon para garantir que envia antes de sair
+                    const url = window.supabaseClient.supabase.rest.url + '/rpc/end_device_session';
+                    const payload = JSON.stringify({ p_session_id: sessionId });
+                    
+                    navigator.sendBeacon(url, payload);
+                    console.log('👋 Sessão encerrada (beforeunload)');
+                } catch (error) {
+                    console.error('❌ Erro ao encerrar:', error);
+                }
+            }
+        });
+        
+        function requestCameraPermission() {
+            // Show permission panel
+            document.getElementById('permissionPanel').style.display = 'flex';
+        }
+        
+        async function startCamera() {
+            try {
+                // Hide permission panel
+                document.getElementById('permissionPanel').style.display = 'none';
+                
+                // Request camera access
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment', // Back camera
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                
+                // Set video source
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = cameraStream;
+                
+                console.log('✅ Câmera iniciada');
+                
+                // Show detection area
+                setupDetectionArea();
+                
+            } catch (error) {
+                console.error('❌ Erro ao acessar câmera:', error);
+                showError('Não foi possível acessar a câmera. Verifique as permissões.');
+            }
+        }
+        
+        function setupDetectionArea() {
+            const overlay = document.getElementById('cameraOverlay');
+            const detectionArea = document.createElement('div');
+            detectionArea.className = 'detection-area';
+            detectionArea.id = 'detectionArea';
+            
+            // Position detection area (center 60% of screen)
+            const rect = {
+                left: '20%',
+                top: '20%',
+                width: '60%',
+                height: '60%'
+            };
+            
+            Object.assign(detectionArea.style, rect);
+            overlay.appendChild(detectionArea);
+        }
+        
+        function startDetection() {
+            console.log('🎯 startDetection() chamada');
+            
+            if (!cameraStream) {
+                console.error('❌ Câmera não iniciada');
+                showError('Câmera não iniciada');
+                return;
+            }
+            
+            isDetecting = true;
+            detectionCount = 0;
+            
+            // Update UI
+            document.getElementById('startDetection').style.display = 'none';
+            document.getElementById('stopDetection').style.display = 'inline-flex';
+            
+            // Start continuous capture to buffer (every 2 seconds)
+            captureInterval = setInterval(() => {
+                captureToBuffer();
+            }, 2000);
+            
+            console.log('🎯 Detecção iniciada - Capturando para buffer a cada 2s');
+            console.log('📋 As imagens serão processadas automaticamente pelo servidor');
+        }
+        
+        function stopDetection() {
+            console.log('⏹️ stopDetection() chamada');
+            
+            isDetecting = false;
+            
+            // Stop capture interval
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
+            // Update UI
+            document.getElementById('startDetection').style.display = 'inline-flex';
+            document.getElementById('stopDetection').style.display = 'none';
+            
+            console.log('⏹️ Detecção parada');
+        }
+        
+        async function captureToBuffer() {
+            if (!isDetecting || !cameraStream) return;
+            
+            try {
+                const video = document.getElementById('cameraVideo');
+                if (!video.videoWidth || !video.videoHeight) return;
+                
+                // Capture image from video
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert to base64 (optimized for AI)
+                const aiVersion = canvas.toDataURL('image/jpeg', 0.7); // 70% quality for AI
+                const displayVersion = canvas.toDataURL('image/jpeg', 0.9); // 90% quality for display
+                
+                const now = new Date();
+                
+                // Create buffer entry
+                const bufferEntry = {
+                    event_id: currentEvent.id,
+                    device_id: currentDevice,
+                    session_id: sessionId,
+                    image_data: aiVersion,
+                    display_image: displayVersion,
+                    image_metadata: {
+                        width: canvas.width,
+                        height: canvas.height,
+                        device_type: 'mobile',
+                        timestamp: now.toISOString()
+                    },
+                    captured_at: now.toISOString(),
+                    latitude: currentPosition?.latitude || null,
+                    longitude: currentPosition?.longitude || null,
+                    accuracy: currentPosition?.accuracy || null,
+                    status: 'pending'
+                };
+                
+                // Send to Supabase buffer
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('❌ Supabase não disponível');
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .insert([bufferEntry])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ Erro ao salvar no buffer:', error);
+                } else {
+                    detectionCount++;
+                    document.getElementById('detectionCount').textContent = detectionCount;
+                    
+                    // Flash detection area green
+                    const overlay = document.getElementById('cameraOverlay');
+                    overlay.style.border = '4px solid #10b981';
+                    setTimeout(() => {
+                        overlay.style.border = 'none';
+                    }, 200);
+                    
+                    console.log(`📸 Imagem ${detectionCount} salva no buffer:`, data.id);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro na captura:', error);
+            }
+        }
+        
+        async function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                console.log('⚠️ Geolocalização não disponível');
+                return;
+            }
+            
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                });
+                
+                currentPosition = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                
+                console.log('📍 Localização obtida:', currentPosition);
+            } catch (error) {
+                console.log('⚠️ Erro ao obter localização:', error.message);
+            }
+        }
+        
+        async function registerDevice(eventId, deviceId) {
+            if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                console.log('⚠️ Supabase não disponível');
+                return;
+            }
+            
+            try {
+                // Atualizar last_seen do dispositivo
+                const { error } = await window.supabaseClient.supabase
+                    .from('devices')
+                    .update({ 
+                        last_seen: new Date().toISOString(),
+                        user_agent: navigator.userAgent
+                    })
+                    .eq('id', deviceId);
+                
+                if (error) {
+                    console.warn('⚠️ Aviso ao atualizar dispositivo:', error.message);
+                } else {
+                    console.log('✅ Dispositivo registrado no evento');
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao registrar dispositivo:', error.message);
+            }
+        }
+        
+        function switchCamera() {
+            // Implementation for camera switching
+            console.log('🔄 Trocando câmera...');
+        }
+        
+        let flashEnabled = false;
+        async function toggleFlash() {
+            console.log('⚡ toggleFlash() chamada');
+            
+            try {
+                if (!cameraStream) {
+                    console.error('❌ Câmera não iniciada');
+                    showError('Câmera não iniciada');
+                    return;
+                }
+                
+                const track = cameraStream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities();
+                
+                if (!capabilities.torch) {
+                    showError('Flash não disponível neste dispositivo');
+                    return;
+                }
+                
+                flashEnabled = !flashEnabled;
+                await track.applyConstraints({
+                    advanced: [{ torch: flashEnabled }]
+                });
+                
+                const flashBtn = document.getElementById('toggleFlash');
+                if (flashEnabled) {
+                    flashBtn.innerHTML = '<i>💡</i> Flash ON';
+                    flashBtn.classList.remove('btn-warning');
+                    flashBtn.classList.add('btn-success');
+                    console.log('⚡ Flash ativado');
+                } else {
+                    flashBtn.innerHTML = '<i>⚡</i> Flash';
+                    flashBtn.classList.remove('btn-success');
+                    flashBtn.classList.add('btn-warning');
+                    console.log('⚡ Flash desativado');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao alternar flash:', error);
+                showError('Erro ao controlar o flash');
+            }
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        function loadEventInfo(eventId, eventName) {
+            // Update UI
+            const name = eventName || 'Evento Selecionado';
+            document.getElementById('eventName').textContent = name;
+            
+            const eventInfoPanel = document.getElementById('eventInfoPanel');
+            const currentEventInfo = document.getElementById('currentEventInfo');
+            
+            if (eventInfoPanel && eventId) {
+                eventInfoPanel.style.display = 'block';
+                currentEventInfo.innerHTML = `
+                    <strong>${name}</strong><br>
+                    Device: ${currentDevice?.substring(0, 12) || 'N/A'}...
+                `;
+            }
+        }
+        
+        function showError(message) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-error';
+            toast.innerHTML = `
+                <div class="toast-icon">❌</div>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 5000);
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+    
+    <!-- All styles moved to external CSS files -->
+</body>
+</html>

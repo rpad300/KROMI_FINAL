@@ -31,7 +31,7 @@ A função `cleanup_inactive_sessions` existe e está funcionando:
 
 ### ✅ **Script de Teste:**
 
-Execute `test-session-functions.sql` no Supabase SQL Editor para:
+Execute "`../sql/test-session-functions.sql" no Supabase SQL Editor para:
 
 1. **Verificar existência** - Confirma se ambas as funções existem
 2. **Estado antes** - Conta sessões antes da limpeza
@@ -89,4 +89,6 @@ Execute `test-session-functions.sql` no Supabase SQL Editor para:
 - ✅ **Logs detalhados** - Rastreamento completo do processo
 - ✅ **Scripts de teste** - Para verificar funcionamento
 
-**Execute `test-session-functions.sql` para testar as funções e `verify-session-cleanup.sql` para verificar o estado das sessões!** 🎉
+**Execute "`../sql/test-session-functions.sql" para testar as funções e "`../sql/verify-session-cleanup.sql" para verificar o estado das sessões!** 🎉
+
+

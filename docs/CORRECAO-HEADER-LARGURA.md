@@ -83,3 +83,5 @@ if (isHidden) {
 6. ✅ **Sem espaços em branco** quando sidebar está oculto
 
 **O header agora se adapta completamente à largura e os botões permanecem sempre visíveis!** 🎉
+
+

@@ -94,3 +94,5 @@ Se Supabase vazio → página vazia!
 
 **100% Real Data Only!** ✅
 
+
+

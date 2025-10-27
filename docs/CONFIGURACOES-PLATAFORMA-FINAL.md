@@ -70,7 +70,7 @@
 - ✅ **Validação**: Correção automática de URLs malformadas
 
 ### **Base de Dados:**
-- ✅ `create-platform-configuration-system.sql` - Schema completo do sistema
+- ✅ "`../sql/create-platform-configuration-system.sql" - Schema completo do sistema
 - ✅ **Tabelas**: `platform_configurations`, `event_processor_settings`, `global_processor_settings`
 - ✅ **Funções**: RPC para gerenciamento de configurações
 - ✅ **Índices**: Para consultas rápidas
@@ -178,3 +178,5 @@ O sistema está **100% funcional** e pronto para uso em produção com:
 - Salvar configuração
 
 **🎯 Sistema completamente funcional, estável e pronto para uso em produção!** 🚀
+
+

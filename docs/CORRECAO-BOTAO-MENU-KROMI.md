@@ -97,3 +97,5 @@ checkMobileMenu();
 ✅ events-kromi.html - CORRIGIDO
 ✅ config-kromi.html - CORRIGIDO
 ⏳ Outras páginas - PENDENTE
+
+

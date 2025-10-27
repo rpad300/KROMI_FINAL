@@ -41,15 +41,15 @@ Reorganização do projeto por tipo de artefacto. Atualização de referências 
 ```
 
 ### Exemplos de Referências Atualizadas
-- Ficheiros em `src/` que liam SQL: `./query.sql` → `../sql/query.sql`
-- Links em Markdown: `[Setup](setup.md)` → `[Setup](docs/setup.md)`
+- Ficheiros em `src/` que liam SQL: "`../sql/query.sql" → `../sql/query.sql`
+- Links em Markdown: `[Setup](docs/setup.md)` → `[Setup](docs/docs/setup.md)`
 - Imports relativos atualizados conforme nova estrutura
 
 ## Estatísticas
 
 ### Ficheiros Movidos
 - Documentação Markdown: ~207 ficheiros → `docs/`
-- Scripts SQL: ~122 ficheiros → `sql/`
+- Scripts SQL: ~122 ficheiros → `../sql/`
 - Código fonte (HTML/JS/CSS): movidos para `src/`
 - Ficheiros de configuração: movidos para `config/`
 - Ficheiros Docker: movidos para `infra/`

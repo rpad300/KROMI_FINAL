@@ -83,3 +83,5 @@ checkMobileMenu();
 ✅ detection-kromi.html - HTML CORRIGIDO
 ⏳ detection-kromi.html - CSS/JS PENDENTE
 ⏳ Outras páginas - PENDENTE
+
+

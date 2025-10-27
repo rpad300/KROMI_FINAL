@@ -1,0 +1,278 @@
+/**
+ * ==========================================
+ * KROMI LAYOUT - Desktop Layout Structure
+ * ==========================================
+ * 
+ * Desktop layout patterns and structure
+ * For mobile-first patterns, see kromi-mobile.css
+ * 
+ * Versão: 2.0
+ * ==========================================
+ */
+
+/* ==========================================
+   DESKTOP LAYOUT WITH SIDEBAR
+   ========================================== */
+
+/* Layout Container */
+.layout-with-sidebar {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg-primary);
+}
+
+/* Sidebar */
+.layout-with-sidebar .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    z-index: 1050;
+    overflow-y: auto;
+    transition: transform var(--transition-slow);
+    padding: var(--spacing-5);
+}
+
+/* Header */
+.layout-with-sidebar .header {
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    height: 60px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 1040;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-5);
+    transition: left var(--transition-slow);
+}
+
+/* Main Content */
+.layout-with-sidebar .main {
+    margin-left: 280px;
+    margin-top: 60px;
+    width: calc(100% - 280px);
+    min-height: calc(100vh - 60px);
+    transition: margin-left var(--transition-slow), width var(--transition-slow);
+}
+
+/* Bottom Navigation (Hidden on Desktop) */
+.app-bottom-nav {
+    display: none;
+}
+
+/* ==========================================
+   CAMERA LAYOUT (Desktop)
+   ========================================== */
+
+.camera-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: var(--bg-primary);
+    overflow: hidden;
+}
+
+.camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror effect */
+}
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.detection-area {
+    position: absolute;
+    border: 2px solid var(--primary);
+    background: rgba(252, 107, 3, 0.1);
+    border-radius: var(--radius-md);
+    pointer-events: none;
+}
+
+.detection-area.active {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+/* Camera Controls */
+.side-controls {
+    position: absolute;
+    left: var(--spacing-4);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    z-index: 20;
+}
+
+.main-camera-controls {
+    position: absolute;
+    bottom: var(--spacing-5);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--spacing-3);
+    z-index: 20;
+    justify-content: center;
+}
+
+/* Legacy camera-controls for compatibility */
+.camera-controls {
+    position: absolute;
+    bottom: var(--spacing-6);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--spacing-3);
+    z-index: 20;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 90%;
+}
+
+.camera-info {
+    position: absolute;
+    top: var(--spacing-6);
+    left: var(--spacing-6);
+    right: var(--spacing-6);
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.detection-stats {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+}
+
+.event-info {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+    text-align: right;
+}
+
+/* Permission Panel */
+.permission-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.permission-content {
+    background: var(--bg-secondary);
+    padding: var(--spacing-8);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    box-shadow: var(--shadow-2xl);
+    max-width: 400px;
+    width: 90%;
+    border: 1px solid var(--border-color);
+}
+
+.permission-content h3 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+}
+
+.permission-content p {
+    margin: 0 0 var(--spacing-6) 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+}
+
+.permission-actions {
+    display: flex;
+    gap: var(--spacing-3);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Back Button (Mobile Only - Hidden on Desktop) */
+.back-button-mobile {
+    display: none;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* ==========================================
+   RESPONSIVE: TABLET (769px - 1024px)
+   ========================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .layout-with-sidebar .main {
+        padding: var(--spacing-4);
+    }
+    
+    .camera-container {
+        border-radius: var(--radius-lg);
+        margin: var(--spacing-2);
+    }
+}
+
+/* ==========================================
+   RESPONSIVE: DESKTOP (1025px - 1440px)
+   ========================================== */
+
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .layout-with-sidebar .main {
+        padding: var(--spacing-5);
+    }
+}
+
+/* ==========================================
+   RESPONSIVE: LARGE DESKTOP (1441px+)
+   ========================================== */
+
+@media (min-width: 1441px) {
+    .layout-with-sidebar {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+}
+

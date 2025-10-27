@@ -1,0 +1,477 @@
+/**
+ * ==========================================
+ * KROMI CAMERA - Camera Module Styles
+ * ==========================================
+ * 
+ * Camera-specific styles for video, overlays,
+ * detection areas, and controls
+ * 
+ * Versão: 2.0
+ * ========================================== */
+
+/* ==========================================
+   CAMERA CONTAINER
+   ========================================== */
+
+.camera-container {
+    position: relative;
+    width: 100%;
+    height: 100dvh; /* Dynamic viewport height */
+    background: var(--bg-primary);
+    overflow: hidden;
+    overscroll-behavior: none; /* Prevent scroll */
+}
+
+/* ==========================================
+   CAMERA VIDEO
+   ========================================== */
+
+.camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror effect for UX */
+    background: var(--bg-primary);
+}
+
+/* Ensure video fills container */
+video.camera-video {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==========================================
+   CAMERA OVERLAY
+   ========================================== */
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* ==========================================
+   DETECTION AREA
+   ========================================== */
+
+.detection-area {
+    position: absolute;
+    border: 2px solid var(--primary);
+    background: rgba(252, 107, 3, 0.1);
+    border-radius: var(--radius-md);
+    pointer-events: none;
+    transition: all var(--transition-base);
+}
+
+.detection-area.active {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.15);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .detection-area {
+        transition: none;
+    }
+    
+    .detection-area.active {
+        animation: none;
+    }
+}
+
+/* ==========================================
+   CAMERA CONTROLS
+   ========================================== */
+
+/* Side Controls (Left Side) */
+.side-controls {
+    position: absolute;
+    left: var(--spacing-4);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    z-index: 20;
+    pointer-events: auto;
+}
+
+.side-controls .btn {
+    min-width: clamp(44px, 12vw, 60px);
+    height: clamp(44px, 12vw, 60px);
+    padding: var(--spacing-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(2px, 1vw, 4px);
+}
+
+/* Main Camera Controls (Bottom Center) */
+.main-camera-controls {
+    position: absolute;
+    bottom: var(--spacing-5);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--spacing-3);
+    z-index: 20;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.main-camera-controls .btn {
+    min-width: clamp(110px, 30vw, 160px);
+    height: clamp(48px, 12vw, 56px);
+    padding: clamp(10px, 2.5vw, 12px) clamp(16px, 4vw, 20px);
+    font-size: clamp(13px, 3.5vw, 16px);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+}
+
+/* Legacy camera-controls for compatibility */
+.camera-controls {
+    position: absolute;
+    bottom: var(--spacing-6);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--spacing-3);
+    z-index: 20;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 90%;
+    pointer-events: auto;
+}
+
+.camera-controls .btn {
+    flex: 0 1 auto;
+    min-width: clamp(100px, 25vw, 140px);
+    height: clamp(44px, 12vw, 52px);
+}
+
+/* ==========================================
+   CAMERA INFO
+   ========================================== */
+
+.camera-info {
+    position: absolute;
+    top: var(--spacing-6);
+    left: var(--spacing-6);
+    right: var(--spacing-6);
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    pointer-events: auto;
+}
+
+.detection-stats {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+}
+
+.detection-stats .stat-value {
+    font-size: clamp(24px, 6vw, 32px);
+    font-weight: 700;
+    line-height: 1;
+    margin-top: var(--spacing-1);
+}
+
+.detection-stats .stat-label {
+    font-size: clamp(10px, 3vw, 12px);
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-info {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+    text-align: right;
+    pointer-events: auto;
+}
+
+.event-info .event-name {
+    font-size: clamp(12px, 3.5vw, 16px);
+    font-weight: 600;
+    margin-bottom: var(--spacing-1);
+}
+
+.event-info .event-meta {
+    font-size: clamp(10px, 3vw, 12px);
+    opacity: 0.8;
+}
+
+/* ==========================================
+   PERMISSION PANEL
+   ========================================== */
+
+.permission-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: var(--spacing-4);
+}
+
+.permission-content {
+    background: var(--bg-secondary);
+    padding: clamp(var(--spacing-5), 6vw, var(--spacing-8));
+    border-radius: var(--radius-lg);
+    text-align: center;
+    box-shadow: var(--shadow-2xl);
+    max-width: clamp(320px, 90vw, 500px);
+    width: 100%;
+    border: 1px solid var(--border-color);
+}
+
+.permission-content h3 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--text-primary);
+    font-size: clamp(18px, 5vw, 24px);
+    font-weight: 600;
+}
+
+.permission-content p {
+    margin: 0 0 var(--spacing-6) 0;
+    color: var(--text-secondary);
+    font-size: clamp(14px, 4vw, 16px);
+    line-height: 1.6;
+}
+
+.permission-actions {
+    display: flex;
+    gap: var(--spacing-3);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.permission-actions .btn {
+    flex: 1;
+    min-width: clamp(120px, 40vw, 160px);
+}
+
+/* ==========================================
+   PIN INPUT
+   ========================================== */
+
+.pin-entry-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg-primary);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-5);
+}
+
+.pin-entry-panel .form-group {
+    width: 100%;
+    max-width: 300px;
+}
+
+#pinInput {
+    width: 100%;
+    padding: clamp(12px, 3vw, 16px);
+    font-size: clamp(20px, 5vw, 32px);
+    text-align: center;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: 0.5em;
+}
+
+#pinInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+}
+
+#pinError {
+    color: var(--danger);
+    margin-top: var(--spacing-2);
+    font-size: clamp(12px, 3.5vw, 14px);
+    text-align: center;
+    display: none;
+}
+
+#pinError.show {
+    display: block;
+}
+
+/* ==========================================
+   BACK BUTTON (Mobile Only)
+   ========================================== */
+
+.back-button-mobile {
+    display: none;
+    position: fixed;
+    top: var(--spacing-4);
+    left: var(--spacing-4);
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 2px solid var(--primary);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-full);
+    width: clamp(40px, 10vw, 48px);
+    height: clamp(40px, 10vw, 48px);
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(20px, 5vw, 24px);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all var(--transition-base);
+    touch-action: manipulation;
+}
+
+.back-button-mobile:hover {
+    background: rgba(252, 107, 3, 0.9);
+    transform: scale(1.1);
+}
+
+@media (max-width: 1024px) {
+    .back-button-mobile {
+        display: flex;
+    }
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.detection-area.active {
+    animation: pulse 2s infinite;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .detection-area.active {
+        animation: none;
+    }
+}
+
+/* ==========================================
+   TOUCH OPTIMIZATIONS
+   ========================================== */
+
+/* Ensure all camera controls are touch-friendly */
+.side-controls .btn,
+.main-camera-controls .btn,
+.camera-controls .btn,
+.back-button-mobile {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    cursor: pointer;
+}
+
+/* Hover states for touch devices */
+@media (hover: none) {
+    .side-controls .btn:active,
+    .main-camera-controls .btn:active,
+    .camera-controls .btn:active,
+    .back-button-mobile:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+}
+
+/* ==========================================
+   OVERSCROLL PREVENTION
+   ========================================== */
+
+.camera-container {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.camera-overlay {
+    overscroll-behavior: none;
+}
+
+/* ==========================================
+   FOCUS MANAGEMENT
+   ========================================== */
+
+.camera-info:focus-within,
+.camera-controls:focus-within,
+.side-controls:focus-within,
+.main-camera-controls:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-base);
+}
+
+/* ==========================================
+   HIGH CONTRAST MODE
+   ========================================== */
+
+@media (prefers-contrast: high) {
+    .detection-area {
+        border-width: 3px;
+    }
+    
+    .detection-stats,
+    .event-info,
+    .back-button-mobile {
+        border: 2px solid white;
+    }
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+
+@media print {
+    .camera-container {
+        display: none;
+    }
+}
+

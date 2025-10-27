@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Processando Login</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .callback-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            margin: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #fcc;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #cfc;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .manual-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+        
+        .manual-link:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-container">
+        <div class="spinner" id="spinner"></div>
+        <h1>VisionKrono</h1>
+        <p id="statusMessage">A processar login...</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <a href="login.html" class="manual-link" id="manualLink" style="display: none;">Voltar ao Login</a>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="auth-system.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Aguardar inicialização do sistema de autenticação
+                await waitForAuthSystem();
+                
+                // Processar callback do OAuth
+                await processOAuthCallback();
+                
+            } catch (error) {
+                console.error('Erro no callback:', error);
+                showError('Erro ao processar login. Tente novamente.');
+            }
+        });
+
+        async function waitForAuthSystem() {
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (!window.authSystem && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.authSystem) {
+                throw new Error('Sistema de autenticação não inicializado');
+            }
+        }
+
+        async function processOAuthCallback() {
+            try {
+                // Verificar se há código de autorização na URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const error = urlParams.get('error');
+                
+                if (error) {
+                    throw new Error(`Erro de autorização: ${error}`);
+                }
+                
+                if (!code) {
+                    throw new Error('Código de autorização não encontrado');
+                }
+                
+                // Trocar código por tokens
+                const { data, error: exchangeError } = await window.authSystem.supabase.auth.exchangeCodeForSession(code);
+                
+                if (exchangeError) {
+                    throw exchangeError;
+                }
+                
+                if (data.session) {
+                    // Login bem-sucedido
+                    showSuccess('Login realizado com sucesso!');
+                    
+                    // Aguardar um pouco antes de redirecionar
+                    setTimeout(() => {
+                        window.authSystem.redirectBasedOnProfile();
+                    }, 2000);
+                    
+                } else {
+                    throw new Error('Sessão não criada');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao processar OAuth callback:', error);
+                
+                let errorMessage = 'Erro ao processar login';
+                
+                if (error.message.includes('access_denied')) {
+                    errorMessage = 'Login cancelado pelo utilizador';
+                } else if (error.message.includes('invalid_request')) {
+                    errorMessage = 'Pedido inválido';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                showError(errorMessage);
+                showManualLink();
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('statusMessage').textContent = 'Erro no login';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+
+        function showSuccess(message) {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('statusMessage').textContent = 'Login realizado com sucesso!';
+            document.getElementById('successMessage').textContent = message;
+            document.getElementById('successMessage').style.display = 'block';
+        }
+
+        function showManualLink() {
+            document.getElementById('manualLink').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>
+
+

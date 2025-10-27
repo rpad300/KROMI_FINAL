@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Dashboard Administrador</title>
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="kromi-mobile-detection-fixes.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .card-content {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .recent-activity {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f0f8ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>VisionKrono - Dashboard Administrador</h1>
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div>
+                <div id="userName">Administrador</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;" id="userEmail">admin@visionkrono.com</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>A carregar dashboard...</p>
+        </div>
+
+        <div id="dashboardContent" style="display: none;">
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <h3 class="card-title">Estatísticas Gerais</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-number" id="totalUsers">-</div>
+                                <div class="stat-label">Utilizadores</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="totalEvents">-</div>
+                                <div class="stat-label">Eventos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="totalParticipants">-</div>
+                                <div class="stat-label">Participantes</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="activeSessions">-</div>
+                                <div class="stat-label">Sessões Ativas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">⚙️</div>
+                        <h3 class="card-title">Gestão do Sistema</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="quick-actions">
+                            <a href="events.html" class="action-btn">
+                                📅 Gerir Eventos
+                            </a>
+                            <a href="participants.html" class="action-btn">
+                                👥 Gerir Participantes
+                            </a>
+                            <a href="database-management.html" class="action-btn">
+                                🗄️ Base de Dados
+                            </a>
+                            <a href="configuracoes.html" class="action-btn">
+                                ⚙️ Configurações
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">👥</div>
+                        <h3 class="card-title">Gestão de Utilizadores</h3>
+                    </div>
+                    <div class="card-content">
+                        <p>Gerir utilizadores da plataforma e atribuir perfis.</p>
+                        <div class="quick-actions">
+                            <button class="action-btn" onclick="showUserManagement()">
+                                👤 Gerir Utilizadores
+                            </button>
+                            <button class="action-btn" onclick="showUserStats()">
+                                📈 Estatísticas de Utilizadores
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">🏆</div>
+                        <h3 class="card-title">Eventos e Classificações</h3>
+                    </div>
+                    <div class="card-content">
+                        <p>Aceder às funcionalidades principais da plataforma.</p>
+                        <div class="quick-actions">
+                            <a href="classifications.html" class="action-btn">
+                                🏆 Classificações
+                            </a>
+                            <a href="detection.html" class="action-btn">
+                                📷 Detecção
+                            </a>
+                            <a href="image-processor.html" class="action-btn">
+                                ⚙️ Processamento
+                            </a>
+                            <a href="live-stream.html" class="action-btn">
+                                📺 Live Stream
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <div class="card-header">
+                    <div class="card-icon">📝</div>
+                    <h3 class="card-title">Atividade Recente</h3>
+                </div>
+                <div id="recentActivity">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>A carregar atividade...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gestão de Utilizadores -->
+    <div id="userManagementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 15px; padding: 2rem; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="margin: 0;">Gestão de Utilizadores</h2>
+                <button onclick="closeUserManagement()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+            </div>
+            <div id="userManagementContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>A carregar utilizadores...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth-system.js"></script>
+    <script src="universal-route-protection.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadDashboard();
+        });
+
+        async function loadDashboard() {
+            try {
+                // Aguardar sistema de autenticação
+                await waitForAuthSystem();
+                
+                // Verificar se é administrador
+                if (!window.authSystem.isAdmin()) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Carregar informações do utilizador
+                loadUserInfo();
+                
+                // Carregar estatísticas
+                await loadStatistics();
+                
+                // Carregar atividade recente
+                await loadRecentActivity();
+                
+                // Mostrar dashboard
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                document.getElementById('loading').innerHTML = '<p>Erro ao carregar dashboard</p>';
+            }
+        }
+
+        async function waitForAuthSystem() {
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (!window.authSystem && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window.authSystem) {
+                throw new Error('Sistema de autenticação não inicializado');
+            }
+        }
+
+        function loadUserInfo() {
+            const userProfile = window.authSystem.userProfile;
+            if (userProfile) {
+                document.getElementById('userName').textContent = userProfile.full_name || 'Administrador';
+                document.getElementById('userEmail').textContent = userProfile.email;
+                
+                // Avatar com primeira letra do nome
+                const avatar = document.getElementById('userAvatar');
+                avatar.textContent = (userProfile.full_name || 'A').charAt(0).toUpperCase();
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const supabase = window.authSystem.supabase;
+                
+                // Carregar estatísticas em paralelo
+                const [usersResult, eventsResult, participantsResult, sessionsResult] = await Promise.all([
+                    supabase.from('user_profiles').select('id', { count: 'exact' }),
+                    supabase.from('events').select('id', { count: 'exact' }),
+                    supabase.from('event_participants').select('id', { count: 'exact' }),
+                    supabase.from('user_sessions').select('id', { count: 'exact' }).eq('is_active', true)
+                ]);
+
+                // Atualizar estatísticas
+                document.getElementById('totalUsers').textContent = usersResult.count || 0;
+                document.getElementById('totalEvents').textContent = eventsResult.count || 0;
+                document.getElementById('totalParticipants').textContent = participantsResult.count || 0;
+                document.getElementById('activeSessions').textContent = sessionsResult.count || 0;
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        async function loadRecentActivity() {
+            try {
+                const supabase = window.authSystem.supabase;
+                
+                const { data: activities, error } = await supabase
+                    .from('activity_logs')
+                    .select(`
+                        *,
+                        user_profiles!activity_logs_user_id_fkey(full_name, email)
+                    `)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                if (error) {
+                    throw error;
+                }
+
+                const activityContainer = document.getElementById('recentActivity');
+                
+                if (activities && activities.length > 0) {
+                    activityContainer.innerHTML = activities.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-icon">${getActivityIcon(activity.action)}</div>
+                            <div class="activity-content">
+                                <div class="activity-title">${getActivityTitle(activity)}</div>
+                                <div class="activity-time">${formatTime(activity.created_at)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    activityContainer.innerHTML = '<p style="text-align: center; color: #666;">Nenhuma atividade recente</p>';
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar atividade recente:', error);
+                document.getElementById('recentActivity').innerHTML = '<p style="text-align: center; color: #e74c3c;">Erro ao carregar atividade</p>';
+            }
+        }
+
+        function getActivityIcon(action) {
+            const icons = {
+                'LOGIN': '🔐',
+                'LOGOUT': '🚪',
+                'PAGE_ACCESS': '👁️',
+                'USER_PROFILE_UPDATED': '👤',
+                'PASSWORD_UPDATED': '🔑',
+                'PASSWORD_RESET_REQUEST': '📧'
+            };
+            return icons[action] || '📝';
+        }
+
+        function getActivityTitle(activity) {
+            const user = activity.user_profiles?.full_name || 'Utilizador';
+            const actions = {
+                'LOGIN': `${user} fez login`,
+                'LOGOUT': `${user} fez logout`,
+                'PAGE_ACCESS': `${user} acedeu a uma página`,
+                'USER_PROFILE_UPDATED': `Perfil de ${user} foi atualizado`,
+                'PASSWORD_UPDATED': `${user} atualizou a palavra-passe`,
+                'PASSWORD_RESET_REQUEST': `${user} solicitou reset de palavra-passe`
+            };
+            return actions[activity.action] || `${user} realizou uma ação`;
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) { // Menos de 1 minuto
+                return 'Agora mesmo';
+            } else if (diff < 3600000) { // Menos de 1 hora
+                const minutes = Math.floor(diff / 60000);
+                return `Há ${minutes} minuto${minutes > 1 ? 's' : ''}`;
+            } else if (diff < 86400000) { // Menos de 1 dia
+                const hours = Math.floor(diff / 3600000);
+                return `Há ${hours} hora${hours > 1 ? 's' : ''}`;
+            } else {
+                return date.toLocaleDateString('pt-PT');
+            }
+        }
+
+        async function showUserManagement() {
+            document.getElementById('userManagementModal').style.display = 'block';
+            await loadUserManagement();
+        }
+
+        async function loadUserManagement() {
+            try {
+                const supabase = window.authSystem.supabase;
+                
+                const { data: users, error } = await supabase
+                    .from('user_profiles')
+                    .select(`
+                        *,
+                        auth_users!user_profiles_user_id_fkey(email, created_at, last_sign_in_at)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                const content = document.getElementById('userManagementContent');
+                
+                if (users && users.length > 0) {
+                    content.innerHTML = `
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Nome</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Email</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Perfil</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Estado</th>
+                                        <th style="padding: 1rem; text-align: left; border-bottom: 1px solid #ddd;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${users.map(user => `
+                                        <tr>
+                                            <td style="padding: 1rem; border-bottom: 1px solid #eee;">${user.full_name || '-'}</td>
+                                            <td style="padding: 1rem; border-bottom: 1px solid #eee;">${user.email}</td>
+                                            <td style="padding: 1rem; border-bottom: 1px solid #eee;">
+                                                <span style="
+                                                    padding: 4px 8px; 
+                                                    border-radius: 4px; 
+                                                    font-size: 0.8rem;
+                                                    background: ${getProfileColor(user.profile_type)};
+                                                    color: white;
+                                                ">
+                                                    ${getProfileName(user.profile_type)}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 1rem; border-bottom: 1px solid #eee;">
+                                                <span style="
+                                                    padding: 4px 8px; 
+                                                    border-radius: 4px; 
+                                                    font-size: 0.8rem;
+                                                    background: ${user.is_active ? '#28a745' : '#dc3545'};
+                                                    color: white;
+                                                ">
+                                                    ${user.is_active ? 'Ativo' : 'Inativo'}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 1rem; border-bottom: 1px solid #eee;">
+                                                <button onclick="editUser('${user.user_id}')" style="
+                                                    background: #007bff; 
+                                                    color: white; 
+                                                    border: none; 
+                                                    padding: 6px 12px; 
+                                                    border-radius: 4px; 
+                                                    cursor: pointer;
+                                                    margin-right: 5px;
+                                                ">Editar</button>
+                                                <button onclick="toggleUserStatus('${user.user_id}', ${user.is_active})" style="
+                                                    background: ${user.is_active ? '#dc3545' : '#28a745'}; 
+                                                    color: white; 
+                                                    border: none; 
+                                                    padding: 6px 12px; 
+                                                    border-radius: 4px; 
+                                                    cursor: pointer;
+                                                ">${user.is_active ? 'Desativar' : 'Ativar'}</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = '<p style="text-align: center; color: #666;">Nenhum utilizador encontrado</p>';
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar utilizadores:', error);
+                document.getElementById('userManagementContent').innerHTML = '<p style="text-align: center; color: #e74c3c;">Erro ao carregar utilizadores</p>';
+            }
+        }
+
+        function getProfileName(profileType) {
+            const names = {
+                'admin': 'Administrador',
+                'event_manager': 'Gestor de Eventos',
+                'participant': 'Participante'
+            };
+            return names[profileType] || profileType;
+        }
+
+        function getProfileColor(profileType) {
+            const colors = {
+                'admin': '#dc3545',
+                'event_manager': '#ffc107',
+                'participant': '#28a745'
+            };
+            return colors[profileType] || '#6c757d';
+        }
+
+        function closeUserManagement() {
+            document.getElementById('userManagementModal').style.display = 'none';
+        }
+
+        async function editUser(userId) {
+            // Implementar edição de utilizador
+            alert('Funcionalidade de edição será implementada em breve');
+        }
+
+        async function toggleUserStatus(userId, currentStatus) {
+            try {
+                const supabase = window.authSystem.supabase;
+                
+                const { error } = await supabase
+                    .from('user_profiles')
+                    .update({ is_active: !currentStatus })
+                    .eq('user_id', userId);
+
+                if (error) {
+                    throw error;
+                }
+
+                // Recarregar lista de utilizadores
+                await loadUserManagement();
+                
+                // Log da atividade
+                await window.authSystem.logActivity('USER_PROFILE_UPDATED', 'user_profile', userId, {
+                    action: currentStatus ? 'deactivated' : 'activated'
+                });
+                
+            } catch (error) {
+                console.error('Erro ao alterar estado do utilizador:', error);
+                alert('Erro ao alterar estado do utilizador');
+            }
+        }
+
+        function showUserStats() {
+            alert('Estatísticas detalhadas de utilizadores serão implementadas em breve');
+        }
+
+        async function logout() {
+            try {
+                await window.authSystem.signOut();
+            } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+            }
+        }
+    </script>
+</body>
+</html>

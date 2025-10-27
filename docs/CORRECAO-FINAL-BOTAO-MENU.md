@@ -128,3 +128,5 @@ header.style.maxWidth = '100vw';
 7. ✅ **Logs de debug** para acompanhar funcionamento
 
 **O botão de menu agora funciona perfeitamente - quando o sidebar está oculto, a página ocupa TODO o espaço disponível!** 🎉
+
+

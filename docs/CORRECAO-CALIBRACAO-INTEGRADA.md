@@ -125,3 +125,5 @@ function hideExistingCalibrationSection() {
 - ✅ **Design consistente** - Segue o padrão KROMI
 
 **A calibração existente agora é exibida como uma seção integrada na página, mantendo a navegação e proporcionando uma experiência mais fluida!** 🎉
+
+

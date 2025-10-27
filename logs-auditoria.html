@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs de Auditoria - VisionKrono</title>
+    
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">📋 Logs de Auditoria</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-sm btn-primary" onclick="refreshLogs()">
+                <span>🔄</span>
+                Atualizar
+            </button>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+                <div class="filters">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tipo de Ação</label>
+                            <select id="filterAction">
+                                <option value="">Todas</option>
+                                <option value="LOGIN_SUCCESS">Login Sucesso</option>
+                                <option value="LOGIN_FAILED">Login Falhou</option>
+                                <option value="LOGOUT">Logout</option>
+                                <option value="USER_CREATED">Utilizador Criado</option>
+                                <option value="USER_UPDATED">Utilizador Atualizado</option>
+                                <option value="USER_DELETED">Utilizador Eliminado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Limite</label>
+                            <select id="filterLimit">
+                                <option value="50">50 registos</option>
+                                <option value="100" selected>100 registos</option>
+                                <option value="200">200 registos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Ação</th>
+                                <th>Utilizador</th>
+                                <th>Detalhes</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 40px;">
+                                    Carregando logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    <script defer>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Inicializar Supabase primeiro
+                if (!window.supabaseClient?.init) {
+                    throw new Error('SupabaseClient não encontrado');
+                }
+                await window.supabaseClient.init();
+                await window.supabaseClient.ready();
+                console.log('✅ Supabase inicializado para logs');
+                
+                // Verificar autenticação
+                const autenticado = await verificarAutenticacao(['admin']);
+                if (!autenticado) return;
+                
+                // Aguardar navegação estar pronta
+                await waitForNavigation();
+                console.log('✅ Navegação pronta');
+                
+                // Carregar logs
+                loadAuditLogs();
+                
+                // Event listeners
+                document.getElementById('filterAction').addEventListener('change', loadAuditLogs);
+                document.getElementById('filterLimit').addEventListener('change', loadAuditLogs);
+            } catch (error) {
+                console.error('Erro na inicialização:', error);
+            }
+        });
+        
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        
+        async function loadAuditLogs() {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando...</td></tr>';
+            
+            try {
+                const action = document.getElementById('filterAction')?.value || '';
+                const limit = parseInt(document.getElementById('filterLimit')?.value || '100');
+                
+                // Carregar do Supabase
+                if (!window.supabaseClient?.supabase) {
+                    throw new Error('Supabase não inicializado');
+                }
+                
+                let query = window.supabaseClient.supabase
+                    .from('audit_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(limit);
+                
+                if (action) {
+                    query = query.eq('action', action);
+                }
+                
+                const { data: logs, error } = await query;
+                
+                if (error) throw error;
+                
+                if (!logs || logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum log encontrado</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = logs.map(log => {
+                    const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+                    return `
+                        <tr>
+                            <td>${new Date(log.created_at).toLocaleString('pt-PT')}</td>
+                            <td>${getActionBadge(log.action)}</td>
+                            <td>${details.email || log.user_id || 'Sistema'}</td>
+                            <td><small>${JSON.stringify(details).substring(0, 50)}...</small></td>
+                            <td>${log.ip_address}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Erro ao carregar logs:', error);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">Erro ao carregar logs: ${error.message}</td></tr>`;
+            }
+        }
+        
+        function getActionBadge(action) {
+            const badges = {
+                'LOGIN_SUCCESS': '<span class="status-badge active">✅ Login</span>',
+                'LOGIN_FAILED': '<span class="status-badge suspended">❌ Login Falhou</span>',
+                'LOGOUT': '<span class="status-badge inactive">👋 Logout</span>',
+                'USER_CREATED': '<span class="status-badge active">➕ Criado</span>',
+                'USER_UPDATED': '<span class="status-badge active">✏️ Atualizado</span>',
+                'USER_DELETED': '<span class="status-badge suspended">🗑️ Eliminado</span>'
+            };
+            return badges[action] || `<span>${action}</span>`;
+        }
+        
+        function refreshLogs() {
+            loadAuditLogs();
+        }
+        
+        function logout() {
+            if (window.authSystem) {
+                window.authSystem.signOut();
+            }
+        }
+    </script>
+</body>
+</html>
+

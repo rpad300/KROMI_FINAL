@@ -2,7 +2,7 @@
 
 ## 🎯 **PROBLEMA IDENTIFICADO:**
 
-Erro no script `verify-session-cleanup.sql`:
+Erro no script "`../sql/verify-session-cleanup.sql":
 ```
 ERROR: 42703: column ed.device_name does not exist
 LINE 34:     ed.device_name,
@@ -73,7 +73,7 @@ ORDER BY d.device_name;
 
 ### ✅ **Script de Verificação Completo:**
 
-O script `verify-session-cleanup.sql` agora funciona corretamente e mostra:
+O script "`../sql/verify-session-cleanup.sql" agora funciona corretamente e mostra:
 
 1. **Todas as sessões** - Estado atual de todas as sessões
 2. **Sessões ativas** - Apenas as sessões ativas
@@ -96,4 +96,6 @@ O script `verify-session-cleanup.sql` agora funciona corretamente e mostra:
 - ✅ **Relacionamentos** - JOINs corretos entre tabelas
 - ✅ **Verificação completa** - Mostra estado real das sessões
 
-**Execute o script `verify-session-cleanup.sql` no Supabase SQL Editor para verificar o estado das sessões!** 🎉
+**Execute o script "`../sql/verify-session-cleanup.sql" no Supabase SQL Editor para verificar o estado das sessões!** 🎉
+
+

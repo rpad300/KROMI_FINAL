@@ -149,7 +149,7 @@ Este guia permite validar todas as funcionalidades implementadas usando apenas d
 
 ### **Se algum teste falhar:**
 
-1. **Verifique:** Se executou `add-multimodal-system-final.sql`
+1. **Verifique:** Se executou "`../sql/add-multimodal-system-final.sql"
 2. **Confirme:** Se Supabase está conectado
 3. **Verifique:** Se tem permissões adequadas
 4. **Execute:** Scripts de validação novamente
@@ -175,3 +175,5 @@ Quando todos os testes passarem:
 ✅ **Interface Dinâmica:** Funcionando  
 
 **🎯 Sistema pronto para uso em produção!**
+
+

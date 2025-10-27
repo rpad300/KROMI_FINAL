@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Detecção</title>
+    
+    <!-- CSS específico da página -->
+    <link rel="stylesheet" href="[CSS_DA_PÁGINA]">
+    
+    <!-- CSS para páginas de detecção (sem autenticação) -->
+    <style>
+        .detection-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9999;
+        }
+
+        .detection-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .detection-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .detection-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .device-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .device-status.online {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+
+        .device-status.offline {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+        }
+
+        /* Ocultar conteúdo até inicialização */
+        body:not(.detection-ready) .main-content {
+            display: none !important;
+        }
+
+        body.detection-ready .detection-loading {
+            display: none !important;
+        }
+
+        body.detection-ready .detection-header {
+            display: flex !important;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .detection-header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading de inicialização -->
+    <div class="detection-loading" id="detectionLoading">
+        <div class="detection-spinner"></div>
+        <p>A inicializar detecção...</p>
+    </div>
+
+    <!-- Header de detecção -->
+    <div class="detection-header" id="detectionHeader">
+        <h1>📷 VisionKrono - Detecção</h1>
+        <div class="device-info">
+            <div class="device-status" id="deviceStatus">Verificando...</div>
+            <div id="eventInfo">Evento: [Nome do Evento]</div>
+            <div id="deviceInfo">Dispositivo: [ID do Dispositivo]</div>
+        </div>
+    </div>
+
+    <!-- Conteúdo principal da página -->
+    <div class="main-content">
+        <!-- AQUI VAI O CONTEÚDO ESPECÍFICO DA PÁGINA DE DETECÇÃO -->
+        <div class="page-content">
+            <h2>Sistema de Detecção</h2>
+            <p>Esta página é acessada por dispositivos de detecção e não requer autenticação.</p>
+            <div id="detectionParams">
+                <p>Parâmetros da URL:</p>
+                <ul id="paramList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Detecção -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth-system.js"></script>
+    <script src="universal-route-protection.js"></script>
+    
+    <!-- Scripts específicos da página de detecção -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDetectionPage();
+        });
+
+        function initializeDetectionPage() {
+            // Verificar parâmetros da URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            const deviceId = urlParams.get('device');
+            const eventName = urlParams.get('eventName');
+
+            // Mostrar parâmetros na página
+            const paramList = document.getElementById('paramList');
+            if (paramList) {
+                paramList.innerHTML = `
+                    <li>Event ID: ${eventId || 'Não fornecido'}</li>
+                    <li>Device ID: ${deviceId || 'Não fornecido'}</li>
+                    <li>Event Name: ${eventName || 'Não fornecido'}</li>
+                `;
+            }
+
+            // Atualizar informações no header
+            const eventInfo = document.getElementById('eventInfo');
+            const deviceInfo = document.getElementById('deviceInfo');
+            const deviceStatus = document.getElementById('deviceStatus');
+
+            if (eventInfo) {
+                eventInfo.textContent = `Evento: ${eventName || eventId || 'Desconhecido'}`;
+            }
+
+            if (deviceInfo) {
+                deviceInfo.textContent = `Dispositivo: ${deviceId || 'Desconhecido'}`;
+            }
+
+            if (deviceStatus) {
+                deviceStatus.textContent = 'Online';
+                deviceStatus.className = 'device-status online';
+            }
+
+            // Verificar se tem parâmetros válidos
+            if (eventId && deviceId) {
+                console.log('Página de detecção inicializada com parâmetros válidos');
+                
+                // Adicionar classe ready ao body
+                document.body.classList.add('detection-ready');
+                
+                // Inicializar funcionalidades específicas da detecção
+                initializeDetectionFeatures();
+            } else {
+                console.error('Parâmetros inválidos para página de detecção');
+                document.getElementById('detectionLoading').innerHTML = `
+                    <div style="text-align: center; color: #e74c3c;">
+                        <h3>Erro: Parâmetros Inválidos</h3>
+                        <p>Esta página requer parâmetros de evento e dispositivo.</p>
+                        <p>URL deve incluir: ?event=ID&device=ID</p>
+                    </div>
+                `;
+            }
+        }
+
+        function initializeDetectionFeatures() {
+            // Inicializar funcionalidades específicas da detecção
+            console.log('Inicializando funcionalidades de detecção...');
+            
+            // Aqui podem ser adicionadas funcionalidades específicas como:
+            // - Conectar à câmara
+            // - Inicializar detecção de dorsais
+            // - Conectar ao WebSocket para comunicação em tempo real
+            // - etc.
+        }
+    </script>
+</body>
+</html>

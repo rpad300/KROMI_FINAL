@@ -1,0 +1,176 @@
+/* ============================================================================
+   UNIFIED SIDEBAR STYLES - VisionKrono
+   ============================================================================
+   Estilos consistentes para o sidebar em TODAS as páginas
+   Baseado no index-kromi.html como referência
+   ============================================================================ */
+
+/* Sidebar Header */
+.sidebar-header {
+    padding: var(--spacing-5);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-4);
+}
+
+.sidebar-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.sidebar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-2);
+    border-radius: var(--radius-base);
+    transition: all var(--transition-base);
+}
+
+.sidebar-toggle:hover {
+    background: var(--bg-primary);
+    color: var(--primary);
+}
+
+.sidebar-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: currentColor;
+    margin: 3px 0;
+    transition: all var(--transition-base);
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+    flex: 1;
+}
+
+.nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-item {
+    margin-bottom: var(--spacing-1);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: all var(--transition-base);
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    gap: var(--spacing-3);
+}
+
+.nav-link:hover {
+    background: rgba(252, 107, 3, 0.1);
+    color: var(--primary);
+}
+
+.nav-link.active {
+    background: var(--primary);
+    color: var(--text-dark);
+}
+
+.nav-icon {
+    font-size: var(--font-size-lg);
+    width: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-text {
+    flex: 1;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: var(--spacing-4);
+    border-top: 1px solid var(--border-color);
+    margin-top: var(--spacing-4);
+}
+
+.btn-logout {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    background: var(--danger);
+    color: var(--text-dark);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-logout:hover {
+    background: var(--danger-dark);
+    transform: translateY(-1px);
+}
+
+/* Sidebar Collapsed State */
+.sidebar.collapsed {
+    transform: translateX(-280px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 1024px) {
+    .sidebar-toggle {
+        display: block;
+    }
+    
+    .sidebar {
+        transform: translateX(-280px);
+    }
+    
+    .sidebar.active,
+    .sidebar.sidebar-open {
+        transform: translateX(0);
+    }
+}
+
+/* Event Info Panel (para páginas de eventos) */
+#eventInfoPanel {
+    padding: var(--spacing-4);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-4);
+    background: rgba(252, 107, 3, 0.05);
+    border-radius: var(--radius-lg);
+}
+
+#eventInfoPanel h4 {
+    color: var(--primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    margin: 0 0 var(--spacing-2) 0;
+}
+
+#currentEventInfo {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+#currentEventInfo strong {
+    color: var(--text-primary);
+}
+

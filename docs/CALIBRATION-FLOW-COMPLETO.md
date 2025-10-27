@@ -239,3 +239,5 @@ O sistema funciona **SEM** nomenclatura (assume numérico 1-9999).
 
 **Quer que implemente o Passo de Nomenclatura completo numa próxima sessão?** 🔧
 
+
+

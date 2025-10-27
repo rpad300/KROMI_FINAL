@@ -90,3 +90,5 @@ Todas as páginas KROMI agora têm:
 2. Verificar se o menu toggle funciona corretamente
 3. Confirmar que não há mais sobreposições
 4. Validar responsividade em diferentes resoluções
+
+

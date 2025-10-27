@@ -147,3 +147,5 @@ async function toggleFlash() {
 - ✅ **UX melhorada** - Experiência fluida e focada
 
 **A página de detecção agora é totalmente limpa e funcional em mobile, com apenas os elementos essenciais e botões que funcionam perfeitamente!** 🎉
+
+

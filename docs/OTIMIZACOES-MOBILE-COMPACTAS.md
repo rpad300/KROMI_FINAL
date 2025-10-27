@@ -192,3 +192,5 @@ A página de detecção em mobile estava ocupando muito espaço:
 - ✅ **UX otimizada** - Máximo espaço para detecção
 
 **A página de detecção agora é ultra compacta e otimizada para mobile, maximizando o espaço disponível para a câmera!** 🎉
+
+

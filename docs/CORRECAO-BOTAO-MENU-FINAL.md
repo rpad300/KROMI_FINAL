@@ -119,3 +119,5 @@ function toggleSidebar() {
 7. ✅ **Logs de debug** para acompanhar funcionamento
 
 **O botão de menu agora funciona exatamente como deveria!** 🎉
+
+

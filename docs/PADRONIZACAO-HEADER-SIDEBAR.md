@@ -147,3 +147,5 @@ Todas as páginas KROMI usam o formato:
 - Layout responsivo e funcional
 
 **Status: ✅ CONCLUÍDO - Todas as páginas estão padronizadas!**
+
+

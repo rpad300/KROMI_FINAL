@@ -148,3 +148,5 @@ O passo 5 agora exibe:
 6. **🚀 Próximos Passos** (orientações)
 
 A imagem de referência fornece o contexto visual necessário para que o usuário entenda completamente o que foi calibrado e possa validar os resultados! 🎯
+
+

@@ -156,3 +156,5 @@ Configuração
 4. **Manutenibilidade:** Código organizado e limpo
 5. **UX:** Interface intuitiva e focada
 
+
+

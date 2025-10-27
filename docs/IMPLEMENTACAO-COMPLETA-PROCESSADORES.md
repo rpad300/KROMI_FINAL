@@ -333,8 +333,8 @@ async processEventImages(eventId, images) {
 - ✅ **Configuração**: Carregamento por evento específico
 
 ### **Base de Dados**
-- ✅ `add-processor-config.sql` - Schema completo
-- ✅ `create-manual-processing-table.sql` - Tabela de processamento manual
+- ✅ "`../sql/add-processor-config.sql" - Schema completo
+- ✅ "`../sql/create-manual-processing-table.sql" - Tabela de processamento manual
 - ✅ **Tabelas**: `event_configurations`, `manual_processing`
 - ✅ **Funções**: RPC para configuração e processamento manual
 - ✅ **Índices**: Para consultas rápidas
@@ -396,3 +396,5 @@ O sistema está **100% funcional** e pronto para uso em produção com:
 - **Backend adaptativo** baseado na configuração
 
 **🎯 RESPOSTA: SIM, foi implementado TUDO sem dados mock, com todas as funcionalidades e dados efetivamente implementados!** ✨
+
+

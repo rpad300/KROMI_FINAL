@@ -131,7 +131,7 @@ $$ LANGUAGE plpgsql;
 
 ### ✅ **Script de Verificação:**
 
-Execute `verify-session-cleanup.sql` no Supabase SQL Editor para verificar:
+Execute "`../sql/verify-session-cleanup.sql" no Supabase SQL Editor para verificar:
 
 1. **Todas as sessões** - Estado atual
 2. **Sessões ativas** - Apenas as ativas
@@ -174,3 +174,5 @@ Execute `verify-session-cleanup.sql` no Supabase SQL Editor para verificar:
 - ✅ **Contadores atualizados** - Automaticamente sincronizados
 
 **O sistema agora controla completamente as sessões na base de dados!** 🎉
+
+

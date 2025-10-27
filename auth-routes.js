@@ -1,0 +1,409 @@
+/**
+ * ==========================================
+ * AUTH ROUTES - VisionKrono
+ * ==========================================
+ * 
+ * Rotas de autenticação server-side
+ * Integra com Supabase Auth + SessionManager
+ * 
+ * Versão: 1.0
+ * Data: 2025-10-26
+ * ==========================================
+ */
+
+const express = require('express');
+const router = express.Router();
+
+/**
+ * Configurar rotas de autenticação
+ */
+function setupAuthRoutes(app, sessionManager, supabase, auditLogger) {
+    
+    // ==========================================
+    // POST /api/auth/login
+    // ==========================================
+    app.post('/api/auth/login', express.json(), async (req, res) => {
+        try {
+            const { email, password } = req.body;
+            
+            console.log(`🔐 Tentativa de login: ${email}`);
+            
+            // Validar com Supabase Auth
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            
+            if (error) {
+                console.error(`❌ Login falhou: ${email} - ${error.message}`);
+                
+                // Auditar falha
+                auditLogger.log('LOGIN_FAILED', null, {
+                    email,
+                    reason: error.message,
+                    ip: req.ip,
+                    userAgent: req.get('user-agent')
+                });
+                
+                return res.status(401).json({
+                    error: 'Credenciais inválidas',
+                    message: error.message
+                });
+            }
+            
+            // Carregar perfil do utilizador
+            const { data: profile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', data.user.id)
+                .single();
+            
+            if (profileError) {
+                console.error(`❌ Erro ao carregar perfil: ${profileError.message}`);
+                // Usar perfil padrão
+                profile = {
+                    user_id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.email,
+                    role: 'admin',
+                    status: 'active'
+                };
+            }
+            
+            // Criar sessão
+            const sessionId = sessionManager.createSession(data.user.id, profile, {
+                ip: req.ip,
+                userAgent: req.get('user-agent'),
+                loginAt: Date.now()
+            });
+            
+            // Configurar cookie seguro
+            res.cookie('sid', sessionId, {
+                httpOnly: true,
+                secure: true, // HTTPS only
+                sameSite: 'lax',
+                maxAge: sessionManager.MAX_SESSION_LIFETIME,
+                path: '/'
+            });
+            
+            // Auditar sucesso
+            auditLogger.log('LOGIN_SUCCESS', data.user.id, {
+                email,
+                role: profile.role,
+                ip: req.ip,
+                userAgent: req.get('user-agent')
+            });
+            
+            console.log(`✅ Login bem-sucedido: ${email} (role: ${profile.role})`);
+            
+            // Retornar dados do utilizador (SEM tokens sensíveis)
+            res.json({
+                success: true,
+                user: {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: profile.name,
+                    role: profile.role,
+                    status: profile.status
+                },
+                session: {
+                    expiresIn: sessionManager.INACTIVITY_TIMEOUT / 1000,
+                    maxLifetime: sessionManager.MAX_SESSION_LIFETIME / 1000
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro no login:', error);
+            res.status(500).json({
+                error: 'Erro interno',
+                message: 'Erro ao processar login'
+            });
+        }
+    });
+
+    // ==========================================
+    // POST /api/auth/logout
+    // ==========================================
+    app.post('/api/auth/logout', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (sessionId) {
+            const session = sessionManager.getSession(sessionId);
+            
+            if (session) {
+                // Auditar logout
+                auditLogger.log('LOGOUT', session.userId, {
+                    email: session.userProfile.email,
+                    ip: req.ip
+                });
+            }
+            
+            // Revogar sessão
+            sessionManager.revokeSession(sessionId);
+            
+            console.log(`👋 Logout: ${sessionId.substring(0, 8)}...`);
+        }
+        
+        // Limpar cookie
+        res.clearCookie('sid');
+        
+        res.json({
+            success: true,
+            message: 'Logout realizado com sucesso'
+        });
+    });
+
+    // ==========================================
+    // POST /api/auth/logout-all
+    // ==========================================
+    app.post('/api/auth/logout-all', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                error: 'Não autenticado'
+            });
+        }
+        
+        const session = sessionManager.getSession(sessionId);
+        
+        if (!session) {
+            return res.status(401).json({
+                error: 'Sessão inválida'
+            });
+        }
+        
+        // Revogar TODAS as sessões do utilizador
+        const count = sessionManager.revokeAllUserSessions(session.userId);
+        
+        // Auditar
+        auditLogger.log('LOGOUT_ALL', session.userId, {
+            email: session.userProfile.email,
+            sessionsRevoked: count,
+            ip: req.ip
+        });
+        
+        // Limpar cookie
+        res.clearCookie('sid');
+        
+        res.json({
+            success: true,
+            message: `${count} sessões terminadas com sucesso`
+        });
+    });
+
+    // ==========================================
+    // POST /api/auth/logout-others
+    // ==========================================
+    app.post('/api/auth/logout-others', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                error: 'Não autenticado'
+            });
+        }
+        
+        const session = sessionManager.getSession(sessionId);
+        
+        if (!session) {
+            return res.status(401).json({
+                error: 'Sessão inválida'
+            });
+        }
+        
+        // Revogar outras sessões (manter apenas a atual)
+        const count = sessionManager.revokeOtherSessions(session.userId, sessionId);
+        
+        // Auditar
+        auditLogger.log('LOGOUT_OTHERS', session.userId, {
+            email: session.userProfile.email,
+            sessionsRevoked: count,
+            ip: req.ip
+        });
+        
+        res.json({
+            success: true,
+            message: `${count} outras sessões terminadas com sucesso`
+        });
+    });
+
+    // ==========================================
+    // GET /api/auth/session
+    // ==========================================
+    app.get('/api/auth/session', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                authenticated: false,
+                message: 'Sem sessão'
+            });
+        }
+        
+        const session = sessionManager.getSession(sessionId);
+        
+        if (!session) {
+            res.clearCookie('sid');
+            return res.status(401).json({
+                authenticated: false,
+                message: 'Sessão inválida ou expirada'
+            });
+        }
+        
+        // Obter tempo restante
+        const timeRemaining = sessionManager.getSessionTimeRemaining(sessionId);
+        
+        res.json({
+            authenticated: true,
+            user: {
+                id: session.userId,
+                email: session.userProfile.email,
+                name: session.userProfile.name,
+                role: session.userProfile.role,
+                status: session.userProfile.status
+            },
+            session: {
+                id: sessionId.substring(0, 8) + '...',
+                createdAt: new Date(session.createdAt).toISOString(),
+                lastActivity: new Date(session.lastActivity).toISOString(),
+                expiresAt: new Date(session.expiresAt).toISOString(),
+                timeRemaining: timeRemaining
+            }
+        });
+    });
+
+    // ==========================================
+    // POST /api/auth/refresh
+    // ==========================================
+    app.post('/api/auth/refresh', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                error: 'Sem sessão'
+            });
+        }
+        
+        const session = sessionManager.refreshSession(sessionId);
+        
+        if (!session) {
+            res.clearCookie('sid');
+            return res.status(401).json({
+                error: 'Sessão expirada'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Sessão renovada',
+            expiresIn: sessionManager.INACTIVITY_TIMEOUT / 1000
+        });
+    });
+
+    // ==========================================
+    // POST /api/auth/rotate-session
+    // ==========================================
+    app.post('/api/auth/rotate-session', (req, res) => {
+        const oldSessionId = req.cookies?.sid;
+        
+        if (!oldSessionId) {
+            return res.status(401).json({
+                error: 'Sem sessão'
+            });
+        }
+        
+        // Rotar ID de sessão
+        const newSessionId = sessionManager.rotateSessionId(oldSessionId);
+        
+        if (!newSessionId) {
+            res.clearCookie('sid');
+            return res.status(401).json({
+                error: 'Sessão inválida'
+            });
+        }
+        
+        // Configurar novo cookie
+        res.cookie('sid', newSessionId, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            maxAge: sessionManager.MAX_SESSION_LIFETIME,
+            path: '/'
+        });
+        
+        res.json({
+            success: true,
+            message: 'ID de sessão rotado com sucesso'
+        });
+    });
+
+    // ==========================================
+    // GET /api/auth/sessions
+    // ==========================================
+    app.get('/api/auth/sessions', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                error: 'Não autenticado'
+            });
+        }
+        
+        const session = sessionManager.getSession(sessionId);
+        
+        if (!session) {
+            res.clearCookie('sid');
+            return res.status(401).json({
+                error: 'Sessão inválida'
+            });
+        }
+        
+        // Listar todas as sessões do utilizador
+        const sessions = sessionManager.getUserSessions(session.userId);
+        
+        res.json({
+            success: true,
+            sessions: sessions,
+            currentSession: sessionId.substring(0, 8) + '...'
+        });
+    });
+
+    // ==========================================
+    // GET /api/auth/stats (apenas admin)
+    // ==========================================
+    app.get('/api/auth/stats', (req, res) => {
+        const sessionId = req.cookies?.sid;
+        
+        if (!sessionId) {
+            return res.status(401).json({
+                error: 'Não autenticado'
+            });
+        }
+        
+        const session = sessionManager.getSession(sessionId);
+        
+        if (!session) {
+            return res.status(401).json({
+                error: 'Sessão inválida'
+            });
+        }
+        
+        // Apenas admin pode ver estatísticas
+        if (session.userProfile.role !== 'admin') {
+            return res.status(403).json({
+                error: 'Sem permissão'
+            });
+        }
+        
+        const stats = sessionManager.getStats();
+        
+        res.json({
+            success: true,
+            stats: stats
+        });
+    });
+}
+
+module.exports = setupAuthRoutes;
+

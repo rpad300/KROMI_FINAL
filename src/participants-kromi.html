@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Gestão de Participantes</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        /* Sidebar styles */
+        .layout-with-sidebar .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform var(--transition-slow);
+        }
+        
+        /* Header styles */
+        .layout-with-sidebar .header {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-5);
+            transition: left var(--transition-slow);
+        }
+        
+        /* Main content area */
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 1024px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            .layout-with-sidebar .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .layout-with-sidebar .sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .layout-with-sidebar .header {
+                left: 0;
+            }
+            
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                min-height: calc(100vh - 60px) !important;
+                padding-bottom: 80px !important;
+            }
+            
+            /* Ensure content fills the screen */
+            #mainContent {
+                min-height: calc(100vh - 60px - 80px);
+                padding: var(--spacing-4);
+            }
+            
+            #menuToggle {
+                display: block !important;
+            }
+            
+            .app-bottom-nav {
+                display: flex !important;
+            }
+        }
+        
+        /* Participants specific styles */
+        .participants-grid {
+            display: grid;
+            gap: var(--spacing-5);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .event-selector-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+        }
+        
+        .event-config-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+        }
+        
+        .participants-table {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: var(--bg-primary);
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-3);
+        }
+        
+        .table-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: var(--spacing-2);
+            flex-wrap: wrap;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: var(--spacing-3) var(--spacing-4);
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            font-size: var(--font-size-sm);
+            white-space: nowrap;
+        }
+        
+        .data-table td {
+            padding: var(--spacing-3) var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .participant-form {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            font-family: var(--font-family-base);
+            transition: all var(--transition-base);
+        }
+        
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            text-align: center;
+            transition: transform var(--transition-base), box-shadow var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: var(--spacing-12);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: var(--spacing-4);
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+        }
+        
+        .empty-state p {
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            max-width: 400px;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .table-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .data-table {
+                font-size: var(--font-size-xs);
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: var(--spacing-2);
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <!-- App Container -->
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+        <div class="sidebar" id="sidebar"></div>
+        
+        <!-- Header -->
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: var(--spacing-4);">
+                <button class="btn btn-icon btn-secondary" id="menuToggle" onclick="toggleSidebar()">
+                    <i>☰</i>
+                </button>
+                <h2 id="pageTitle" style="font-size: var(--font-size-2xl); font-weight: 600; margin: 0;">
+                    👥 Gestão de Participantes
+                </h2>
+            </div>
+            <div style="display: flex; gap: var(--spacing-2);" id="headerActions">
+                <button class="btn btn-sm btn-primary" id="addParticipant">
+                    <i>➕</i> Adicionar
+                </button>
+                <button class="btn btn-sm btn-secondary" id="importParticipants">
+                    <i>📊</i> Importar CSV
+                </button>
+                <button class="btn btn-sm btn-secondary" id="exportParticipants">
+                    <i>📤</i> Exportar
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main">
+            <div style="flex: 1; overflow-y: auto; padding: var(--spacing-5);" id="mainContent">
+                
+                <!-- Event Selector -->
+                <div class="participants-grid event-selector-container">
+                    <div class="event-selector-card">
+                        <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">
+                            📋 Selecionar Evento
+                        </h3>
+                        <div class="form-group">
+                            <label class="form-label" for="eventSelect">Evento:</label>
+                            <select id="eventSelect" class="form-select">
+                                <option value="">-- Selecionar Evento --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="stats-grid event-info-container" id="statsGrid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalParticipants">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maleParticipants">0</div>
+                        <div class="stat-label">Masculino</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="femaleParticipants">0</div>
+                        <div class="stat-label">Feminino</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="confirmedParticipants">0</div>
+                        <div class="stat-label">Confirmados</div>
+                    </div>
+                </div>
+                
+                <!-- Participants Table -->
+                <div class="participants-table" id="participantsTable" style="display: none;">
+                    <div class="table-header">
+                        <h3 class="table-title">👥 Lista de Participantes</h3>
+                        <div class="table-actions">
+                            <button class="btn btn-sm btn-secondary" id="refreshParticipants">
+                                <i>🔄</i> Atualizar
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="clearParticipants">
+                                <i>🗑️</i> Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Telefone</th>
+                                    <th>Idade</th>
+                                    <th>Género</th>
+                                    <th>Equipa</th>
+                                    <th>Categoria</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantsBody">
+                                <!-- Será preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Add Participant Form -->
+                <div class="participant-form" id="participantForm" style="display: none;">
+                    <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary);">
+                        ➕ Adicionar Participante
+                    </h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="participantDorsal">Dorsal:</label>
+                            <input type="number" id="participantDorsal" class="form-input" placeholder="Ex: 123">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantName">Nome Completo:</label>
+                            <input type="text" id="participantName" class="form-input" placeholder="Ex: João Silva">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantEmail">Email: *</label>
+                            <input type="email" id="participantEmail" class="form-input" placeholder="Ex: joao@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantPhone">Telefone: *</label>
+                            <input type="tel" id="participantPhone" class="form-input" placeholder="Ex: +351 912 345 678" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantTeam">Equipa:</label>
+                            <input type="text" id="participantTeam" class="form-input" placeholder="Ex: Clube Atlético">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantCategory">Categoria:</label>
+                            <input type="text" id="participantCategory" class="form-input" placeholder="Ex: Sénior M">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantBirthDate">Data Nascimento: *</label>
+                            <input type="date" id="participantBirthDate" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="participantGender">Género: *</label>
+                            <select id="participantGender" class="form-select" required>
+                                <option value="">-- Selecionar --</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="O">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--spacing-4); display: flex; gap: var(--spacing-3);">
+                        <button class="btn btn-primary" id="saveParticipant">
+                            <i>💾</i> Salvar Participante
+                        </button>
+                        <button class="btn btn-secondary" id="cancelParticipant">
+                            <i>❌</i> Cancelar
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState">
+                    <div>👥</div>
+                    <h3>Nenhum Evento Selecionado</h3>
+                    <p>Selecione um evento para gerir os participantes.</p>
+                </div>
+                
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="app-bottom-nav">
+            <button class="nav-btn" onclick="window.location.href='/'">
+                <i>🏠</i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/events'">
+                <i>🏃</i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-btn" onclick="window.location.href='/detection'">
+                <i>📱</i>
+                <span>Detecção</span>
+            </button>
+            <button class="nav-btn active">
+                <i>👥</i>
+                <span>Participantes</span>
+            </button>
+        </nav>
+    </div>
+    
+    <!-- Scripts -->
+    <!-- Scripts de Autenticação -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="supabase.js?v=2025102605" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    
+    <!-- Participants Logic -->
+    <script>
+        // Global variables
+        let currentEvent = null;
+        
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        let participants = [];
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Verificar autenticação
+            const autenticado = await verificarAutenticacao(['admin', 'event_manager', 'participant']);
+            if (!autenticado) return;
+            
+            // Aguardar navegação estar pronta
+            await waitForNavigation();
+            console.log('✅ Navegação pronta');
+            
+            // Get event from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            const eventName = urlParams.get('eventName');
+            
+            // Atualizar contexto de evento
+            if (eventId && window.navigationService) {
+                window.navigationService.setEventContext(eventId, eventName);
+            }
+            
+            if (eventId) {
+                // Se temos evento na URL, carregar automaticamente
+                await loadEventInfo(eventId);
+                    
+                    // Esconder dropdown de seleção de evento
+                    const eventSelectorContainer = document.querySelector('.event-selector-container');
+                    if (eventSelectorContainer) {
+                        eventSelectorContainer.style.display = 'none';
+                    }
+                    
+                    // Mostrar info do evento selecionado
+                    const eventInfoContainer = document.querySelector('.event-info-container');
+                    if (eventInfoContainer) {
+                        eventInfoContainer.style.display = 'block';
+                    }
+                }
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load events
+            await loadEvents();
+        });
+        
+        function setupEventListeners() {
+            // Event selector
+            document.getElementById('eventSelect').addEventListener('change', (e) => {
+                if (e.target.value) {
+                    loadEventInfo(e.target.value);
+                } else {
+                    hideEventInfo();
+                }
+            });
+            
+            // Event config (removido - não existe mais)
+            
+            // Participants
+            const addParticipantBtn = document.getElementById('addParticipant');
+            const saveParticipantBtn = document.getElementById('saveParticipant');
+            const cancelParticipantBtn = document.getElementById('cancelParticipant');
+            const refreshParticipantsBtn = document.getElementById('refreshParticipants');
+            const clearParticipantsBtn = document.getElementById('clearParticipants');
+            
+            if (addParticipantBtn) addParticipantBtn.addEventListener('click', showParticipantForm);
+            if (saveParticipantBtn) saveParticipantBtn.addEventListener('click', saveParticipant);
+            if (cancelParticipantBtn) cancelParticipantBtn.addEventListener('click', hideParticipantForm);
+            if (refreshParticipantsBtn) refreshParticipantsBtn.addEventListener('click', refreshParticipants);
+            if (clearParticipantsBtn) clearParticipantsBtn.addEventListener('click', clearParticipants);
+            
+            // Import/Export
+            const importParticipantsBtn = document.getElementById('importParticipants');
+            const exportParticipantsBtn = document.getElementById('exportParticipants');
+            
+            if (importParticipantsBtn) importParticipantsBtn.addEventListener('click', importParticipants);
+            if (exportParticipantsBtn) exportParticipantsBtn.addEventListener('click', exportParticipants);
+            
+            // Menu toggle mobile
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+        }
+        
+        async function loadEvents() {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('Supabase não disponível');
+                    showError('Supabase não disponível');
+                    return;
+                }
+                
+                const { data: events, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar eventos:', error);
+                    showError('Erro ao carregar eventos');
+                    return;
+                }
+                
+                const selector = document.getElementById('eventSelect');
+                selector.innerHTML = '<option value="">-- Selecionar Evento --</option>';
+                
+                events.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = `${event.name} (${event.is_active ? 'Ativo' : 'Inativo'})`;
+                    selector.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos:', error);
+                showError('Erro ao carregar eventos');
+            }
+        }
+        
+        async function loadEventInfo(eventId) {
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('Supabase não disponível');
+                    return;
+                }
+                
+                // Carregar dados do evento
+                const { data: event, error: eventError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('*')
+                    .eq('id', eventId)
+                    .single();
+                
+                if (eventError) {
+                    console.error('Erro ao carregar evento:', eventError);
+                    showError('Erro ao carregar evento');
+                    return;
+                }
+                
+                currentEvent = event;
+                
+                // Update UI (apenas elementos que existem)
+                const eventNameEl = document.getElementById('eventName');
+                const eventDateEl = document.getElementById('eventDate');
+                const eventTimeEl = document.getElementById('eventTime');
+                const eventLocationEl = document.getElementById('eventLocation');
+                
+                if (eventNameEl) eventNameEl.value = event.name;
+                if (eventDateEl) eventDateEl.value = event.event_date ? event.event_date.split('T')[0] : '';
+                if (eventTimeEl) eventTimeEl.value = event.event_date ? event.event_date.split('T')[1]?.substring(0, 5) : '';
+                if (eventLocationEl) eventLocationEl.value = event.location || '';
+                
+                // Show elements that exist
+                const statsGrid = document.getElementById('statsGrid');
+                const participantsTable = document.getElementById('participantsTable');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (statsGrid) statsGrid.style.display = 'grid';
+                if (participantsTable) participantsTable.style.display = 'block';
+                if (emptyState) emptyState.style.display = 'none';
+                
+                // Update sidebar
+                const eventInfoPanel = document.getElementById('eventInfoPanel');
+                const currentEventInfo = document.getElementById('currentEventInfo');
+                
+                if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                if (currentEventInfo) {
+                    currentEventInfo.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        Local: ${event.location || 'Não definido'}
+                    `;
+                }
+                
+                // Load participants
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar evento:', error);
+                showError('Erro ao carregar evento');
+            }
+        }
+        
+        function hideEventInfo() {
+            currentEvent = null;
+            
+            // Hide event info
+            document.getElementById('eventConfigCard').style.display = 'none';
+            document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('participantsTable').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            
+            // Hide sidebar info
+            document.getElementById('eventInfoPanel').style.display = 'none';
+        }
+        
+        async function loadParticipants() {
+            try {
+                if (!currentEvent || !window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('Sem evento selecionado ou Supabase não disponível');
+                    return;
+                }
+                
+                const { data: participantsData, error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .select('*')
+                    .eq('event_id', currentEvent.id)
+                    .order('dorsal_number', { ascending: true });
+                
+                if (error) {
+                    console.error('Erro ao carregar participantes:', error);
+                    showError('Erro ao carregar participantes');
+                    return;
+                }
+                
+                participants = participantsData || [];
+                renderParticipants();
+                updateStatistics();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar participantes:', error);
+                showError('Erro ao carregar participantes');
+            }
+        }
+        
+        function renderParticipants() {
+            const tbody = document.getElementById('participantsBody');
+            tbody.innerHTML = '';
+            
+            participants.forEach(participant => {
+                const row = document.createElement('tr');
+                
+                // Calcular idade se birth_date existir
+                let age = '--';
+                if (participant.birth_date) {
+                    const birthDate = new Date(participant.birth_date);
+                    const today = new Date();
+                    age = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${participant.dorsal_number || '--'}</strong></td>
+                    <td>${participant.full_name || '--'}</td>
+                    <td>${participant.email || '--'}</td>
+                    <td>${participant.phone || '--'}</td>
+                    <td>${age}</td>
+                    <td>${participant.gender === 'M' ? 'Masculino' : participant.gender === 'F' ? 'Feminino' : 'Outro'}</td>
+                    <td>${participant.team_name || '--'}</td>
+                    <td>${participant.category || 'Open'}</td>
+                    <td>
+                        <div style="display: flex; gap: var(--spacing-1);">
+                            <button class="btn btn-sm btn-secondary" onclick="editParticipant(${participant.dorsal_number})">
+                                <i>✏️</i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteParticipant(${participant.dorsal_number})">
+                                <i>🗑️</i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'confirmed': return 'badge-success';
+                case 'pending': return 'badge-warning';
+                case 'cancelled': return 'badge-danger';
+                default: return 'badge-secondary';
+            }
+        }
+        
+        function getStatusText(status) {
+            switch (status) {
+                case 'confirmed': return 'Confirmado';
+                case 'pending': return 'Pendente';
+                case 'cancelled': return 'Cancelado';
+                default: return 'Desconhecido';
+            }
+        }
+        
+        function updateStatistics() {
+            const total = participants.length;
+            const male = participants.filter(p => p.gender === 'M').length;
+            const female = participants.filter(p => p.gender === 'F').length;
+            const confirmed = participants.filter(p => p.status === 'confirmed').length;
+            
+            document.getElementById('totalParticipants').textContent = total;
+            document.getElementById('maleParticipants').textContent = male;
+            document.getElementById('femaleParticipants').textContent = female;
+            document.getElementById('confirmedParticipants').textContent = confirmed;
+        }
+        
+        function saveEventConfig() {
+            const config = {
+                name: document.getElementById('eventName').value,
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('eventTime').value,
+                location: document.getElementById('eventLocation').value
+            };
+            
+            // Validate
+            if (!config.name || !config.date || !config.time || !config.location) {
+                showError('Preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            // Save config (replace with actual Supabase call)
+            console.log('💾 Salvando configuração:', config);
+            showSuccess('Configuração salva com sucesso');
+        }
+        
+        function resetEventConfig() {
+            if (confirm('Tem certeza que deseja resetar a configuração?')) {
+                document.getElementById('eventName').value = '';
+                document.getElementById('eventDate').value = '';
+                document.getElementById('eventTime').value = '';
+                document.getElementById('eventLocation').value = '';
+                showSuccess('Configuração resetada');
+            }
+        }
+        
+        function showParticipantForm() {
+            document.getElementById('participantForm').style.display = 'block';
+            document.getElementById('addParticipant').style.display = 'none';
+        }
+        
+        function hideParticipantForm() {
+            document.getElementById('participantForm').style.display = 'none';
+            document.getElementById('addParticipant').style.display = 'inline-flex';
+            
+            // Clear form
+            document.getElementById('participantDorsal').value = '';
+            document.getElementById('participantName').value = '';
+            document.getElementById('participantEmail').value = '';
+            document.getElementById('participantPhone').value = '';
+            document.getElementById('participantBirthDate').value = '';
+            document.getElementById('participantGender').value = '';
+            document.getElementById('participantTeam').value = '';
+            document.getElementById('participantCategory').value = '';
+        }
+        
+        async function saveParticipant() {
+            const participantData = {
+                event_id: currentEvent.id,
+                dorsal_number: parseInt(document.getElementById('participantDorsal').value),
+                full_name: document.getElementById('participantName').value,
+                email: document.getElementById('participantEmail').value,
+                phone: document.getElementById('participantPhone').value,
+                birth_date: document.getElementById('participantBirthDate').value,
+                gender: document.getElementById('participantGender').value,
+                team_name: document.getElementById('participantTeam').value || null,
+                category: document.getElementById('participantCategory').value || null
+            };
+            
+            // Validate TODOS os campos obrigatórios
+            if (!participantData.dorsal_number) {
+                showError('Dorsal é obrigatório');
+                return;
+            }
+            if (!participantData.full_name) {
+                showError('Nome é obrigatório');
+                return;
+            }
+            if (!participantData.email) {
+                showError('Email é obrigatório');
+                return;
+            }
+            if (!participantData.phone) {
+                showError('Telefone é obrigatório');
+                return;
+            }
+            if (!participantData.birth_date) {
+                showError('Data de nascimento é obrigatória');
+                return;
+            }
+            if (!participantData.gender) {
+                showError('Género é obrigatório');
+                return;
+            }
+            
+            try {
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    showError('Supabase não disponível');
+                    return;
+                }
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .insert([participantData]);
+                
+                if (error) {
+                    if (error.code === '23505') {
+                        showError('Dorsal já existe');
+                    } else {
+                        throw error;
+                    }
+                    return;
+                }
+                
+                showSuccess('Participante adicionado com sucesso!');
+                hideParticipantForm();
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar participante:', error);
+                showError('Erro ao salvar participante');
+            }
+        }
+        
+        async function editParticipant(dorsal) {
+            const participant = participants.find(p => (p.dorsal_number || p.dorsal) === dorsal);
+            if (!participant) return;
+            
+            // Use prompt for simplicity (pode melhorar com modal depois)
+            const newName = prompt('Nome:', participant.full_name || participant.name);
+            if (!newName) return;
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .update({ full_name: newName })
+                    .eq('event_id', currentEvent.id)
+                    .eq('dorsal_number', dorsal);
+                
+                if (error) throw error;
+                
+                showSuccess('Participante atualizado!');
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao editar:', error);
+                showError('Erro ao editar participante');
+            }
+        }
+        
+        async function deleteParticipant(dorsal) {
+            if (!confirm(`Tem certeza que deseja remover o participante com dorsal ${dorsal}?`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .delete()
+                    .eq('event_id', currentEvent.id)
+                    .eq('dorsal_number', dorsal);
+                
+                if (error) throw error;
+                
+                showSuccess('Participante removido!');
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao remover:', error);
+                showError('Erro ao remover participante');
+            }
+        }
+        
+        function refreshParticipants() {
+            loadParticipants();
+            showSuccess('Lista atualizada');
+        }
+        
+        function clearParticipants() {
+            if (confirm('Tem certeza que deseja limpar todos os participantes?')) {
+                participants = [];
+                renderParticipants();
+                updateStatistics();
+                showSuccess('Lista limpa');
+            }
+        }
+        
+        function importParticipants() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const lines = text.split('\n').filter(line => line.trim());
+                    
+                    if (lines.length < 2) {
+                        showError('CSV vazio ou inválido');
+                        return;
+                    }
+                    
+                    // Skip header
+                    const dataLines = lines.slice(1);
+                    const importData = [];
+                    
+                    for (const line of dataLines) {
+                        const [dorsal, name, birthDate, gender, team] = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+                        
+                        if (dorsal && name) {
+                            importData.push({
+                                event_id: currentEvent.id,
+                                dorsal_number: parseInt(dorsal),
+                                full_name: name,
+                                birth_date: birthDate || null,
+                                gender: gender || 'M',
+                                team_name: team || null
+                            });
+                        }
+                    }
+                    
+                    if (importData.length === 0) {
+                        showError('Nenhum dado válido no CSV');
+                        return;
+                    }
+                    
+                    // Import to Supabase
+                    const { error } = await window.supabaseClient.supabase
+                        .from('participants')
+                        .insert(importData);
+                    
+                    if (error) throw error;
+                    
+                    showSuccess(`${importData.length} participantes importados!`);
+                    await loadParticipants();
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao importar:', error);
+                    showError('Erro ao importar CSV');
+                }
+            };
+            input.click();
+        }
+        
+        function exportParticipants() {
+            if (!participants || participants.length === 0) {
+                showError('Nenhum participante para exportar');
+                return;
+            }
+            
+            // Create CSV data
+            const csvData = [
+                ['Dorsal', 'Nome', 'Data Nascimento', 'Género', 'Equipa'],
+                ...participants.map(p => [
+                    p.dorsal_number || p.dorsal,
+                    p.full_name || p.name,
+                    p.birth_date || '',
+                    p.gender || 'M',
+                    p.team_name || '',
+                    getStatusText(p.status)
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            // Download CSV
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `participantes_${currentEvent?.name.replace(/\s+/g, '_') || 'evento'}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Dados exportados');
+        }
+        
+        function showSuccess(message) {
+            showToast(message, 'success');
+        }
+        
+        function showError(message) {
+            showToast(message, 'error');
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+    </script>
+    
+    <style>
+        /* Layout adaptations */
+        .layout-with-sidebar {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+        }
+        
+        /* Mobile */
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                z-index: var(--z-modal);
+                box-shadow: var(--shadow-2xl);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            #menuToggle {
+                display: flex !important;
+            }
+            
+            .main #mainContent {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
+</body>
+</html>

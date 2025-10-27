@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Dashboard</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="kromi-design-system.css">
+    <link rel="stylesheet" href="kromi-layout-fixes.css">
+    <link rel="stylesheet" href="dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="navigation-component.css?v=2025102601">
+    
+    <style>
+        /* Dashboard specific styles */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-5);
+            margin-bottom: var(--spacing-8);
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-icon {
+            font-size: var(--font-size-3xl);
+            margin-bottom: var(--spacing-3);
+            color: var(--primary);
+        }
+        
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .admin-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .admin-section h3 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-4);
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .admin-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            text-align: center;
+            transition: all var(--transition-base);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .admin-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-primary);
+        }
+        
+        .admin-icon {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--spacing-3);
+            color: var(--primary);
+        }
+        
+        .admin-title {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .admin-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .user-profile-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--radius-full);
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-2xl);
+            color: var(--text-dark);
+            font-weight: var(--font-weight-bold);
+        }
+        
+        .profile-info h4 {
+            color: var(--text-primary);
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .profile-info p {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .profile-badge {
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            background: rgba(252, 107, 3, 0.15);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: var(--spacing-3);
+            flex-wrap: wrap;
+        }
+        
+        .btn-quick {
+            background: var(--primary);
+            color: var(--text-dark);
+            border: none;
+            padding: var(--spacing-2) var(--spacing-4);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .btn-quick:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-quick.secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-quick.secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+        }
+        
+        /* Sidebar Styles */
+        .sidebar-header {
+            padding: var(--spacing-5);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .sidebar-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--spacing-2);
+            border-radius: var(--radius-base);
+            transition: all var(--transition-base);
+        }
+        
+        .sidebar-toggle:hover {
+            background: var(--bg-primary);
+            color: var(--primary);
+        }
+        
+        .sidebar-toggle span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: currentColor;
+            margin: 3px 0;
+            transition: all var(--transition-base);
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+        }
+        
+        .nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .nav-item {
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-3) var(--spacing-4);
+            border-radius: var(--radius-lg);
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            gap: var(--spacing-3);
+        }
+        
+        .nav-link:hover {
+            background: rgba(252, 107, 3, 0.1);
+            color: var(--primary);
+        }
+        
+        .nav-link.active {
+            background: var(--primary);
+            color: var(--text-dark);
+        }
+        
+        .nav-icon {
+            font-size: var(--font-size-lg);
+            width: 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-text {
+            flex: 1;
+        }
+        
+        .sidebar-footer {
+            padding: var(--spacing-4);
+            border-top: 1px solid var(--border-color);
+            margin-top: var(--spacing-4);
+        }
+        
+        .btn-logout {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            padding: var(--spacing-3) var(--spacing-4);
+            border-radius: var(--radius-lg);
+            background: var(--danger);
+            color: var(--text-dark);
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .btn-logout:hover {
+            background: var(--danger-dark);
+            transform: translateY(-1px);
+        }
+        
+        /* Header Styles */
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .user-name {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+        
+        .user-role {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            background: rgba(252, 107, 3, 0.15);
+            color: var(--primary);
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-full);
+            border: 1px solid var(--primary);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            display: none;
+            padding: var(--spacing-6);
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        /* Sidebar Collapsed State */
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar-toggle {
+                display: block;
+            }
+            
+            .sidebar {
+                transform: translateX(-280px);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .quick-actions {
+                justify-content: center;
+            }
+            
+            .user-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title" id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <span class="user-name" id="userName">Carregando...</span>
+                <span class="user-role" id="userRole">admin</span>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">🏃</div>
+                    <div class="stat-value" id="totalEvents">0</div>
+                    <div class="stat-label">Eventos Ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="totalParticipants">0</div>
+                    <div class="stat-label">Participantes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📱</div>
+                    <div class="stat-value" id="totalDetections">0</div>
+                    <div class="stat-label">Detecções Hoje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value" id="totalClassifications">0</div>
+                    <div class="stat-label">Classificações</div>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>🚀 Acesso Rápido</h3>
+                <div class="admin-grid">
+                    <a href="events-kromi.html" class="admin-card">
+                        <div class="admin-icon">🏃</div>
+                        <div class="admin-title">Gestão de Eventos</div>
+                        <div class="admin-description">Criar e gerir eventos desportivos</div>
+                    </a>
+                    <a href="detection-kromi.html" class="admin-card">
+                        <div class="admin-icon">📱</div>
+                        <div class="admin-title">Detecção de Dorsais</div>
+                        <div class="admin-description">Captura automática com IA</div>
+                    </a>
+                    <a href="classifications-kromi.html" class="admin-card">
+                        <div class="admin-icon">🏆</div>
+                        <div class="admin-title">Classificações</div>
+                        <div class="admin-description">Rankings em tempo real</div>
+                    </a>
+                    <a href="participants-kromi.html" class="admin-card">
+                        <div class="admin-icon">👥</div>
+                        <div class="admin-title">Participantes</div>
+                        <div class="admin-description">Gestão de inscrições</div>
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Admin Section -->
+        <section id="admin-section" class="content-section">
+            <div class="admin-section">
+                <h3>👥 Gestão de Utilizadores</h3>
+                <div class="admin-grid">
+                    <div class="admin-card" onclick="showUserManagement()">
+                        <div class="admin-icon">👥</div>
+                        <div class="admin-title">Utilizadores</div>
+                        <div class="admin-description">Gerir utilizadores da plataforma</div>
+                    </div>
+                    <div class="admin-card" onclick="showRoleManagement()">
+                        <div class="admin-icon">🔐</div>
+                        <div class="admin-title">Perfis e Permissões</div>
+                        <div class="admin-description">Configurar roles e acessos</div>
+                    </div>
+                    <div class="admin-card" onclick="showSystemSettings()">
+                        <div class="admin-icon">⚙️</div>
+                        <div class="admin-title">Configurações</div>
+                        <div class="admin-description">Configurações do sistema</div>
+                    </div>
+                    <div class="admin-card" onclick="showAuditLog()">
+                        <div class="admin-icon">📋</div>
+                        <div class="admin-title">Logs de Auditoria</div>
+                        <div class="admin-description">Histórico de atividades</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Management Panel -->
+            <div id="userManagementPanel" class="admin-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                    <h3>👥 Gestão de Utilizadores</h3>
+                    <button class="btn-quick" type="button" onclick="showAddUserModal()">
+                        <span>➕</span>
+                        Adicionar Utilizador
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Perfil</th>
+                                <th>Estado</th>
+                                <th>Último Acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Profile Section -->
+        <section id="profile-section" class="content-section">
+            <div class="user-profile-section">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">U</div>
+                    <div class="profile-info">
+                        <h4 id="profileName">Nome do Utilizador</h4>
+                        <p id="profileEmail">email@exemplo.com</p>
+                        <span class="profile-badge" id="profileRole">admin</span>
+                    </div>
+                </div>
+                
+                <div class="quick-actions">
+                    <button class="btn-quick" type="button" onclick="showEditProfileModal()">
+                        <span>✏️</span>
+                        Editar Perfil
+                    </button>
+                    <button class="btn-quick secondary" type="button" onclick="showChangePasswordModal()">
+                        <span>🔒</span>
+                        Alterar Palavra-passe
+                    </button>
+                    <button class="btn-quick secondary" type="button" onclick="showPreferencesModal()">
+                        <span>⚙️</span>
+                        Preferências
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Profile Edit Panel -->
+            <div id="profileEditPanel" class="admin-section" style="display: none;">
+                <h3>✏️ Editar Perfil</h3>
+                <form id="profileEditForm" class="form">
+                    <div class="form-group">
+                        <label for="editName">Nome Completo</label>
+                        <input type="text" id="editName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEmail">Email</label>
+                        <input type="email" id="editEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">Telefone</label>
+                        <input type="tel" id="editPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="editOrganization">Organização</label>
+                        <input type="text" id="editOrganization" name="organization">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Guardar Alterações</button>
+                        <button type="button" class="btn-secondary" onclick="hideProfileEditPanel()">Cancelar</button>
+                    </div>
+                </form>
+        </div>
+        </section>
+    </main>
+    
+    <!-- Modals -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Adicionar Novo Utilizador</h3>
+                <button class="modal-close" type="button" onclick="hideAddUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="newUserName">Nome Completo <span class="required">*</span></label>
+                            <input type="text" id="newUserName" name="name" placeholder="João Silva" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserEmail">Email <span class="required">*</span></label>
+                            <input type="email" id="newUserEmail" name="email" placeholder="joao@exemplo.com" autocomplete="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserPhone">Telefone</label>
+                            <input type="tel" id="newUserPhone" name="phone" placeholder="+351 912 345 678" autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserOrganization">Organização</label>
+                            <input type="text" id="newUserOrganization" name="organization" placeholder="Empresa XYZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserRole">Perfil <span class="required">*</span></label>
+                            <select id="newUserRole" name="role" required>
+                                <option value="user">👤 Utilizador</option>
+                                <option value="moderator">⚙️ Moderador</option>
+                                <option value="admin">👑 Administrador</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserStatus">Estado</label>
+                            <select id="newUserStatus" name="status">
+                                <option value="active">✅ Ativo</option>
+                                <option value="inactive">⏸️ Inativo</option>
+                                <option value="suspended">🚫 Suspenso</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="newUserPassword">Palavra-passe Temporária <span class="required">*</span></label>
+                            <input type="password" id="newUserPassword" name="password" autocomplete="new-password" minlength="8" required>
+                            <span class="helper-text">Mínimo 8 caracteres. O utilizador pode alterar após primeiro login.</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="hideAddUserModal()">Cancelar</button>
+                <button type="submit" form="addUserForm" class="btn-primary">➕ Criar Utilizador</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Editar Utilizador</h3>
+                <button class="modal-close" type="button" onclick="hideEditUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="id">
+                    <input type="hidden" id="editUserUserId" name="user_id">
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editUserName">Nome Completo <span class="required">*</span></label>
+                            <input type="text" id="editUserName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserEmail">Email <span class="required">*</span></label>
+                            <input type="email" id="editUserEmail" name="email" autocomplete="email" readonly>
+                            <span class="helper-text">Email não pode ser alterado</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserPhone">Telefone</label>
+                            <input type="tel" id="editUserPhone" name="phone" placeholder="+351 912 345 678" autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserOrganization">Organização</label>
+                            <input type="text" id="editUserOrganization" name="organization" placeholder="Empresa XYZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserRole">Perfil <span class="required">*</span></label>
+                            <select id="editUserRole" name="role" required>
+                                <option value="user">👤 Utilizador</option>
+                                <option value="moderator">⚙️ Moderador</option>
+                                <option value="admin">👑 Administrador</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editUserStatus">Estado</label>
+                            <select id="editUserStatus" name="status">
+                                <option value="active">✅ Ativo</option>
+                                <option value="inactive">⏸️ Inativo</option>
+                                <option value="suspended">🚫 Suspenso</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção de Alterar Password -->
+                    <div class="password-section">
+                        <div class="password-toggle">
+                            <input type="checkbox" id="changePassword">
+                            <label for="changePassword">Alterar Palavra-passe</label>
+                        </div>
+                        <div id="passwordFields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-group full-width">
+                                    <label for="editUserNewPassword">Nova Palavra-passe</label>
+                                    <input type="password" id="editUserNewPassword" name="newPassword" autocomplete="new-password" minlength="8">
+                                    <span class="helper-text">Mínimo 8 caracteres. Deixe em branco para manter password atual.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="hideEditUserModal()">Cancelar</button>
+                <button type="submit" form="editUserForm" class="btn-primary">💾 Guardar Alterações</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js?v=2025102603" defer></script>
+    <script src="terminal-debug.js?v=2025102603" defer></script>
+    <script src="auth-client.js?v=2025102616" defer></script>
+    <script src="auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="navigation-config.js?v=2025102601" defer></script>
+    <script src="navigation-service.js?v=2025102601" defer></script>
+    <script src="navigation-component.js?v=2025102601" defer></script>
+    <script src="navigation-init.js?v=2025102601" defer></script>
+    
+    <script src="universal-route-protection.js?v=2025102618" defer></script>
+    <script src="user-management.js?v=2025102609" defer></script>
+    <script defer>
+        // Dashboard functionality
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 1) Garantir Supabase de dados
+                if (!window.supabaseClient?.init) {
+                    throw new Error('SupabaseClient não encontrado');
+                }
+                await window.supabaseClient.init();
+                await window.supabaseClient.ready();
+
+                // 2) Garantir autenticação (usa o helper server-side)
+                const ok = await verificarAutenticacao(['admin','moderator']);
+                if (!ok) {
+                    document.querySelector('.main')?.replaceChildren();
+                    document.querySelector('.main')?.insertAdjacentHTML('afterbegin', `
+                        <section class="content-section active" style="text-align:center;padding:64px;">
+                            <h2>🔒 Sem sessão ou permissões</h2>
+                            <p>Inicie sessão para continuar.</p>
+                            <a href="./login.html" class="btn-quick">🔐 Iniciar Sessão</a>
+                        </section>
+                    `);
+                    return;
+                }
+
+                // 3) Aguardar navegação estar pronta (renderizada pelo NavigationComponent)
+                await waitForNavigation();
+
+                // 4) Inicializações do dashboard
+                await loadUserData();
+                await loadDashboardStats();
+            } catch (err) {
+                console.error('[DASHBOARD] Falha na inicialização:', err);
+            }
+        });
+        
+        // Aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve);
+                }
+            });
+        }
+        
+        async function loadUserData() {
+            try {
+                console.log('[DASHBOARD] Carregando dados do utilizador...');
+                
+                // Aguardar sistema de autenticação estar pronto
+                if (!window.authSystem || !window.authSystem.currentUser) {
+                    console.log('[DASHBOARD] Aguardando sistema de autenticação...');
+                    await waitForAuthSystem();
+                }
+                
+                const user = window.authSystem.currentUser;
+                const profile = window.authSystem.userProfile;
+                
+                if (user && profile) {
+                    // Update user info in header
+                    document.getElementById('userName').textContent = profile?.name || user.email;
+                    document.getElementById('userRole').textContent = profile?.role || 'user';
+                    
+                    document.getElementById('profileName').textContent = profile?.name || user.email;
+                    document.getElementById('profileEmail').textContent = user.email;
+                    document.getElementById('profileRole').textContent = profile?.role || 'user';
+                    
+                    // Set avatar initial
+                    const avatar = document.getElementById('profileAvatar');
+                    const name = profile?.name || user.email;
+                    avatar.textContent = name.charAt(0).toUpperCase();
+                    
+                    console.log('[DASHBOARD] Dados do utilizador carregados:', { user: user.email, profile: profile.role });
+                } else {
+                    console.warn('[DASHBOARD] Utilizador ou perfil não disponível');
+                }
+            } catch (error) {
+                console.error('[DASHBOARD] Erro ao carregar dados do utilizador:', error);
+            }
+        }
+        
+        async function waitForAuthSystem() {
+            // Espera pelo Supabase de dados (não pelo supabase dentro do AuthClient)
+            return new Promise((resolve) => {
+                const tick = () => {
+                    if (window.authSystem?.currentUser !== undefined && window.supabaseClient?.supabase) {
+                        console.log('[DASHBOARD] AuthSystem pronto com perfil');
+                        resolve();
+                    } else {
+                        setTimeout(tick, 100);
+                    }
+                };
+                tick();
+            });
+        }
+        
+        async function loadDashboardStats() {
+            try {
+                console.log('[DASHBOARD] Carregando estatísticas...');
+                
+                // Aguardar sistema de autenticação estar pronto
+                if (!window.authSystem || !window.authSystem.supabase) {
+                    console.log('[DASHBOARD] Aguardando sistema de autenticação...');
+                    await waitForAuthSystem();
+                }
+                
+                // Carregar estatísticas reais da base de dados
+                const stats = await loadRealStats();
+                
+                document.getElementById('totalEvents').textContent = stats.events || '0';
+                document.getElementById('totalParticipants').textContent = stats.participants || '0';
+                document.getElementById('totalDetections').textContent = stats.detections || '0';
+                document.getElementById('totalClassifications').textContent = stats.classifications || '0';
+                
+                console.log('[DASHBOARD] Estatísticas carregadas:', stats);
+            } catch (error) {
+                console.error('[DASHBOARD] Erro ao carregar estatísticas:', error);
+                // Manter valores padrão em caso de erro
+                document.getElementById('totalEvents').textContent = '0';
+                document.getElementById('totalParticipants').textContent = '0';
+                document.getElementById('totalDetections').textContent = '0';
+                document.getElementById('totalClassifications').textContent = '0';
+            }
+        }
+        
+        async function loadRealStats() {
+            try {
+                console.log('[DASHBOARD] Carregando stats via API REST...');
+                
+                // Usar API REST (bypassa RLS com service role no servidor)
+                const res = await fetch('/api/events/stats', {
+                    credentials: 'include'
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        console.warn('[DASHBOARD] Sem sessão');
+                        return { events: 0, participants: 0, detections: 0, classifications: 0 };
+                    }
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+                const { success, stats, error } = await res.json();
+                
+                if (!success || error) {
+                    throw new Error(error || 'Erro ao carregar estatísticas');
+                }
+                
+                console.log('[DASHBOARD] Stats da API:', stats);
+                
+                return {
+                    events: stats?.totalEvents || 0,
+                    participants: stats?.totalParticipants || 0,
+                    detections: stats?.totalDetectionsToday || 0,
+                    classifications: stats?.totalClassifications || 0
+                };
+            } catch (error) {
+                console.error('[DASHBOARD] Erro a carregar stats via API:', error);
+                
+                // Fallback: tentar Supabase direto (pode falhar por RLS)
+                try {
+                    console.warn('[DASHBOARD] Tentando fallback com Supabase direto...');
+                    return await loadStatsFromSupabaseFallback();
+                } catch (e2) {
+                    console.error('[DASHBOARD] Fallback também falhou:', e2);
+                    return { events: 0, participants: 0, detections: 0, classifications: 0 };
+                }
+            }
+        }
+        
+        // Fallback: carregar stats direto do Supabase
+        async function loadStatsFromSupabaseFallback() {
+            const supa = window.supabaseClient?.supabase;
+            if (!supa) throw new Error('Supabase client não disponível');
+
+            console.log('[DASHBOARD] Fallback: usando Supabase direto (sujeito a RLS)');
+
+            // Início do dia local
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startISO = start.toISOString();
+
+            const [eventsRes, participantsRes, detectionsRes, classificationsRes] = await Promise.all([
+                supa.from('events').select('*', { count: 'exact', head: true }).eq('is_active', true),
+                supa.from('participants').select('*', { count: 'exact', head: true }),
+                supa.from('detections').select('*', { count: 'exact', head: true }).gte('created_at', startISO),
+                supa.from('classifications').select('*', { count: 'exact', head: true })
+            ]);
+
+            return {
+                events: eventsRes.count || 0,
+                participants: participantsRes.count || 0,
+                detections: detectionsRes.count || 0,
+                classifications: classificationsRes.count || 0
+            };
+        }
+        
+        // Admin functions
+        function showUserManagement() {
+            document.getElementById('userManagementPanel').style.display = 'block';
+            if (window.userManagement) {
+                window.userManagement.loadUsersTable();
+            }
+        }
+        
+        function showRoleManagement() {
+            // Esconder painel de gestão de utilizadores
+            document.getElementById('userManagementPanel').style.display = 'none';
+            
+            // Mostrar painel de gestão de perfis
+            let rolePanel = document.getElementById('roleManagementPanel');
+            if (!rolePanel) {
+                rolePanel = createRoleManagementPanel();
+                document.getElementById('admin-section').appendChild(rolePanel);
+            }
+            rolePanel.style.display = 'block';
+        }
+        
+        function showSystemSettings() {
+            // Esconder outros painéis
+            document.getElementById('userManagementPanel').style.display = 'none';
+            document.getElementById('roleManagementPanel')?.style.setProperty('display', 'none');
+            document.getElementById('auditLogPanel')?.style.setProperty('display', 'none');
+            
+            // Mostrar painel de configurações
+            let settingsPanel = document.getElementById('systemSettingsPanel');
+            if (!settingsPanel) {
+                settingsPanel = createSystemSettingsPanel();
+                document.getElementById('admin-section').appendChild(settingsPanel);
+            }
+            settingsPanel.style.display = 'block';
+        }
+        
+        function showAuditLog() {
+            // Esconder outros painéis
+            document.getElementById('userManagementPanel').style.display = 'none';
+            document.getElementById('roleManagementPanel')?.style.setProperty('display', 'none');
+            document.getElementById('systemSettingsPanel')?.style.setProperty('display', 'none');
+            
+            // Mostrar painel de logs
+            let auditPanel = document.getElementById('auditLogPanel');
+            if (!auditPanel) {
+                auditPanel = createAuditLogPanel();
+                document.getElementById('admin-section').appendChild(auditPanel);
+            }
+            auditPanel.style.display = 'block';
+        }
+        
+        // Delegadas para window.userManagement (source of truth)
+        function showAddUserModal() {
+            window.userManagement?.showAddUserModal();
+        }
+        
+        function hideAddUserModal() {
+            window.userManagement?.hideAddUserModal();
+        }
+        
+        function showEditUserModal(userId) {
+            window.userManagement?.showEditUserModal(userId);
+        }
+        
+        function hideEditUserModal() {
+            window.userManagement?.hideEditUserModal();
+        }
+        
+        function showEditProfileModal() {
+            window.userManagement?.showEditProfileModal();
+        }
+        
+        function hideProfileEditPanel() {
+            window.userManagement?.hideProfileEditPanel();
+        }
+        
+        function showChangePasswordModal() {
+            alert('Alterar palavra-passe - Em desenvolvimento');
+        }
+        
+        function showPreferencesModal() {
+            alert('Preferências - Em desenvolvimento');
+        }
+        
+        function editUser(userId) {
+            window.userManagement?.editUser(userId);
+        }
+        
+        function deleteUser(userId) {
+            window.userManagement?.deleteUser(userId);
+        }
+        
+        function loadUsersTable() {
+            if (window.userManagement) {
+                window.userManagement.loadUsersTable();
+            }
+        }
+        
+        // Funções para os painéis de administração
+        function createRoleManagementPanel() {
+            const panel = document.createElement('div');
+            panel.id = 'roleManagementPanel';
+            panel.className = 'admin-section';
+            panel.style.display = 'none';
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                    <h3>🔐 Gestão de Perfis e Permissões</h3>
+                    <button class="btn-quick" type="button" onclick="createNewRole()">
+                        <span>➕</span>
+                        Novo Perfil
+                    </button>
+                </div>
+                
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <div class="admin-icon">👑</div>
+                        <div class="admin-title">Administrador</div>
+                        <div class="admin-description">Acesso total ao sistema</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="editRole('admin')">Editar</button>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">🛡️</div>
+                        <div class="admin-title">Moderador</div>
+                        <div class="admin-description">Gestão de eventos e participantes</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="editRole('moderator')">Editar</button>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">👤</div>
+                        <div class="admin-title">Utilizador</div>
+                        <div class="admin-description">Acesso básico à plataforma</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="editRole('user')">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container" style="margin-top: var(--spacing-6);">
+                    <h4>Permissões por Perfil</h4>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Funcionalidade</th>
+                                <th>Administrador</th>
+                                <th>Moderador</th>
+                                <th>Utilizador</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Gestão de Utilizadores</td>
+                                <td><span class="badge badge-success">✓</span></td>
+                                <td><span class="badge badge-danger">✗</span></td>
+                                <td><span class="badge badge-danger">✗</span></td>
+                            </tr>
+                            <tr>
+                                <td>Gestão de Eventos</td>
+                                <td><span class="badge badge-success">✓</span></td>
+                                <td><span class="badge badge-success">✓</span></td>
+                                <td><span class="badge badge-danger">✗</span></td>
+                            </tr>
+                            <tr>
+                                <td>Visualizar Relatórios</td>
+                                <td><span class="badge badge-success">✓</span></td>
+                                <td><span class="badge badge-success">✓</span></td>
+                                <td><span class="badge badge-success">✓</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            return panel;
+        }
+        
+        function createSystemSettingsPanel() {
+            const panel = document.createElement('div');
+            panel.id = 'systemSettingsPanel';
+            panel.className = 'admin-section';
+            panel.style.display = 'none';
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                    <h3>⚙️ Configurações do Sistema</h3>
+                    <button class="btn-quick" type="button" onclick="saveSystemSettings()">
+                        <span>💾</span>
+                        Guardar Configurações
+                    </button>
+                </div>
+                
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <div class="admin-icon">🔐</div>
+                        <div class="admin-title">Segurança</div>
+                        <div class="admin-description">Configurações de autenticação</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="openSecuritySettings()">Configurar</button>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">📧</div>
+                        <div class="admin-title">Notificações</div>
+                        <div class="admin-description">Configurações de email e alertas</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="openNotificationSettings()">Configurar</button>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">🎨</div>
+                        <div class="admin-title">Aparência</div>
+                        <div class="admin-description">Tema e personalização</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="openAppearanceSettings()">Configurar</button>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">🗄️</div>
+                        <div class="admin-title">Base de Dados</div>
+                        <div class="admin-description">Backup e manutenção</div>
+                        <div class="admin-actions">
+                            <button class="btn-quick secondary" type="button" onclick="openDatabaseSettings()">Configurar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form" style="margin-top: var(--spacing-6);">
+                    <h4>Configurações Gerais</h4>
+                    <div class="form-group">
+                        <label for="systemName">Nome do Sistema</label>
+                        <input type="text" id="systemName" value="VisionKrono" placeholder="Nome do sistema">
+                    </div>
+                    <div class="form-group">
+                        <label for="systemEmail">Email do Sistema</label>
+                        <input type="email" id="systemEmail" value="admin@visionkrono.com" placeholder="Email de contacto">
+                    </div>
+                    <div class="form-group">
+                        <label for="timezone">Fuso Horário</label>
+                        <select id="timezone">
+                            <option value="Europe/Lisbon">Lisboa (GMT+0/+1)</option>
+                            <option value="Europe/London">Londres (GMT+0/+1)</option>
+                            <option value="America/New_York">Nova Iorque (GMT-5/-4)</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            return panel;
+        }
+        
+        function createAuditLogPanel() {
+            const panel = document.createElement('div');
+            panel.id = 'auditLogPanel';
+            panel.className = 'admin-section';
+            panel.style.display = 'none';
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                    <h3>📋 Logs de Auditoria</h3>
+                    <div>
+                        <button class="btn-quick secondary" type="button" onclick="exportAuditLogs()">
+                            <span>📤</span>
+                            Exportar
+                        </button>
+                        <button class="btn-quick" type="button" onclick="refreshAuditLogs()">
+                            <span>🔄</span>
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table" id="auditLogTable">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Utilizador</th>
+                                <th>Ação</th>
+                                <th>Detalhes</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditLogTableBody">
+                            <tr>
+                                <td>2025-10-25 23:22:26</td>
+                                <td>Rdias300@gmail.com</td>
+                                <td><span class="badge badge-info">LOGIN</span></td>
+                                <td>Login realizado com sucesso</td>
+                                <td>192.168.1.219</td>
+                            </tr>
+                            <tr>
+                                <td>2025-10-25 23:20:15</td>
+                                <td>Rdias300@gmail.com</td>
+                                <td><span class="badge badge-warning">ACCESS</span></td>
+                                <td>Acesso à página de administração</td>
+                                <td>192.168.1.219</td>
+                            </tr>
+                            <tr>
+                                <td>2025-10-25 23:18:42</td>
+                                <td>Rdias300@gmail.com</td>
+                                <td><span class="badge badge-success">VIEW</span></td>
+                                <td>Visualização do dashboard</td>
+                                <td>192.168.1.219</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="admin-grid" style="margin-top: var(--spacing-6);">
+                    <div class="admin-card">
+                        <div class="admin-icon">📊</div>
+                        <div class="admin-title">Estatísticas</div>
+                        <div class="admin-description">
+                            <p><strong>Logins hoje:</strong> 3</p>
+                            <p><strong>Total de ações:</strong> 15</p>
+                            <p><strong>Última atividade:</strong> Agora</p>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <div class="admin-icon">⚠️</div>
+                        <div class="admin-title">Alertas</div>
+                        <div class="admin-description">
+                            <p><strong>Tentativas falhadas:</strong> 0</p>
+                            <p><strong>Acessos suspeitos:</strong> 0</p>
+                            <p><strong>Sistema:</strong> Normal</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return panel;
+        }
+        
+        // Funções auxiliares para os painéis
+        function createNewRole() {
+            alert('Criar novo perfil - Funcionalidade em desenvolvimento');
+        }
+        
+        function editRole(role) {
+            alert(`Editar perfil ${role} - Funcionalidade em desenvolvimento`);
+        }
+        
+        function saveSystemSettings() {
+            alert('Configurações guardadas com sucesso!');
+        }
+        
+        function openSecuritySettings() {
+            alert('Configurações de segurança - Funcionalidade em desenvolvimento');
+        }
+        
+        function openNotificationSettings() {
+            alert('Configurações de notificações - Funcionalidade em desenvolvimento');
+        }
+        
+        function openAppearanceSettings() {
+            alert('Configurações de aparência - Funcionalidade em desenvolvimento');
+        }
+        
+        function openDatabaseSettings() {
+            alert('Configurações de base de dados - Funcionalidade em desenvolvimento');
+        }
+        
+        function exportAuditLogs() {
+            alert('Exportar logs - Funcionalidade em desenvolvimento');
+        }
+        
+        function refreshAuditLogs() {
+            alert('Logs atualizados!');
+        }
+        
+        // Toggle password fields (listener adicional para quando o modal é criado dinamicamente)
+        document.addEventListener('DOMContentLoaded', function() {
+            const changePasswordCheckbox = document.getElementById('changePassword');
+            const passwordFields = document.getElementById('passwordFields');
+            
+            if (changePasswordCheckbox && passwordFields) {
+                changePasswordCheckbox.addEventListener('change', function() {
+                    passwordFields.style.display = this.checked ? 'block' : 'none';
+                    const passwordInput = document.getElementById('editUserNewPassword');
+                    if (passwordInput) {
+                        passwordInput.required = this.checked;
+                        if (!this.checked) {
+                            passwordInput.value = '';
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Form submissions (verificar se existem antes de adicionar listeners)
+        document.addEventListener('DOMContentLoaded', function() {
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    window.userManagement?.handleAddUser(e);
+                });
+            }
+            
+            const editUserForm = document.getElementById('editUserForm');
+            if (editUserForm) {
+                editUserForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    window.userManagement?.handleEditUser(e);
+                });
+            }
+            
+            const profileEditForm = document.getElementById('profileEditForm');
+            if (profileEditForm) {
+                profileEditForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    window.userManagement?.handleProfileEdit(e);
+                });
+            }
+            
+            // Nota: logoutBtn é gerido pelo NavigationComponent
+        });
+    </script>
+</body>
+</html>
+

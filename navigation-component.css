@@ -1,0 +1,162 @@
+/**
+ * VisionKrono - Estilos do Componente de Navegação
+ * 
+ * @version 2025.10.26
+ */
+
+/* Separador entre seções */
+.nav-separator {
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--spacing-4) var(--spacing-3);
+    opacity: 0.5;
+}
+
+/* Label de seção */
+.nav-section-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-2);
+}
+
+.nav-section-icon {
+    font-size: var(--font-size-base);
+}
+
+.nav-section-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Link de voltar */
+.nav-link-back {
+    padding: var(--spacing-2) var(--spacing-4) !important;
+    font-size: var(--font-size-sm) !important;
+    margin-top: var(--spacing-1);
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 2px solid var(--primary);
+}
+
+.nav-link-back:hover {
+    background: rgba(252, 107, 3, 0.15) !important;
+    border-left-color: var(--primary);
+}
+
+.nav-text-small {
+    font-size: var(--font-size-xs);
+}
+
+/* Badge de readonly */
+.nav-badge {
+    margin-left: auto;
+    font-size: var(--font-size-xs);
+    opacity: 0.7;
+}
+
+/* Seção de evento */
+.sidebar-nav[data-section="event"] {
+    background: rgba(252, 107, 3, 0.03);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2);
+    margin: 0 var(--spacing-2) var(--spacing-2);
+}
+
+.sidebar-nav[data-section="event"] .nav-section-label {
+    background: rgba(252, 107, 3, 0.1);
+    border-radius: var(--radius-base);
+    margin-bottom: var(--spacing-2);
+}
+
+/* Responsividade adicional */
+@media (max-width: 1024px) {
+    .nav-section-label {
+        padding: var(--spacing-2) var(--spacing-3);
+        font-size: 10px;
+    }
+    
+    .nav-text-small {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar-nav[data-section="event"] {
+        margin: 0 var(--spacing-1) var(--spacing-1);
+        padding: var(--spacing-1);
+    }
+}
+
+/* Estados de carregamento */
+.nav-loading {
+    padding: var(--spacing-4);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.nav-error {
+    padding: var(--spacing-4);
+    text-align: center;
+    color: var(--danger);
+    font-size: var(--font-size-sm);
+}
+
+/* Animações */
+.sidebar-nav {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Hover states aprimorados */
+.nav-link {
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--primary);
+    transform: scaleY(0);
+    transition: transform var(--transition-base);
+}
+
+.nav-link.active::before,
+.nav-link:hover::before {
+    transform: scaleY(1);
+}
+
+/* Indicador de contexto ativo */
+.sidebar-nav[data-section="event"]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--primary), transparent);
+}
+
