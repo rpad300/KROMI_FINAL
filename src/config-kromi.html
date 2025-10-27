@@ -2000,10 +2000,15 @@
                     .from('events')
                     .select('has_lap_counter')
                     .eq('id', eventId)
-                    .single();
+                    .maybeSingle();
                 
                 if (eventError) {
                     console.error('❌ Erro ao carregar configuração do evento:', eventError);
+                    return;
+                }
+                
+                if (!eventData) {
+                    console.log('ℹ️ Evento não encontrado ou sem configuração de lap counter');
                     return;
                 }
                 
