@@ -76,7 +76,8 @@ class AICostSync {
             let totalCost = 0;
 
             // OPÇÃO 1: Usar Google Cloud Billing API (requer credenciais)
-            if (this.googleProjectId && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+            // TEMPORARIAMENTE DESATIVADO - usando estimativas
+            if (false && this.googleProjectId && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
                 console.log('💰 [AI-COST-SYNC] Usando Google Cloud Billing API...');
                 const results = await this.syncFromGoogleBillingAPI(startDate, endDate);
                 totalRecords = results.records;

@@ -249,6 +249,168 @@ class ImageProcessor {
         }
     }
     
+    async processImagesWithOpenAI(images) {
+        if (!images || images.length === 0) return;
+        
+        try {
+            // Preparar dados para OpenAI
+            const imageData = images.map(img => {
+                // Remover qualquer prefixo data:image/...;base64, da string Base64
+                let cleanBase64 = img.image_data;
+                if (cleanBase64.includes(',')) {
+                    cleanBase64 = cleanBase64.split(',')[1];
+                }
+                
+                return {
+                    type: 'image_url',
+                    image_url: {
+                        url: `data:image/jpeg;base64,${cleanBase64}`
+                    }
+                };
+            });
+            
+            // Obter modelo OpenAI da configuração
+            const processorConfig = await this.getProcessorConfig();
+            const openaiModel = processorConfig?.openaiModel || 'gpt-4o';
+            
+            const requestBody = {
+                model: openaiModel,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            {
+                                type: "text",
+                                text: `Analise estas ${images.length} imagens de corrida e identifique números de dorsais (bib numbers). 
+
+INSTRUÇÕES:
+1. Procure por números de dorsais nas imagens
+2. Cada linha deve conter apenas o número encontrado na imagem correspondente
+3. Se não encontrar número, escreva "NENHUM"
+4. Se encontrar múltiplos números, escreva apenas o mais visível
+5. Responda apenas com os números, um por linha, na ordem das imagens
+
+FORMATO DE RESPOSTA:
+123
+456
+NENHUM
+789
+
+Analise as imagens:`
+                            },
+                            ...imageData
+                        ]
+                    }
+                ],
+                temperature: 0.1,
+                max_tokens: 1000
+            };
+            
+            // Enviar para OpenAI
+            const openaiKey = await this.getOpenAIKey();
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openaiKey}`
+                },
+                body: JSON.stringify(requestBody)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`OpenAI API error: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+                throw new Error('Resposta inválida do OpenAI');
+            }
+            
+            const responseText = result.choices[0].message.content;
+            const lines = responseText.trim().split('\n');
+            
+            // Processar cada imagem
+            for (let i = 0; i < images.length; i++) {
+                const image = images[i];
+                const line = lines[i] || 'NENHUM';
+                
+                if (line.trim().toUpperCase() === 'NENHUM' || !line.trim()) {
+                    // Marcar como descartada
+                    await this.supabaseClient.supabase
+                        .from('image_buffer')
+                        .update({ 
+                            status: 'discarded',
+                            processed_at: new Date().toISOString(),
+                            processing_result: 'Nenhum número detectado'
+                        })
+                        .eq('id', image.id);
+                    
+                    this.log(`📷 Imagem ${i + 1}: Nenhum número detectado`, 'info');
+                    continue;
+                }
+                
+                // Extrair número
+                const numberMatch = line.match(/\d+/);
+                if (!numberMatch) {
+                    // Marcar como descartada
+                    await this.supabaseClient.supabase
+                        .from('image_buffer')
+                        .update({ 
+                            status: 'discarded',
+                            processed_at: new Date().toISOString(),
+                            processing_result: 'Número inválido: ' + line
+                        })
+                        .eq('id', image.id);
+                    
+                    this.log(`📷 Imagem ${i + 1}: Número inválido - ${line}`, 'warning');
+                    continue;
+                }
+                
+                const number = parseInt(numberMatch[0]);
+                
+                // Salvar detecção
+                const { data: detection, error: detectionError } = await this.supabaseClient.supabase
+                    .from('detections')
+                    .insert({
+                        number: number,
+                        timestamp: image.captured_at,
+                        latitude: image.latitude,
+                        longitude: image.longitude,
+                        accuracy: image.accuracy,
+                        device_type: 'mobile',
+                        session_id: image.session_id,
+                        event_id: image.event_id,
+                        proof_image: image.display_image,
+                        detection_method: 'OpenAI'
+                    })
+                    .select()
+                    .single();
+                
+                if (detectionError) {
+                    this.log(`❌ Erro ao salvar detecção: ${detectionError.message}`, 'error');
+                    continue;
+                }
+                
+                // Marcar como processada
+                await this.supabaseClient.supabase
+                    .from('image_buffer')
+                    .update({ 
+                        status: 'processed',
+                        processed_at: new Date().toISOString(),
+                        processing_result: `Dorsal ${number} detectado`,
+                        detection_id: detection.id
+                    })
+                    .eq('id', image.id);
+                
+                this.log(`✅ Dorsal ${number} detectado na imagem ${i + 1}`, 'success');
+            }
+            
+        } catch (error) {
+            this.log(`❌ Erro ao processar com OpenAI: ${error.message}`, 'error');
+        }
+    }
+    
     async processImagesWithGemini(images) {
         if (!images || images.length === 0) return;
         
@@ -303,9 +465,11 @@ Analise as imagens:`
             
             // Usar a fila Gemini
             const geminiKey = await this.getGeminiKey();
+            const config = await this.getProcessorConfig();
             const result = await window.geminiQueue.addRequest({
                 geminiKey: geminiKey,
-                requestBody: requestBody
+                requestBody: requestBody,
+                model: config.geminiModel || 'gemini-2.5-flash'
             });
             
             if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
@@ -313,7 +477,6 @@ Analise as imagens:`
             }
             
             const responseText = result.candidates[0].content.parts[0].text;
-            const lines = responseText.trim().split('\n');
             
             // Processar cada imagem
             for (let i = 0; i < images.length; i++) {
@@ -430,6 +593,42 @@ Analise as imagens:`
             return config.GEMINI_API_KEY;
         } catch (error) {
             throw new Error('Erro ao obter chave Gemini: ' + error.message);
+        }
+    }
+
+    async getOpenAIKey() {
+        try {
+            const response = await fetch('/api/config');
+            const config = await response.json();
+            return config.OPENAI_API_KEY;
+        } catch (error) {
+            throw new Error('Erro ao obter chave OpenAI: ' + error.message);
+        }
+    }
+
+    async getProcessorConfig() {
+        try {
+            // Tentar carregar do localStorage primeiro
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            
+            if (eventId) {
+                const savedConfig = localStorage.getItem(`visionkrono_processor_config_${eventId}`);
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    // Garantir que geminiModel existe
+                    if (!config.geminiModel) {
+                        config.geminiModel = 'gemini-1.5-flash';
+                    }
+                    return config;
+                }
+            }
+            
+            // Fallback para configuração padrão
+            return { geminiModel: 'gemini-1.5-flash', openaiModel: 'gpt-4o' };
+        } catch (error) {
+            console.error('Erro ao obter configuração:', error);
+            return { geminiModel: 'gemini-1.5-flash', openaiModel: 'gpt-4o' };
         }
     }
     

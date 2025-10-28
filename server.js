@@ -614,6 +614,171 @@ app.post('/api/roles/update-permissions', requireAuth, requireRole('admin'), asy
 const setupEventsRoutes = require('./src/events-routes');
 setupEventsRoutes(app, sessionManager);
 
+// Função helper para obter preços
+function getOpenAIPricing(modelId) {
+    const pricing = {
+        'gpt-4o': { input: 0.0025, output: 0.010 },
+        'gpt-4o-2024-08-06': { input: 0.0025, output: 0.010 },
+        'gpt-4-turbo': { input: 0.010, output: 0.030 },
+        'gpt-4': { input: 0.030, output: 0.060 },
+        'gpt-4-vision-preview': { input: 0.010, output: 0.030 }
+    };
+    
+    // Tentar encontrar o modelo exato
+    if (pricing[modelId]) {
+        return pricing[modelId];
+    }
+    
+    // Fallback para modelos similares
+    if (modelId.includes('gpt-4o')) {
+        return pricing['gpt-4o'];
+    } else if (modelId.includes('gpt-4-turbo')) {
+        return pricing['gpt-4-turbo'];
+    } else if (modelId.includes('gpt-4')) {
+        return pricing['gpt-4'];
+    }
+    
+    // Default
+    return { input: 0.0025, output: 0.010 };
+}
+
+// Função helper para obter preços Gemini
+function getGeminiPricing(modelId) {
+    const pricing = {
+        'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
+        'gemini-1.5-pro-latest': { input: 0.00125, output: 0.005 },
+        'gemini-1.5-flash': { input: 0.000075, output: 0.0003 },
+        'gemini-1.5-flash-latest': { input: 0.000075, output: 0.0003 },
+        'gemini-2.0-flash-exp': { input: 0.000075, output: 0.0003 },
+        'gemini-2.0-flash-thinking-exp': { input: 0.000075, output: 0.0003 },
+        'gemini-ultra': { input: 0.0025, output: 0.01 }
+    };
+    
+    // Tentar encontrar o modelo exato
+    if (pricing[modelId]) {
+        return pricing[modelId];
+    }
+    
+    // Fallback para modelos similares
+    if (modelId.includes('ultra')) {
+        return pricing['gemini-ultra'];
+    } else if (modelId.includes('pro')) {
+        return pricing['gemini-1.5-pro'];
+    } else if (modelId.includes('flash')) {
+        return pricing['gemini-1.5-flash'];
+    }
+    
+    // Default (flash é mais barato)
+    return { input: 0.000075, output: 0.0003 };
+}
+
+// ==========================================
+// ROTA PARA LISTAR MODELOS GEMINI
+// ==========================================
+app.get('/api/gemini/models', async (req, res) => {
+    console.log('🔍 Rota /api/gemini/models foi chamada!');
+    try {
+        const geminiKey = process.env.GEMINI_API_KEY;
+        
+        if (!geminiKey) {
+            return res.status(400).json({
+                success: false,
+                error: 'GEMINI_API_KEY não configurada'
+            });
+        }
+        
+        console.log('📡 Consultando modelos disponíveis no Gemini...');
+        
+        // Lista de modelos Gemini com visão
+        const visionModels = [
+            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Modelo rápido e eficiente com suporte a visão' },
+            { id: 'gemini-1.5-flash-latest', name: 'Gemini 1.5 Flash (Latest)', description: 'Versão mais recente do Flash' },
+            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Modelo avançado com melhor precisão' },
+            { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro (Latest)', description: 'Versão mais recente do Pro' },
+            { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash Experimental', description: 'Modelo experimental mais rápido' },
+            { id: 'gemini-ultra', name: 'Gemini Ultra', description: 'Modelo mais poderoso (quando disponível)' }
+        ];
+        
+        console.log(`✅ Retornando ${visionModels.length} modelos do Gemini`);
+        
+        res.json({
+            success: true,
+            models: visionModels.map(m => ({
+                id: m.id,
+                name: m.name,
+                description: m.description,
+                pricing: getGeminiPricing(m.id)
+            }))
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao listar modelos Gemini:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==========================================
+// ROTA PARA LISTAR MODELOS OPENAI
+// ==========================================
+app.get('/api/openai/models', async (req, res) => {
+    console.log('🔍 Rota /api/openai/models foi chamada!');
+    try {
+        const openaiKey = process.env.OPENAI_API_KEY;
+        
+        if (!openaiKey) {
+            return res.status(400).json({
+                success: false,
+                error: 'OPENAI_API_KEY não configurada'
+            });
+        }
+        
+        console.log('📡 Consultando modelos disponíveis na OpenAI...');
+        
+        const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Filtrar apenas modelos com suporte a visão
+        const visionModels = data.data.filter(model => 
+            model.id.includes('gpt-4') && 
+            (model.id.includes('o') || model.id.includes('turbo') || model.id.includes('vision'))
+        );
+        
+        console.log(`✅ Encontrados ${visionModels.length} modelos com visão`);
+        
+        res.json({
+            success: true,
+            models: visionModels.map(m => ({
+                id: m.id,
+                name: m.id,
+                description: `Modelo ${m.id} com suporte a visão`,
+                context_window: m.context_window,
+                pricing: getOpenAIPricing(m.id)
+            }))
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao consultar modelos OpenAI:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // ==========================================
 // ROTAS DE BASE DE DADOS (REST API)
 // ==========================================

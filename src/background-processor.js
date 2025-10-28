@@ -1,5 +1,6 @@
 // Background Image Processor - Roda no servidor Node.js
 const https = require('https');
+const AICostTracker = require('./ai-cost-tracker');
 
 class BackgroundImageProcessor {
     constructor() {
@@ -9,13 +10,19 @@ class BackgroundImageProcessor {
         this.supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
         this.geminiApiKey = process.env.GEMINI_API_KEY;
         this.googleVisionApiKey = process.env.GOOGLE_VISION_API_KEY;
+        this.openaiApiKey = process.env.OPENAI_API_KEY;
         this.batchSize = 5;
         this.checkInterval = 10000; // 10 segundos
         
         // Processor configuration
-        this.processorType = 'gemini'; // gemini, google-vision, ocr, hybrid, manual
+        this.processorType = 'gemini'; // gemini, openai, google-vision, ocr, hybrid, manual
         this.processorSpeed = 'balanced'; // fast, balanced, accurate
         this.processorConfidence = 0.7;
+        this.openaiModel = 'gpt-4o'; // OpenAI model to use
+        this.geminiModel = 'gemini-1.5-flash'; // Gemini model to use
+        
+        // AI Cost Tracker
+        this.costTracker = new AICostTracker();
     }
 
     log(message, type = 'info') {
@@ -248,6 +255,8 @@ class BackgroundImageProcessor {
                 this.processorType = config.processorType || 'gemini';
                 this.processorSpeed = config.processorSpeed || 'balanced';
                 this.processorConfidence = config.processorConfidence || 0.7;
+                this.openaiModel = config.openaiModel || 'gpt-4o';
+                this.geminiModel = config.geminiModel || 'gemini-1.5-flash';
                 this.log(`Configuração carregada: ${this.processorType} (${this.processorSpeed})`, 'info');
                 return;
             }
@@ -283,7 +292,9 @@ class BackgroundImageProcessor {
                 return {
                     processorType: config[0].processor_type,
                     processorSpeed: config[0].processor_speed,
-                    processorConfidence: parseFloat(config[0].processor_confidence)
+                    processorConfidence: parseFloat(config[0].processor_confidence),
+                    openaiModel: config[0].openai_model,
+                    geminiModel: config[0].gemini_model
                 };
             }
             
@@ -317,7 +328,9 @@ class BackgroundImageProcessor {
                 return {
                     processorType: config[0].processor_type,
                     processorSpeed: config[0].processor_speed,
-                    processorConfidence: parseFloat(config[0].processor_confidence)
+                    processorConfidence: parseFloat(config[0].processor_confidence),
+                    openaiModel: config[0].openai_model,
+                    geminiModel: config[0].gemini_model
                 };
             }
             
@@ -333,6 +346,12 @@ class BackgroundImageProcessor {
             case 'gemini':
                 if (!this.geminiApiKey) {
                     this.log('ERRO: GEMINI_API_KEY não configurada para processador Gemini', 'error');
+                    return false;
+                }
+                break;
+            case 'openai':
+                if (!this.openaiApiKey) {
+                    this.log('ERRO: OPENAI_API_KEY não configurada para processador OpenAI', 'error');
                     return false;
                 }
                 break;
@@ -424,12 +443,16 @@ class BackgroundImageProcessor {
             const originalConfig = {
                 processorType: this.processorType,
                 processorSpeed: this.processorSpeed,
-                processorConfidence: this.processorConfidence
+                processorConfidence: this.processorConfidence,
+                openaiModel: this.openaiModel,
+                geminiModel: this.geminiModel
             };
             
             this.processorType = eventConfig.processorType;
             this.processorSpeed = eventConfig.processorSpeed;
             this.processorConfidence = eventConfig.processorConfidence;
+            this.openaiModel = eventConfig.openaiModel || 'gpt-4o';
+            this.geminiModel = eventConfig.geminiModel || 'gemini-1.5-flash';
             
             try {
                 // Processar com configuração do evento
@@ -439,6 +462,8 @@ class BackgroundImageProcessor {
                 this.processorType = originalConfig.processorType;
                 this.processorSpeed = originalConfig.processorSpeed;
                 this.processorConfidence = originalConfig.processorConfidence;
+                this.openaiModel = originalConfig.openaiModel;
+                this.geminiModel = originalConfig.geminiModel;
             }
         } else {
             this.log(`Usando configuração global para evento ${eventId}`, 'info');
@@ -484,6 +509,9 @@ class BackgroundImageProcessor {
         switch (this.processorType) {
             case 'gemini':
                 await this.processImagesWithGemini(images);
+                break;
+            case 'openai':
+                await this.processImagesWithOpenAI(images);
                 break;
             case 'google-vision':
                 await this.processImagesWithGoogleVision(images);
@@ -566,8 +594,32 @@ NENHUM
         });
 
         try {
+            const startTime = Date.now();
             const response = await this.callGeminiAPI(requestBody);
+            const duration = Date.now() - startTime;
             const resultText = response.candidates[0].content.parts[0].text;
+            
+            // Calcular tokens e registar custo
+            const tokensInput = this.costTracker.estimateImageTokens(JSON.stringify(requestBody));
+            const tokensOutput = (resultText || '').split(' ').length * 1.3; // Estimativa
+            
+            // Registar custo para cada imagem
+            for (const image of images) {
+                await this.costTracker.logApiCall({
+                    service: 'gemini',
+                    model: this.geminiModel,
+                    eventId: image.event_id,
+                    tokensInput: Math.floor(tokensInput / images.length), // Dividir entre imagens
+                    tokensOutput: Math.floor(tokensOutput / images.length),
+                    tokensTotal: Math.floor((tokensInput + tokensOutput) / images.length),
+                    requestDurationMs: duration,
+                    metadata: {
+                        image_id: image.id,
+                        batch_size: images.length,
+                        method: 'background-processor'
+                    }
+                });
+            }
             
             // Processar resposta
             const lines = resultText.trim().split('\n');
@@ -668,7 +720,7 @@ NENHUM
 
     async callGeminiAPI(requestBody) {
         return new Promise((resolve, reject) => {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.geminiApiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
             
             const urlObj = new URL(url);
             const options = {
@@ -693,6 +745,255 @@ NENHUM
                         resolve(JSON.parse(data));
                     } else {
                         reject(new Error(`Gemini API ${res.statusCode}: ${data}`));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                reject(error);
+            });
+
+            req.write(requestBody);
+            req.end();
+        });
+    }
+
+    async processImagesWithOpenAI(images) {
+        // Marcar como processando
+        for (const image of images) {
+            await this.updateImageStatus(image.id, 'processing');
+        }
+
+        // Agrupar imagens por sessão para verificar duplicatas
+        const sessionMap = {};
+        for (const image of images) {
+            const sessionKey = `${image.event_id}_${image.device_id}_${image.session_id}`;
+            if (!sessionMap[sessionKey]) {
+                sessionMap[sessionKey] = [];
+            }
+            sessionMap[sessionKey].push(image);
+        }
+
+        // Preparar imagens para OpenAI
+        const imageParts = images.map(img => {
+            let base64 = img.image_data;
+            // Remover prefixo data: se existir
+            if (base64.includes('base64,')) {
+                base64 = base64.split('base64,')[1];
+            }
+            
+            return {
+                type: 'image_url',
+                image_url: {
+                    url: `data:image/jpeg;base64,${base64}`
+                }
+            };
+        });
+
+        // Fazer requisição ao OpenAI
+        const requestBody = JSON.stringify({
+            model: this.openaiModel || "gpt-4o",
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: `Analise estas ${images.length} imagens de uma corrida esportiva. Para cada imagem, identifique o número do dorsal (bib number) do atleta.
+
+IMPORTANTE:
+- Retorne APENAS números válidos (0-9999)
+- Se não identificar número, retorne "NENHUM"
+- Um número por linha
+- Formato: apenas o número, nada mais
+
+Exemplos:
+407
+156
+NENHUM
+42
+
+Analise as imagens:`
+                        },
+                        ...imageParts
+                    ]
+                }
+            ],
+            temperature: 0.1,
+            max_tokens: 1000
+        });
+
+        try {
+            this.log('📡 Enviando requisição para OpenAI...', 'info');
+            
+            const startTime = Date.now();
+            const response = await this.callOpenAIAPI(requestBody);
+            const duration = Date.now() - startTime;
+            
+            this.log('✅ Resposta recebida do OpenAI', 'success');
+            
+            // Extrair uso de tokens da resposta (se disponível)
+            const usage = response.usage || {};
+            const tokensInput = usage.prompt_tokens || 0;
+            const tokensOutput = usage.completion_tokens || 0;
+            const tokensTotal = usage.total_tokens || tokensInput + tokensOutput;
+            
+            // Registar custo para cada imagem
+            for (const image of images) {
+                await this.costTracker.logApiCall({
+                    service: 'openai',
+                    model: this.openaiModel,
+                    eventId: image.event_id,
+                    tokensInput: Math.floor(tokensInput / images.length),
+                    tokensOutput: Math.floor(tokensOutput / images.length),
+                    tokensTotal: Math.floor(tokensTotal / images.length),
+                    requestDurationMs: duration,
+                    metadata: {
+                        image_id: image.id,
+                        batch_size: images.length,
+                        method: 'background-processor'
+                    }
+                });
+            }
+            
+            const detectedInSession = {};
+            
+            // Processar resposta
+            const responseText = response.choices[0].message.content;
+            const lines = responseText.split('\n').map(line => line.trim()).filter(line => line);
+            
+            for (let i = 0; i < lines.length && i < images.length; i++) {
+                const line = lines[i];
+                const image = images[i];
+                
+                if (line === 'NENHUM' || line === 'NONE' || line === '') {
+                    await this.updateImageStatus(image.id, 'processed', { 
+                        number_detected: null,
+                        reason: 'no_dorsal_detected'
+                    });
+                    this.log(`Nenhum dorsal detectado na imagem ${i + 1}`, 'info');
+                    continue;
+                }
+                
+                // Extrair número
+                const numberMatch = line.match(/\b(\d{1,4})\b/);
+                if (!numberMatch) {
+                    await this.updateImageStatus(image.id, 'error', { 
+                        error: 'formato_invalido',
+                        raw_text: line
+                    });
+                    continue;
+                }
+                
+                const number = parseInt(numberMatch[1]);
+                
+                if (number < 0 || number > 9999) {
+                    await this.updateImageStatus(image.id, 'processed', { 
+                        number_detected: null,
+                        reason: 'numero_invalido'
+                    });
+                    continue;
+                }
+                
+                // Verificar duplicatas
+                const sessionKey = `${image.event_id}_${image.device_id}_${image.session_id}`;
+                const alreadyDetectedInBatch = detectedInSession[`${sessionKey}_${number}`];
+                const existingDetection = await this.checkExistingDetection(number, image.event_id, image.device_id);
+                
+                if (existingDetection || alreadyDetectedInBatch) {
+                    // Duplicata! Descartar esta detecção
+                    await this.updateImageStatus(image.id, 'discarded', { 
+                        reason: 'duplicate',
+                        number: number,
+                        duplicate_of: existingDetection?.id || 'current_batch'
+                    });
+                    
+                    this.log(`Duplicata descartada: ${number} (já detectado anteriormente)`, 'info');
+                    continue;
+                }
+                
+                // Marcar como detectado neste lote
+                detectedInSession[`${sessionKey}_${number}`] = true;
+                
+                // Salvar primeira detecção
+                const savedDetection = await this.saveDetection({
+                    number: number,
+                    timestamp: image.captured_at,
+                    latitude: image.latitude,
+                    longitude: image.longitude,
+                    accuracy: image.accuracy,
+                    device_type: 'mobile',
+                    session_id: image.session_id,
+                    event_id: image.event_id,
+                    proof_image: image.display_image,
+                    dorsal_region: null,
+                    detection_method: 'OpenAI'
+                });
+                
+                // Salvar classificação se evento estiver ativo
+                if (savedDetection && image.event_id) {
+                    try {
+                        const deviceOrder = 1;
+                        
+                        await this.saveClassification({
+                            event_id: image.event_id,
+                            dorsal_number: number,
+                            device_order: deviceOrder,
+                            checkpoint_time: image.captured_at,
+                            detection_id: savedDetection.id
+                        });
+                        this.log(`✅ Classificação criada para dorsal ${number} (checkpoint ${deviceOrder})`, 'success');
+                    } catch (error) {
+                        this.log(`❌ Erro ao criar classificação: ${error.message}`, 'error');
+                    }
+                }
+
+                await this.updateImageStatus(image.id, 'processed', { 
+                    number_detected: number,
+                    detection_id: savedDetection?.id
+                });
+                
+                this.log(`✅ Detecção salva: ${number}`, 'success');
+            }
+
+        } catch (error) {
+            this.log(`Erro no OpenAI: ${error.message}`, 'error');
+            
+            // Marcar como erro
+            for (const image of images) {
+                await this.updateImageStatus(image.id, 'error', { error: error.message });
+            }
+        }
+    }
+
+    async callOpenAIAPI(requestBody) {
+        return new Promise((resolve, reject) => {
+            const url = 'https://api.openai.com/v1/chat/completions';
+            
+            const urlObj = new URL(url);
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.openaiApiKey}`,
+                    'Content-Length': Buffer.byteLength(requestBody)
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve(JSON.parse(data));
+                    } else {
+                        reject(new Error(`OpenAI API ${res.statusCode}: ${data}`));
                     }
                 });
             });
@@ -1317,7 +1618,7 @@ NENHUM
     
     async processImageWithGeminiAPI(base64Data) {
         // Reutilizar a lógica do Gemini existente
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.geminiApiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
         
         const requestBody = {
             contents: [{

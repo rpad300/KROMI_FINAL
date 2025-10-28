@@ -74,12 +74,15 @@ class GeminiQueue {
     
     // Executar requisição individual
     async executeRequest(requestData) {
-        const { geminiKey, requestBody } = requestData;
+        const { geminiKey, requestBody, model } = requestData;
         
-        console.log(`💎 Enviando requisição para Gemini...`);
+        // Usar modelo especificado ou padrão
+        const geminiModel = model || 'gemini-2.5-flash';
+        
+        console.log(`💎 Enviando requisição para Gemini (${geminiModel})...`);
         console.log(`📊 Tamanho do requestBody: ${JSON.stringify(requestBody).length} caracteres`);
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)

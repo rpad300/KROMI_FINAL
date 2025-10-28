@@ -106,6 +106,15 @@
                         </div>
                         
                         <div class="form-group">
+                            <label>OpenAI API Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="openaiApiKey" placeholder="Digite sua chave da API OpenAI">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('openaiApiKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave para processamento com OpenAI GPT-4</span>
+                        </div>
+                        
+                        <div class="form-group">
                             <label>Google Vision API Key</label>
                             <div class="api-key-input">
                                 <input type="password" id="googleVisionApiKey" placeholder="Digite sua chave da API Google Vision">
@@ -193,12 +202,35 @@
                             <label>Tipo de Processador Padrão</label>
                             <select id="defaultProcessorType">
                                 <option value="gemini">🤖 Gemini AI</option>
+                                <option value="openai">🤖 OpenAI GPT-4</option>
                                 <option value="google-vision">👁️ Google Vision</option>
                                 <option value="ocr">📄 OCR Tradicional</option>
                                 <option value="hybrid">🔄 Sistema Híbrido</option>
                                 <option value="manual">✋ Processamento Manual</option>
                             </select>
                             <span class="helper-text">Processador usado por padrão em novos eventos</span>
+                        </div>
+                        
+                        <div class="form-group" id="geminiModelGroup" style="display: none;">
+                            <label>Modelo Gemini Padrão</label>
+                            <select id="geminiModel">
+                                <option value="">Carregando modelos...</option>
+                            </select>
+                            <button type="button" id="reloadGeminiModelsBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%;">
+                                🔄 Recarregar Modelos
+                            </button>
+                            <span class="helper-text">Modelo Gemini usado por padrão</span>
+                        </div>
+                        
+                        <div class="form-group" id="openaiModelGroup" style="display: none;">
+                            <label>Modelo OpenAI Padrão</label>
+                            <select id="openaiModel">
+                                <option value="">Carregando modelos...</option>
+                            </select>
+                            <button type="button" id="reloadModelsBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%;">
+                                🔄 Recarregar Modelos
+                            </button>
+                            <span class="helper-text">Modelo OpenAI usado por padrão</span>
                         </div>
                         
                         <div class="form-group">
@@ -349,7 +381,109 @@
             loadApiConfigurations();
             loadEmailSettings();
             loadProcessorSettings();
+            
+            // Adicionar event listener para tipo de processador
+            const processorTypeSelect = document.getElementById('defaultProcessorType');
+            if (processorTypeSelect) {
+                processorTypeSelect.addEventListener('change', function() {
+                    handleProcessorTypeChange(this.value);
+                });
+            }
+            
+            // Botão recarregar modelos
+            const reloadModelsBtn = document.getElementById('reloadModelsBtn');
+            if (reloadModelsBtn) {
+                reloadModelsBtn.addEventListener('click', loadOpenAIModels);
+            }
+            
+            const reloadGeminiModelsBtn = document.getElementById('reloadGeminiModelsBtn');
+            if (reloadGeminiModelsBtn) {
+                reloadGeminiModelsBtn.addEventListener('click', loadGeminiModels);
+            }
         });
+        
+        function handleProcessorTypeChange(selectedType) {
+            const openaiModelGroup = document.getElementById('openaiModelGroup');
+            const geminiModelGroup = document.getElementById('geminiModelGroup');
+            
+            if (openaiModelGroup) {
+                if (selectedType === 'openai') {
+                    openaiModelGroup.style.display = 'block';
+                    loadOpenAIModels();
+                } else {
+                    openaiModelGroup.style.display = 'none';
+                }
+            }
+            
+            if (geminiModelGroup) {
+                if (selectedType === 'gemini') {
+                    geminiModelGroup.style.display = 'block';
+                    loadGeminiModels();
+                } else {
+                    geminiModelGroup.style.display = 'none';
+                }
+            }
+        }
+        
+        async function loadGeminiModels() {
+            const geminiModelSelect = document.getElementById('geminiModel');
+            if (!geminiModelSelect) return;
+            
+            try {
+                geminiModelSelect.innerHTML = '<option value="">Carregando...</option>';
+                
+                const response = await fetch('/api/gemini/models');
+                const data = await response.json();
+                
+                if (data.success && data.models) {
+                    geminiModelSelect.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = `${model.name} ($${model.pricing.input}/1M tokens)`;
+                        geminiModelSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar modelos Gemini:', error);
+                geminiModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            }
+        }
+        
+        async function loadOpenAIModels() {
+            const openaiModelSelect = document.getElementById('openaiModel');
+            if (!openaiModelSelect) return;
+            
+            try {
+                openaiModelSelect.innerHTML = '<option value="">Carregando...</option>';
+                
+                const response = await fetch('/api/openai/models');
+                const data = await response.json();
+                
+                if (data.success && data.models) {
+                    openaiModelSelect.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = `${model.name} ($${model.pricing.input}/1K input, $${model.pricing.output}/1K output)`;
+                        openaiModelSelect.appendChild(option);
+                    });
+                    
+                    // Default para gpt-4o
+                    if (data.models.length > 0) {
+                        const defaultModel = data.models.find(m => m.id.includes('gpt-4o')) || data.models[0];
+                        openaiModelSelect.value = defaultModel.id;
+                    }
+                } else {
+                    throw new Error(data.error || 'Erro ao carregar modelos');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar modelos OpenAI:', error);
+                openaiModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            }
+        }
         
         async function loadSystemStats() {
             try {
@@ -419,6 +553,7 @@
                     data.forEach(config => {
                         const fieldMap = {
                             'GEMINI_API_KEY': 'geminiApiKey',
+                            'OPENAI_API_KEY': 'openaiApiKey',
                             'GOOGLE_VISION_API_KEY': 'googleVisionApiKey',
                             'SUPABASE_URL': 'supabaseUrl',
                             'SUPABASE_ANON_KEY': 'supabaseAnonKey',
@@ -483,6 +618,7 @@
                 
                 const apiConfigs = [
                     { key: 'GEMINI_API_KEY', value: document.getElementById('geminiApiKey').value },
+                    { key: 'OPENAI_API_KEY', value: document.getElementById('openaiApiKey').value },
                     { key: 'GOOGLE_VISION_API_KEY', value: document.getElementById('googleVisionApiKey').value },
                     { key: 'SUPABASE_URL', value: document.getElementById('supabaseUrl').value },
                     { key: 'SUPABASE_ANON_KEY', value: document.getElementById('supabaseAnonKey').value },
@@ -653,7 +789,10 @@
                         switch (setting.setting_key) {
                             case 'default_processor_type':
                                 const typeSelect = document.getElementById('defaultProcessorType');
-                                if (typeSelect) typeSelect.value = setting.setting_value;
+                                if (typeSelect) {
+                                    typeSelect.value = setting.setting_value;
+                                    handleProcessorTypeChange(setting.setting_value);
+                                }
                                 break;
                             case 'default_processor_speed':
                                 const speedSelect = document.getElementById('defaultProcessorSpeed');
@@ -668,6 +807,14 @@
                                         confidenceValue.textContent = Math.round(parseFloat(setting.setting_value) * 100) + '%';
                                     }
                                 }
+                                break;
+                            case 'default_openai_model':
+                                const modelSelect = document.getElementById('openaiModel');
+                                if (modelSelect) modelSelect.value = setting.setting_value;
+                                break;
+                            case 'default_gemini_model':
+                                const geminiModelSelect = document.getElementById('geminiModel');
+                                if (geminiModelSelect) geminiModelSelect.value = setting.setting_value;
                                 break;
                         }
                     });
@@ -710,7 +857,9 @@
                 const settings = [
                     { key: 'default_processor_type', value: document.getElementById('defaultProcessorType').value },
                     { key: 'default_processor_speed', value: document.getElementById('defaultProcessorSpeed').value },
-                    { key: 'default_processor_confidence', value: document.getElementById('defaultProcessorConfidence').value }
+                    { key: 'default_processor_confidence', value: document.getElementById('defaultProcessorConfidence').value },
+                    { key: 'default_openai_model', value: document.getElementById('openaiModel').value || 'gpt-4o' },
+                    { key: 'default_gemini_model', value: document.getElementById('geminiModel').value || 'gemini-1.5-flash' }
                 ];
                 
                 let savedCount = 0;
