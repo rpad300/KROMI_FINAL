@@ -456,12 +456,16 @@
         }
         
         function updateEventInfo(eventName) {
-            document.getElementById('pageTitle').textContent = `📍 Checkpoints - ${eventName || 'Evento'}`;
+            // Update header title if needed
+            const headerTitle = document.querySelector('.header-title');
+            if (headerTitle && eventName) {
+                headerTitle.textContent = `📍 Checkpoints - ${eventName}`;
+            }
             
             const eventInfoPanel = document.getElementById('eventInfoPanel');
             const currentEventInfo = document.getElementById('currentEventInfo');
             
-            if (eventInfoPanel && eventName) {
+            if (eventInfoPanel && currentEventInfo && eventName) {
                 eventInfoPanel.style.display = 'block';
                 currentEventInfo.innerHTML = `
                     <strong>${eventName}</strong><br>

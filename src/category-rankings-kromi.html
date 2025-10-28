@@ -571,23 +571,20 @@
                 console.log('🎯 Carregando evento automaticamente...');
                 // Se temos evento na URL, carregar automaticamente
                 await loadEventInfo(eventId);
-                    
-                    // Esconder dropdown de seleção de evento
-                    const eventSelectorContainer = document.querySelector('.event-selector-container');
-                    if (eventSelectorContainer) {
-                        eventSelectorContainer.style.display = 'none';
-                        console.log('✅ Dropdown escondido');
-                    }
-                    
-                    // Mostrar info do evento selecionado
-                    const eventInfoContainer = document.querySelector('.event-info-container');
-                    if (eventInfoContainer) {
-                        eventInfoContainer.style.display = 'block';
-                        console.log('✅ Info do evento mostrada');
-                    }
+                
+                // Esconder dropdown de seleção de evento
+                const eventSelectorContainer = document.querySelector('.event-selector-container');
+                if (eventSelectorContainer) {
+                    eventSelectorContainer.style.display = 'none';
+                    console.log('✅ Dropdown escondido');
                 }
-            } else {
-                console.error('❌ window.Navigation não encontrado');
+                
+                // Mostrar info do evento selecionado
+                const eventInfoContainer = document.querySelector('.event-info-container');
+                if (eventInfoContainer) {
+                    eventInfoContainer.style.display = 'block';
+                    console.log('✅ Info do evento mostrada');
+                }
             }
             
             // Setup event listeners
@@ -690,16 +687,63 @@
         async function loadEventInfo(eventId) {
             try {
                 console.log('🎯 loadEventInfo: Iniciando para evento:', eventId);
-                console.log('🎯 window.supabaseClient:', !!window.supabaseClient);
-                console.log('🎯 window.supabaseClient.supabase:', !!window.supabaseClient?.supabase);
                 
+                // Aguardar Supabase estar pronto
+                if (window.supabaseClient && window.supabaseClient.init) {
+                    console.log('⏳ Aguardando Supabase inicializar...');
+                    await window.supabaseClient.init();
+                    await window.supabaseClient.ready();
+                    console.log('✅ Supabase pronto');
+                }
+                
+                // Usar API REST em vez de query direta (para evitar problemas de RLS)
+                console.log('🌐 Tentando carregar evento via API REST...');
+                const apiRes = await fetch(`/api/events/list`, {
+                    credentials: 'include'
+                });
+                
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    console.log('📊 API resposta:', apiData);
+                    
+                    if (apiData.success && apiData.events) {
+                        // Procurar o evento específico na lista
+                        const event = apiData.events.find(e => e.id === eventId);
+                        if (event) {
+                            console.log('✅ Evento encontrado via API:', event.name);
+                            currentEvent = event;
+                            
+                            // Update display info
+                            updateEventDisplay(event);
+                            
+                            // Show controls and rankings
+                            showRankingSections();
+                            
+                            // Update sidebar
+                            const eventInfoPanel = document.getElementById('eventInfoPanel');
+                            const currentEventInfo = document.getElementById('currentEventInfo');
+                            
+                            if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                            if (currentEventInfo) {
+                                currentEventInfo.innerHTML = `
+                                    <strong>${event.name}</strong><br>
+                                    ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Sem data'}
+                                `;
+                            }
+                            
+                            console.log('✅ Evento carregado com sucesso');
+                            return;
+                        }
+                    }
+                }
+                
+                // Fallback: tentar query direta do Supabase
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.log('❌ Supabase não disponível');
+                    console.error('❌ Supabase não disponível');
                     return;
                 }
                 
-                console.log('🎯 Fazendo query para evento...');
-                // Carregar dados do evento
+                console.log('⚠️ API não retornou evento, tentando query direta...');
                 const { data: event, error: eventError } = await window.supabaseClient.supabase
                     .from('events')
                     .select('*')
@@ -708,7 +752,24 @@
                 
                 if (eventError) {
                     console.error('❌ Erro ao carregar evento:', eventError);
-                    showError('Erro ao carregar evento');
+                    if (eventError.code === 'PGRST116') {
+                        console.error('❌ Evento não existe na base de dados');
+                        alert('❌ Evento não encontrado!\n\nRedirecionando para eventos...');
+                        setTimeout(() => {
+                            window.location.href = '/events-kromi.html';
+                        }, 2000);
+                    } else {
+                        showError('Erro ao carregar evento: ' + eventError.message);
+                    }
+                    return;
+                }
+                
+                if (!event) {
+                    console.error('❌ Evento não retornado da query');
+                    alert('❌ Evento não encontrado!\n\nRedirecionando para eventos...');
+                    setTimeout(() => {
+                        window.location.href = '/events-kromi.html';
+                    }, 2000);
                     return;
                 }
                 

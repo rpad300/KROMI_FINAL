@@ -2935,7 +2935,7 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                             timestamp: calibration.completed_at || calibration.created_at
                         };
                         
-                        showExistingCalibrationModal(configData);
+                        showExistingCalibrationSection(configData);
                         return;
                     } else {
                         console.log('ℹ️ Nenhuma calibração encontrada no Supabase');
@@ -3284,11 +3284,19 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             currentEvent = { id: eventId, name: eventName };
             
             // Update sidebar
-            document.getElementById('eventInfoPanel').style.display = 'block';
-            document.getElementById('currentEventInfo').innerHTML = `
-                <strong>${eventName}</strong><br>
-                ID: ${eventId}
-            `;
+            const eventInfoPanel = document.getElementById('eventInfoPanel');
+            const currentEventInfo = document.getElementById('currentEventInfo');
+            
+            if (eventInfoPanel) {
+                eventInfoPanel.style.display = 'block';
+            }
+            
+            if (currentEventInfo) {
+                currentEventInfo.innerHTML = `
+                    <strong>${eventName}</strong><br>
+                    ID: ${eventId}
+                `;
+            }
         }
         
         function showStep(stepNumber) {

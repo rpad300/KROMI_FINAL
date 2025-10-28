@@ -277,8 +277,7 @@
     <div class="layout-with-sidebar">
         <!-- Sidebar -->
         <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
-        <div class="sidebar" id="sidebar"></div>
-            
+        <div class="sidebar" id="sidebar">
             <!-- Event Info Panel -->
             <div id="eventInfoPanel" style="padding: var(--spacing-4); border-top: 1px solid var(--border-color); display: none;">
                 <div class="nav-category">Evento Atual</div>
@@ -286,7 +285,7 @@
                     <!-- Será preenchido dinamicamente -->
                 </div>
             </div>
-        </nav>
+        </div>
         
         <!-- Header -->
         <header class="header">
@@ -488,12 +487,16 @@
         }
         
         function updateEventInfo(eventName) {
-            document.getElementById('pageTitle').textContent = `📱 Dispositivos - ${eventName || 'Evento'}`;
+            // Update header title if needed
+            const headerTitle = document.querySelector('.header-title');
+            if (headerTitle && eventName) {
+                headerTitle.textContent = `📱 Dispositivos - ${eventName}`;
+            }
             
             const eventInfoPanel = document.getElementById('eventInfoPanel');
             const currentEventInfo = document.getElementById('currentEventInfo');
             
-            if (eventInfoPanel && eventName) {
+            if (eventInfoPanel && currentEventInfo && eventName) {
                 eventInfoPanel.style.display = 'block';
                 currentEventInfo.innerHTML = `
                     <strong>${eventName}</strong><br>

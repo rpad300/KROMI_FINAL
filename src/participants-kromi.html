@@ -567,18 +567,17 @@
             if (eventId) {
                 // Se temos evento na URL, carregar automaticamente
                 await loadEventInfo(eventId);
-                    
-                    // Esconder dropdown de seleção de evento
-                    const eventSelectorContainer = document.querySelector('.event-selector-container');
-                    if (eventSelectorContainer) {
-                        eventSelectorContainer.style.display = 'none';
-                    }
-                    
-                    // Mostrar info do evento selecionado
-                    const eventInfoContainer = document.querySelector('.event-info-container');
-                    if (eventInfoContainer) {
-                        eventInfoContainer.style.display = 'block';
-                    }
+                
+                // Esconder dropdown de seleção de evento
+                const eventSelectorContainer = document.querySelector('.event-selector-container');
+                if (eventSelectorContainer) {
+                    eventSelectorContainer.style.display = 'none';
+                }
+                
+                // Mostrar info do evento selecionado
+                const eventInfoContainer = document.querySelector('.event-info-container');
+                if (eventInfoContainer) {
+                    eventInfoContainer.style.display = 'block';
                 }
             }
             
@@ -669,12 +668,80 @@
         
         async function loadEventInfo(eventId) {
             try {
+                console.log('🔍 loadEventInfo chamado com eventId:', eventId);
+                
+                // Aguardar Supabase estar pronto
+                if (window.supabaseClient && window.supabaseClient.init) {
+                    console.log('⏳ Aguardando Supabase inicializar...');
+                    await window.supabaseClient.init();
+                    await window.supabaseClient.ready();
+                    console.log('✅ Supabase pronto');
+                }
+                
+                // Usar API REST em vez de query direta (para evitar problemas de RLS)
+                console.log('🌐 Tentando carregar evento via API REST...');
+                const apiRes = await fetch(`/api/events/list`, {
+                    credentials: 'include'
+                });
+                
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    console.log('📊 API resposta:', apiData);
+                    
+                    if (apiData.success && apiData.events) {
+                        // Procurar o evento específico na lista
+                        const event = apiData.events.find(e => e.id === eventId);
+                        if (event) {
+                            console.log('✅ Evento encontrado via API:', event.name);
+                            currentEvent = event;
+                            
+                            // Update UI
+                            const eventNameEl = document.getElementById('eventName');
+                            const eventDateEl = document.getElementById('eventDate');
+                            const eventTimeEl = document.getElementById('eventTime');
+                            const eventLocationEl = document.getElementById('eventLocation');
+                            
+                            if (eventNameEl) eventNameEl.value = event.name;
+                            if (eventDateEl) eventDateEl.value = event.event_date ? event.event_date.split('T')[0] : '';
+                            if (eventTimeEl) eventTimeEl.value = event.event_date ? event.event_date.split('T')[1]?.substring(0, 5) : '';
+                            if (eventLocationEl) eventLocationEl.value = event.location || '';
+                            
+                            // Show elements that exist
+                            const statsGrid = document.getElementById('statsGrid');
+                            const participantsTable = document.getElementById('participantsTable');
+                            const emptyState = document.getElementById('emptyState');
+                            
+                            if (statsGrid) statsGrid.style.display = 'grid';
+                            if (participantsTable) participantsTable.style.display = 'block';
+                            if (emptyState) emptyState.style.display = 'none';
+                            
+                            // Update sidebar
+                            const eventInfoPanel = document.getElementById('eventInfoPanel');
+                            const currentEventInfo = document.getElementById('currentEventInfo');
+                            
+                            if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                            if (currentEventInfo) {
+                                currentEventInfo.innerHTML = `
+                                    <strong>${event.name}</strong><br>
+                                    Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                                    Local: ${event.location || 'Não definido'}
+                                `;
+                            }
+                            
+                            // Load participants
+                            await loadParticipants();
+                            return;
+                        }
+                    }
+                }
+                
+                // Fallback: tentar query direta do Supabase
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.error('Supabase não disponível');
+                    console.error('❌ Supabase não disponível');
                     return;
                 }
                 
-                // Carregar dados do evento
+                console.log('⚠️ API não retornou evento, tentando query direta...');
                 const { data: event, error: eventError } = await window.supabaseClient.supabase
                     .from('events')
                     .select('*')
@@ -682,14 +749,31 @@
                     .single();
                 
                 if (eventError) {
-                    console.error('Erro ao carregar evento:', eventError);
-                    showError('Erro ao carregar evento');
+                    console.error('❌ Erro ao carregar evento:', eventError);
+                    if (eventError.code === 'PGRST116') {
+                        console.error('❌ Evento não existe na base de dados');
+                        alert('❌ Evento não encontrado!\n\nRedirecionando para eventos...');
+                        setTimeout(() => {
+                            window.location.href = '/events-kromi.html';
+                        }, 2000);
+                    } else {
+                        showError('Erro ao carregar evento: ' + eventError.message);
+                    }
+                    return;
+                }
+                
+                if (!event) {
+                    console.error('❌ Evento não retornado da query');
+                    alert('❌ Evento não encontrado!\n\nRedirecionando para eventos...');
+                    setTimeout(() => {
+                        window.location.href = '/events-kromi.html';
+                    }, 2000);
                     return;
                 }
                 
                 currentEvent = event;
                 
-                // Update UI (apenas elementos que existem)
+                // Update UI (apenas elementos que existem) - Fallback path
                 const eventNameEl = document.getElementById('eventName');
                 const eventDateEl = document.getElementById('eventDate');
                 const eventTimeEl = document.getElementById('eventTime');

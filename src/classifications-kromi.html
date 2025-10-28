@@ -454,7 +454,8 @@
                 const checkInterval = setInterval(() => {
                     const elapsedTime = Date.now() - startTime;
                     
-                    if (window.authSystem && window.authSystem.supabase) {
+                    // Verificar se authSystem existe (não precisa verificar supabase especificamente)
+                    if (window.authSystem && window.authSystem.currentUser !== undefined) {
                         clearInterval(checkInterval);
                         console.log(`✅ AuthSystem pronto após ${elapsedTime}ms`);
                         resolve();
@@ -463,6 +464,7 @@
                     
                     if (elapsedTime > maxWaitTime) {
                         clearInterval(checkInterval);
+                        console.error('❌ Timeout ao aguardar AuthSystem');
                         reject(new Error('Timeout ao aguardar AuthSystem'));
                     }
                 }, 100);
@@ -520,22 +522,36 @@
                 window.navigationService.setEventContext(eventId, eventName);
             }
             
+            // Aguardar Supabase estar pronto
+            if (window.supabaseClient) {
+                console.log('⏳ Aguardando Supabase inicializar...');
+                await window.supabaseClient.init();
+                await window.supabaseClient.ready();
+                console.log('✅ Supabase pronto');
+            }
+            
             if (eventId) {
+                console.log('📋 Evento na URL:', eventId);
                 // Se temos evento na URL, carregar automaticamente
-                await loadEventInfo(eventId);
-                    
-                    // Esconder dropdown de seleção de evento
-                    const eventSelectorContainer = document.querySelector('.event-selector-container');
-                    if (eventSelectorContainer) {
-                        eventSelectorContainer.style.display = 'none';
-                    }
-                    
-                    // Mostrar info do evento selecionado
-                    const eventInfoContainer = document.querySelector('.event-info-container');
-                    if (eventInfoContainer) {
-                        eventInfoContainer.style.display = 'block';
-                    }
+                try {
+                    await loadEventInfo(eventId);
+                } catch (error) {
+                    console.error('❌ Erro ao carregar evento:', error);
                 }
+                
+                // Esconder dropdown de seleção de evento
+                const eventSelectorContainer = document.querySelector('.event-selector-container');
+                if (eventSelectorContainer) {
+                    eventSelectorContainer.style.display = 'none';
+                }
+                
+                // Mostrar info do evento selecionado
+                const eventInfoContainer = document.querySelector('.event-info-container');
+                if (eventInfoContainer) {
+                    eventInfoContainer.style.display = 'block';
+                }
+            } else {
+                console.log('⚠️ Nenhum evento especificado na URL');
             }
             
             // Setup event listeners
@@ -543,6 +559,8 @@
             
             // Load events
             await loadEvents();
+            
+            console.log('✅ Página inicializada completamente');
         });
         
         function setupEventListeners() {
@@ -613,23 +631,139 @@
         
         async function loadEventInfo(eventId) {
             try {
+                console.log('🔍 loadEventInfo chamado com eventId:', eventId);
+                console.log('🔍 window.supabaseClient:', !!window.supabaseClient);
+                console.log('🔍 window.supabaseClient?.supabase:', !!window.supabaseClient?.supabase);
+                
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.error('Supabase não disponível');
+                    console.error('❌ Supabase não disponível');
+                    console.error('   - window.supabaseClient:', window.supabaseClient);
+                    console.error('   - window.supabaseClient?.supabase:', window.supabaseClient?.supabase);
                     return;
                 }
                 
-                // Carregar dados do evento
+                console.log('✅ Supabase disponível, fazendo query...');
+                
+                // Usar API REST em vez de query direta (para evitar problemas de RLS)
+                console.log('🌐 Tentando carregar evento via API REST...');
+                const apiRes = await fetch(`/api/events/list`, {
+                    credentials: 'include'
+                });
+                
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    console.log('📊 API resposta:', apiData);
+                    
+                    if (apiData.success && apiData.events) {
+                        // Procurar o evento específico na lista
+                        const event = apiData.events.find(e => e.id === eventId);
+                        if (event) {
+                            console.log('✅ Evento encontrado via API:', event.name);
+                            
+                            // Usar esse evento e pular para o resto do código
+                            // (não precisa da query Supabase agora)
+                            console.log('✅ Evento carregado via API:', event.name);
+                            
+                            // Atualizar UI com o evento
+                            currentEvent = event;
+                            eventStatus = event.is_active ? 'running' : 'stopped';
+                            
+                            // Update UI with null checks
+                            const eventNameEl = document.getElementById('eventName');
+                            if (eventNameEl) eventNameEl.textContent = event.name;
+                            
+                            const eventStatusEl = document.getElementById('eventStatus');
+                            if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
+                            
+                            // Mostrar data/hora de início
+                            const eventStartTimeEl = document.getElementById('eventStartTime');
+                            if (eventStartTimeEl) {
+                                const startTime = event.event_started_at || event.event_date;
+                                if (startTime) {
+                                    const startDate = new Date(startTime);
+                                    eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit', 
+                                        minute: '2-digit'
+                                    });
+                                } else {
+                                    eventStartTimeEl.textContent = 'Não iniciado';
+                                }
+                            }
+                            
+                            // Iniciar contador de duração em tempo real
+                            startDurationCounter();
+                            
+                            // Show event info
+                            const eventInfoCard = document.getElementById('eventInfoCard');
+                            if (eventInfoCard) eventInfoCard.style.display = 'block';
+                            
+                            const classificationsTable = document.getElementById('classificationsTable');
+                            if (classificationsTable) classificationsTable.style.display = 'block';
+                            
+                            const emptyState = document.getElementById('emptyState');
+                            if (emptyState) emptyState.style.display = 'none';
+                            
+                            // Update sidebar
+                            const eventInfoPanel = document.getElementById('eventInfoPanel');
+                            if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                            
+                            const currentEventInfo = document.getElementById('currentEventInfo');
+                            if (currentEventInfo) {
+                                currentEventInfo.innerHTML = `
+                                    <strong>${event.name}</strong><br>
+                                    Status: ${event.is_active ? 'Ativo' : 'Inativo'}
+                                `;
+                            }
+                            
+                            // Update controls based on status
+                            updateControls();
+                            
+                            // Load classifications
+                            loadClassifications();
+                            return;
+                        }
+                    }
+                }
+                
+                // Se a API não funcionou, tentar query direta do Supabase como fallback
+                console.log('⚠️ API não retornou evento, tentando query direta...');
                 const { data: event, error: eventError } = await window.supabaseClient.supabase
                     .from('events')
                     .select('*')
                     .eq('id', eventId)
                     .single();
                 
+                console.log('📊 Query resultado:', { error: eventError, data: event ? 'event loaded' : 'no data' });
+                
                 if (eventError) {
-                    console.error('Erro ao carregar evento:', eventError);
-                    showError('Erro ao carregar evento');
+                    console.error('❌ Erro ao carregar evento:', eventError);
+                    
+                    if (eventError.code === 'PGRST116') {
+                        // Evento não encontrado
+                        console.error('❌ Evento não existe na base de dados');
+                        alert('❌ Evento não encontrado!\n\nO evento com o ID fornecido não existe na base de dados. Redirecionando para eventos...');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/events-kromi.html';
+                        }, 2000);
+                    } else {
+                        showError('Erro ao carregar evento: ' + eventError.message);
+                    }
                     return;
                 }
+                
+                if (!event) {
+                    console.error('❌ Evento não retornado da query');
+                    alert('❌ Evento não encontrado!\n\nRedirecionando para eventos...');
+                    setTimeout(() => {
+                        window.location.href = '/events-kromi.html';
+                    }, 2000);
+                    return;
+                }
+                
+                console.log('✅ Evento carregado:', event.name);
                 
                 // Carregar estatísticas do evento via API REST
                 const statsRes = await fetch(`/api/events/${eventId}/stats`, {
@@ -652,41 +786,58 @@
                 currentEvent = event;
                 eventStatus = event.is_active ? 'running' : 'stopped';
                 
-                // Update UI
-                document.getElementById('eventName').textContent = event.name;
-                document.getElementById('eventStatus').textContent = event.is_active ? 'Ativo' : 'Inativo';
+                // Update UI with null checks
+                const eventNameEl = document.getElementById('eventName');
+                if (eventNameEl) eventNameEl.textContent = event.name;
+                
+                const eventStatusEl = document.getElementById('eventStatus');
+                if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
                 
                 // Mostrar data/hora de início
-                const startTime = event.event_started_at || event.event_date;
-                if (startTime) {
-                    const startDate = new Date(startTime);
-                    document.getElementById('eventStartTime').textContent = startDate.toLocaleString('pt-PT', { 
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit', 
-                        minute: '2-digit'
-                    });
-                } else {
-                    document.getElementById('eventStartTime').textContent = 'Não iniciado';
+                const eventStartTimeEl = document.getElementById('eventStartTime');
+                if (eventStartTimeEl) {
+                    const startTime = event.event_started_at || event.event_date;
+                    if (startTime) {
+                        const startDate = new Date(startTime);
+                        eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit', 
+                            minute: '2-digit'
+                        });
+                    } else {
+                        eventStartTimeEl.textContent = 'Não iniciado';
+                    }
                 }
                 
-                document.getElementById('totalAthletes').textContent = totalAthletes;
+                const totalAthletesEl = document.getElementById('totalAthletes');
+                if (totalAthletesEl) totalAthletesEl.textContent = totalAthletes;
                 
                 // Iniciar contador de duração em tempo real
                 startDurationCounter();
                 
                 // Show event info
-                document.getElementById('eventInfoCard').style.display = 'block';
-                document.getElementById('classificationsTable').style.display = 'block';
-                document.getElementById('emptyState').style.display = 'none';
+                const eventInfoCard = document.getElementById('eventInfoCard');
+                if (eventInfoCard) eventInfoCard.style.display = 'block';
+                
+                const classificationsTable = document.getElementById('classificationsTable');
+                if (classificationsTable) classificationsTable.style.display = 'block';
+                
+                const emptyState = document.getElementById('emptyState');
+                if (emptyState) emptyState.style.display = 'none';
                 
                 // Update sidebar
-                document.getElementById('eventInfoPanel').style.display = 'block';
-                document.getElementById('currentEventInfo').innerHTML = `
-                    <strong>${event.name}</strong><br>
-                    Status: ${event.is_active ? 'Ativo' : 'Inativo'}<br>
-                    Atletas: ${totalAthletes}
-                `;
+                const eventInfoPanel = document.getElementById('eventInfoPanel');
+                if (eventInfoPanel) eventInfoPanel.style.display = 'block';
+                
+                const currentEventInfo = document.getElementById('currentEventInfo');
+                if (currentEventInfo) {
+                    currentEventInfo.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Status: ${event.is_active ? 'Ativo' : 'Inativo'}<br>
+                        Atletas: ${totalAthletes}
+                    `;
+                }
                 
                 // Update controls based on status
                 updateControls();
@@ -703,13 +854,19 @@
         function hideEventInfo() {
             currentEvent = null;
             
-            // Hide event info
-            document.getElementById('eventInfoCard').style.display = 'none';
-            document.getElementById('classificationsTable').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
+            // Hide event info with null checks
+            const eventInfoCard = document.getElementById('eventInfoCard');
+            if (eventInfoCard) eventInfoCard.style.display = 'none';
+            
+            const classificationsTable = document.getElementById('classificationsTable');
+            if (classificationsTable) classificationsTable.style.display = 'none';
+            
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.style.display = 'block';
             
             // Hide sidebar info
-            document.getElementById('eventInfoPanel').style.display = 'none';
+            const eventInfoPanel = document.getElementById('eventInfoPanel');
+            if (eventInfoPanel) eventInfoPanel.style.display = 'none';
         }
         
         function updateControls() {
