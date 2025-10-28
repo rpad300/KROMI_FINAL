@@ -54,6 +54,15 @@ const NavigationConfig = {
             description: 'Configurar roles e acessos'
         },
         {
+            id: 'email-templates',
+            label: 'Templates de Email',
+            icon: '📧',
+            route: 'email-templates-platform.html',
+            type: 'global',
+            roles: ['admin'],
+            description: 'Gestão de templates de email da plataforma'
+        },
+        {
             id: 'settings',
             label: 'Configurações',
             icon: '⚙️',
@@ -70,6 +79,15 @@ const NavigationConfig = {
             type: 'global',
             roles: ['admin'],
             description: 'Logs de auditoria e histórico'
+        },
+        {
+            id: 'ai-cost-stats',
+            label: 'AI Cost Stats',
+            icon: '💰',
+            route: 'ai-cost-stats.html',
+            type: 'global',
+            roles: ['admin'],
+            description: 'Estatísticas de custos de IA'
         },
         {
             id: 'database',
@@ -206,6 +224,15 @@ const NavigationConfig = {
             roles: ['admin', 'moderator', 'event_manager'],
             description: 'Processamento IA deste evento',
             scope: 'event'  // Ver processamentos apenas deste evento
+        },
+        {
+            id: 'event-email-templates',
+            label: 'Templates de Email',
+            icon: '📧',
+            route: 'email-templates-event.html',
+            type: 'event',
+            roles: ['admin', 'moderator', 'event_manager'],
+            description: 'Templates de email do evento'
         },
         {
             id: 'event-settings',

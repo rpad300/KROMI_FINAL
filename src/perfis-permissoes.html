@@ -12,6 +12,536 @@
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
     <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        /* Dashboard Stats Cards */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            min-width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--radius-md);
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        /* Section styling */
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            margin-bottom: var(--spacing-5);
+        }
+        
+        .section h3 {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 var(--spacing-5) 0;
+            padding-bottom: var(--spacing-3);
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        /* Role description cards */
+        .role-description {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-5);
+            margin-bottom: var(--spacing-4);
+            transition: all var(--transition-base);
+        }
+        
+        .role-description:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(252, 107, 3, 0.1);
+        }
+        
+        .role-description h4 {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0 0 var(--spacing-3) 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .role-description p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-4);
+            line-height: 1.6;
+        }
+        
+        .role-description ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-2);
+        }
+        
+        .role-description li {
+            padding: var(--spacing-2);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        /* Users List */
+        .users-list {
+            display: grid;
+            gap: var(--spacing-3);
+        }
+        
+        .user-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-4);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            transition: all var(--transition-base);
+        }
+        
+        .user-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(252, 107, 3, 0.1);
+        }
+        
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .user-email {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .user-role-badge {
+            display: inline-block;
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .user-role-badge.admin {
+            background: rgba(252, 107, 3, 0.2);
+            color: var(--primary);
+        }
+        
+        .user-role-badge.moderator {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        .user-role-badge.user {
+            background: rgba(107, 114, 128, 0.2);
+            color: #6b7280;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: var(--spacing-2);
+        }
+        
+        .btn-icon {
+            padding: var(--spacing-2);
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-icon:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            padding: var(--spacing-5);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-base);
+        }
+        
+        .modal-close:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-5);
+        }
+        
+        .user-info-display {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            padding: var(--spacing-4);
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-5);
+        }
+        
+        .user-avatar-large {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        
+        .user-info-text h4 {
+            margin: 0 0 var(--spacing-1) 0;
+            color: var(--text-primary);
+        }
+        
+        .user-info-text p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-4);
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+        }
+        
+        .helper-text {
+            display: block;
+            margin-top: var(--spacing-1);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-5);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-3);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: var(--spacing-6);
+            color: var(--text-secondary);
+        }
+        
+        /* Roles List */
+        .roles-list {
+            display: grid;
+            gap: var(--spacing-3);
+        }
+        
+        .role-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-4);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            transition: all var(--transition-base);
+        }
+        
+        .role-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(252, 107, 3, 0.1);
+        }
+        
+        .role-icon-display {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .role-info-details {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .role-name-display {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-1);
+            font-size: var(--font-size-lg);
+        }
+        
+        .role-description-display {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .role-permissions-display {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-1);
+        }
+        
+        .permission-tag {
+            background: var(--bg-secondary);
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-sm);
+        }
+        
+        .role-actions {
+            display: flex;
+            gap: var(--spacing-2);
+        }
+        
+        .role-info-display {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-4);
+            padding: var(--spacing-4);
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-5);
+        }
+        
+        .role-avatar-large {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        
+        .role-info-text h4 {
+            margin: 0 0 var(--spacing-1) 0;
+            color: var(--text-primary);
+        }
+        
+        .role-info-text p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .permissions-list {
+            display: grid;
+            gap: var(--spacing-2);
+            max-height: 300px;
+            overflow-y: auto;
+            padding: var(--spacing-3);
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            padding: var(--spacing-3);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+        }
+        
+        .permission-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .permission-item label {
+            flex: 1;
+            margin: 0;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+        
+        .permission-description {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-left: var(--spacing-8);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .role-description ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .user-card {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 <body data-theme="dark" class="layout-with-sidebar">
     <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
@@ -96,8 +626,107 @@
                         </ul>
                     </div>
                 </div>
+                
+                <div class="section">
+                    <h3>📋 Gestão de Utilizadores</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                        Gerir perfis e permissões dos utilizadores do sistema.
+                    </p>
+                    
+                    <div id="usersList" class="users-list">
+                        <div class="loading-state">Carregando utilizadores...</div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>⚙️ Gestão de Perfis</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                        Gerir e editar as permissões de cada perfil (Admin, Moderador, Utilizador).
+                    </p>
+                    
+                    <div id="rolesList" class="roles-list">
+                        <div class="loading-state">Carregando perfis...</div>
+                    </div>
+                </div>
             </div>
         </main>
+    </div>
+    
+    <!-- Modal de Edição de Permissões do Utilizador -->
+    <div id="editRoleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Permissões do Utilizador</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="user-info-display">
+                    <div class="user-avatar-large" id="modalUserAvatar">👤</div>
+                    <div class="user-info-text">
+                        <h4 id="modalUserName">Nome do Utilizador</h4>
+                        <p id="modalUserEmail">email@exemplo.com</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Perfil / Role</label>
+                    <select id="modalUserRole" class="role-select">
+                        <option value="user">👤 Utilizador</option>
+                        <option value="moderator">⚙️ Moderador</option>
+                        <option value="admin">👑 Administrador</option>
+                    </select>
+                    <span class="helper-text">Selecione o perfil do utilizador</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Estado da Conta</label>
+                    <select id="modalUserStatus" class="status-select">
+                        <option value="active">✅ Ativo</option>
+                        <option value="inactive">⏸️ Inativo</option>
+                        <option value="suspended">🚫 Suspenso</option>
+                    </select>
+                    <span class="helper-text">Estado atual da conta</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveUserChanges()">
+                    💾 Guardar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Edição de Permissões do Perfil -->
+    <div id="editProfilePermissionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Permissões do Perfil</h3>
+                <button class="modal-close" onclick="closeEditProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="role-info-display">
+                    <div class="role-avatar-large" id="modalRoleIcon">👑</div>
+                    <div class="role-info-text">
+                        <h4 id="modalRoleName">Administrador</h4>
+                        <p id="modalRoleDescription">Descrição do perfil</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Permissões Disponíveis</label>
+                    <div id="permissionsList" class="permissions-list">
+                        <!-- Permissões serão carregadas aqui -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditProfileModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveProfilePermissions()">
+                    💾 Guardar Permissões
+                </button>
+            </div>
+        </div>
     </div>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
@@ -119,14 +748,27 @@
             if (!autenticado) return;
             
             loadRoleStats();
+            loadUsers();
+            loadRoles();
         });
         
         async function loadRoleStats() {
-            if (!window.authSystem || !window.authSystem.supabase) return;
-            
             try {
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível para estatísticas');
+                    return;
+                }
+                
                 // Usar Supabase para contar por role
-                const { data, error } = await window.supabase
+                const { data, error } = await window.supabaseClient.supabase
                     .from('user_profiles')
                     .select('role');
                 
@@ -151,6 +793,514 @@
             } catch (error) {
                 console.error('Erro ao carregar estatísticas:', error);
             }
+        }
+        
+        // ==================== GESTÃO DE UTILIZADORES ====================
+        
+        let currentEditingUserId = null;
+        
+        async function loadUsers() {
+            try {
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível');
+                    document.getElementById('usersList').innerHTML = 
+                        '<div class="loading-state">⚠️ Erro ao carregar utilizadores</div>';
+                    return;
+                }
+                
+                // Buscar todos os utilizadores
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    document.getElementById('usersList').innerHTML = 
+                        '<div class="loading-state">Nenhum utilizador encontrado</div>';
+                    return;
+                }
+                
+                // Renderizar lista de utilizadores
+                const usersHtml = data.map(user => `
+                    <div class="user-card">
+                        <div class="user-avatar">👤</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.name || user.email}</div>
+                            <div class="user-email">${user.email}</div>
+                        </div>
+                        <div class="user-role-badge ${user.role}">
+                            ${getRoleName(user.role)}
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-icon" onclick="editUserRole('${user.id}', '${user.name || user.email}', '${user.email}', '${user.role}', '${user.status || 'active'}')" title="Editar permissões">
+                                ✏️
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('usersList').innerHTML = usersHtml;
+                
+            } catch (error) {
+                console.error('Erro ao carregar utilizadores:', error);
+                document.getElementById('usersList').innerHTML = 
+                    '<div class="loading-state">Erro ao carregar utilizadores</div>';
+            }
+        }
+        
+        function getRoleName(role) {
+            const names = {
+                'admin': '👑 Admin',
+                'moderator': '⚙️ Moderador',
+                'user': '👤 Utilizador'
+            };
+            return names[role] || role;
+        }
+        
+        function editUserRole(userId, name, email, role, status) {
+            currentEditingUserId = userId;
+            
+            // Preencher modal com dados do utilizador
+            document.getElementById('modalUserName').textContent = name;
+            document.getElementById('modalUserEmail').textContent = email;
+            document.getElementById('modalUserRole').value = role;
+            document.getElementById('modalUserStatus').value = status;
+            
+            // Mostrar modal
+            document.getElementById('editRoleModal').classList.add('active');
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editRoleModal').classList.remove('active');
+            currentEditingUserId = null;
+        }
+        
+        async function saveUserChanges() {
+            if (!currentEditingUserId) return;
+            
+            try {
+                const newRole = document.getElementById('modalUserRole').value;
+                const newStatus = document.getElementById('modalUserStatus').value;
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    alert('❌ Supabase não disponível');
+                    return;
+                }
+                
+                // Atualizar utilizador
+                const { error } = await window.supabaseClient.supabase
+                    .from('user_profiles')
+                    .update({
+                        role: newRole,
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentEditingUserId);
+                
+                if (error) throw error;
+                
+                alert('✅ Permissões atualizadas com sucesso!');
+                
+                // Recarregar lista de utilizadores e estatísticas
+                closeEditModal();
+                loadUsers();
+                loadRoleStats();
+                
+            } catch (error) {
+                console.error('Erro ao atualizar utilizador:', error);
+                alert('❌ Erro ao atualizar permissões: ' + error.message);
+            }
+        }
+        
+        // ==================== GESTÃO DE PERFIS ====================
+        
+        let currentEditingRoleName = null;
+        let currentEditingPermissions = [];
+        
+        // Definições de permissões disponíveis no sistema
+        const ALL_PERMISSIONS = {
+            'users': {
+                'read_users': 'Ver utilizadores',
+                'create_users': 'Criar utilizadores',
+                'update_users': 'Editar utilizadores',
+                'delete_users': 'Eliminar utilizadores'
+            },
+            'events': {
+                'read_events': 'Ver eventos',
+                'create_events': 'Criar eventos',
+                'update_events': 'Editar eventos',
+                'delete_events': 'Eliminar eventos'
+            },
+            'participants': {
+                'read_participants': 'Ver participantes',
+                'create_participants': 'Criar participantes',
+                'update_participants': 'Editar participantes',
+                'delete_participants': 'Eliminar participantes'
+            },
+            'detections': {
+                'read_detections': 'Ver detecções',
+                'create_detections': 'Criar detecções',
+                'update_detections': 'Editar detecções',
+                'delete_detections': 'Eliminar detecções'
+            },
+            'system': {
+                'read_settings': 'Ver configurações',
+                'update_settings': 'Editar configurações',
+                'read_logs': 'Ver logs',
+                'manage_permissions': 'Gerir permissões'
+            },
+            'profile': {
+                'read_own_profile': 'Ver próprio perfil',
+                'update_own_profile': 'Editar próprio perfil'
+            },
+            'all': {
+                '*': 'Acesso total ao sistema'
+            }
+        };
+        
+        async function loadRoles() {
+            try {
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível');
+                    document.getElementById('rolesList').innerHTML = 
+                        '<div class="loading-state">⚠️ Erro ao carregar perfis</div>';
+                    return;
+                }
+                
+                // Buscar todos os perfis
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('role_definitions')
+                    .select('*')
+                    .order('role_name', { ascending: true });
+                
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    document.getElementById('rolesList').innerHTML = 
+                        '<div class="loading-state">Nenhum perfil encontrado</div>';
+                    return;
+                }
+                
+                // Renderizar lista de perfis
+                const rolesHtml = data.map(role => {
+                    const permissionsList = typeof role.permissions === 'string' 
+                        ? JSON.parse(role.permissions) 
+                        : role.permissions || [];
+                    
+                    const permissionsDisplay = permissionsList.length > 0 
+                        ? permissionsList.slice(0, 3).join(', ') + (permissionsList.length > 3 ? '...' : '')
+                        : 'Sem permissões específicas';
+                    
+                    const roleIcon = role.role_name === 'admin' ? '👑' : 
+                                   role.role_name === 'moderator' ? '⚙️' : '👤';
+                    
+                    return `
+                        <div class="role-card">
+                            <div class="role-icon-display">${roleIcon}</div>
+                            <div class="role-info-details">
+                                <div class="role-name-display">${role.display_name}</div>
+                                <div class="role-description-display">${role.description || ''}</div>
+                                <div class="role-permissions-display">
+                                    ${permissionsList.length > 0 
+                                        ? permissionsList.map(p => `<span class="permission-tag">${p}</span>`).join('') 
+                                        : ''}
+                                </div>
+                            </div>
+                            <div class="role-actions">
+                                <button class="btn-icon" onclick="editProfilePermissions('${role.role_name}', '${escapeHtml(role.display_name)}', '${escapeHtml(role.description || '')}', ${JSON.stringify(permissionsList).replace(/"/g, '&quot;')})" title="Editar permissões">
+                                    ⚙️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('rolesList').innerHTML = rolesHtml;
+                
+            } catch (error) {
+                console.error('Erro ao carregar perfis:', error);
+                document.getElementById('rolesList').innerHTML = 
+                    '<div class="loading-state">Erro ao carregar perfis</div>';
+            }
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        
+        function editProfilePermissions(roleName, displayName, description, permissions) {
+            currentEditingRoleName = roleName;
+            currentEditingPermissions = permissions || [];
+            
+            // Preencher modal com dados do perfil
+            document.getElementById('modalRoleName').textContent = displayName;
+            document.getElementById('modalRoleDescription').textContent = description || 'Sem descrição';
+            
+            const roleIcon = roleName === 'admin' ? '👑' : 
+                           roleName === 'moderator' ? '⚙️' : '👤';
+            document.getElementById('modalRoleIcon').textContent = roleIcon;
+            
+            // Renderizar lista de permissões
+            renderPermissionsChecklist(roleName === 'admin');
+            
+            // Mostrar modal
+            document.getElementById('editProfilePermissionsModal').classList.add('active');
+        }
+        
+        function renderPermissionsChecklist(isAdmin) {
+            const container = document.getElementById('permissionsList');
+            
+            let html = '';
+            
+            // Se for admin, adicionar acesso total
+            if (isAdmin) {
+                html += `
+                    <div class="permission-item">
+                        <input type="checkbox" id="perm_all" checked disabled>
+                        <label for="perm_all" style="color: var(--primary); font-weight: 600;">
+                            * Acesso total ao sistema (Administrador)
+                        </label>
+                    </div>
+                `;
+            }
+            
+            // Adicionar todas as permissões por categoria
+            for (const [category, perms] of Object.entries(ALL_PERMISSIONS)) {
+                if (isAdmin && category === 'all') continue; // Já adicionado acima
+                
+                for (const [key, label] of Object.entries(perms)) {
+                    const isChecked = isAdmin || currentEditingPermissions.includes(key);
+                    const isDisabled = isAdmin && key !== '*';
+                    
+                    html += `
+                        <div class="permission-item">
+                            <input type="checkbox" id="perm_${key}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} 
+                                   ${!isAdmin ? `onchange="updatePermissionState('${key}')"` : ''}>
+                            <label for="perm_${key}" ${!isAdmin ? `onclick="toggleCheckbox('perm_${key}')" style="cursor: pointer;"` : ''}>${label}</label>
+                        </div>
+                    `;
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleCheckbox(id) {
+            const checkbox = document.getElementById(id);
+            if (checkbox && !checkbox.disabled) {
+                checkbox.checked = !checkbox.checked;
+                updatePermissionState(id.replace('perm_', ''));
+            }
+        }
+        
+        function updatePermissionState(permission) {
+            const checkbox = document.getElementById(`perm_${permission}`);
+            if (checkbox && checkbox.checked) {
+                if (!currentEditingPermissions.includes(permission)) {
+                    currentEditingPermissions.push(permission);
+                }
+            } else {
+                const index = currentEditingPermissions.indexOf(permission);
+                if (index > -1) {
+                    currentEditingPermissions.splice(index, 1);
+                }
+            }
+        }
+        
+        function closeEditProfileModal() {
+            document.getElementById('editProfilePermissionsModal').classList.remove('active');
+            currentEditingRoleName = null;
+            currentEditingPermissions = [];
+        }
+        
+        async function saveProfilePermissions() {
+            if (!currentEditingRoleName) return;
+            
+            try {
+                console.log('💾 Salvando permissões do perfil:', currentEditingRoleName);
+                
+                // Gerar array de permissões baseado nos checkboxes
+                const permissions = [];
+                
+                // Não processar se for admin (sempre tem acesso total)
+                if (currentEditingRoleName !== 'admin') {
+                    Object.values(ALL_PERMISSIONS).forEach(categoryPerms => {
+                        Object.keys(categoryPerms).forEach(perm => {
+                            const checkbox = document.getElementById(`perm_${perm}`);
+                            if (checkbox && checkbox.checked && !checkbox.disabled) {
+                                permissions.push(perm);
+                            }
+                        });
+                    });
+                } else {
+                    permissions.push('*');
+                }
+                
+                console.log('📋 Permissões selecionadas:', permissions);
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    alert('❌ Supabase não disponível');
+                    return;
+                }
+                
+                // Preparar dados para atualização
+                const updateData = {
+                    permissions: permissions, // Passar array diretamente, Supabase fará a conversão
+                    updated_at: new Date().toISOString()
+                };
+                
+                console.log('🔄 Dados para atualizar:', updateData);
+                
+                // Verificar se o perfil existe
+                const { data: existingRole, error: checkError } = await window.supabaseClient.supabase
+                    .from('role_definitions')
+                    .select('*')
+                    .eq('role_name', currentEditingRoleName)
+                    .single();
+                
+                if (checkError && checkError.code === 'PGRST116') {
+                    console.log('ℹ️ Perfil não existe, criando...');
+                    
+                    // Criar o perfil se não existir
+                    const { data: newRole, error: insertError } = await window.supabaseClient.supabase
+                        .from('role_definitions')
+                        .insert({
+                            role_name: currentEditingRoleName,
+                            display_name: getRoleDisplayName(currentEditingRoleName),
+                            description: getRoleDescription(currentEditingRoleName),
+                            permissions: permissions,
+                            is_system_role: true,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                        .select()
+                        .single();
+                    
+                    if (insertError) {
+                        console.error('❌ Erro ao criar perfil:', insertError);
+                        throw insertError;
+                    }
+                    
+                    console.log('✅ Perfil criado:', newRole);
+                    alert('✅ Perfil criado e permissões salvos com sucesso!');
+                } else if (checkError) {
+                    console.error('❌ Erro ao verificar perfil:', checkError);
+                    throw checkError;
+                } else {
+                    console.log('ℹ️ Perfil existe, atualizando...');
+                    console.log('🔄 Update query:', { role_name: currentEditingRoleName, updateData });
+                    
+                    // Atualizar perfil existente
+                    const { data, error } = await window.supabaseClient.supabase
+                        .from('role_definitions')
+                        .update(updateData)
+                        .eq('role_name', currentEditingRoleName)
+                        .select();
+                    
+                    if (error) {
+                        console.error('❌ Erro do Supabase:', error);
+                        throw error;
+                    }
+                    
+                    console.log('✅ Resposta da atualização:', { data, errorCount: error ? 1 : 0 });
+                    
+                    if (!data || data.length === 0) {
+                        console.warn('⚠️ Nenhuma linha atualizada.');
+                        console.warn('⚠️ RLS bloqueando UPDATE, tentando via servidor...');
+                        
+                        // Tentar atualizar via servidor (Service Role Key)
+                        try {
+                            const serverUpdate = await fetch('/api/roles/update-permissions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    role_name: currentEditingRoleName,
+                                    permissions: permissions
+                                })
+                            });
+                            
+                            const serverResult = await serverUpdate.json();
+                            
+                            if (serverUpdate.ok && serverResult.success) {
+                                console.log('✅ Atualizado via servidor:', serverResult);
+                                alert('✅ Permissões do perfil atualizadas com sucesso!');
+                            } else {
+                                throw new Error(serverResult.error || 'Erro desconhecido');
+                            }
+                        } catch (serverError) {
+                            console.error('❌ Erro ao atualizar via servidor:', serverError);
+                            alert('❌ Erro ao atualizar permissões. Verifique as políticas RLS ou contacte o administrador.');
+                        }
+                    } else {
+                        alert('✅ Permissões do perfil atualizadas com sucesso!');
+                    }
+                }
+                
+                // Recarregar lista de perfis
+                closeEditProfileModal();
+                await loadRoles();
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar permissões do perfil:', error);
+                alert('❌ Erro ao atualizar permissões: ' + (error.message || error));
+            }
+        }
+        
+        function getRoleDisplayName(roleName) {
+            const names = {
+                'admin': 'Administrador',
+                'moderator': 'Moderador',
+                'user': 'Utilizador'
+            };
+            return names[roleName] || roleName;
+        }
+        
+        function getRoleDescription(roleName) {
+            const descriptions = {
+                'admin': 'Acesso completo ao sistema',
+                'moderator': 'Gestão de eventos e participantes',
+                'user': 'Acesso básico ao sistema'
+            };
+            return descriptions[roleName] || '';
         }
         
         function logout() {

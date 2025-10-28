@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS platform_configurations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     config_key TEXT NOT NULL UNIQUE,
     config_value TEXT NOT NULL,
-    config_type TEXT NOT NULL CHECK (config_type IN ('api_key', 'processor_setting', 'global_setting')),
+    config_type TEXT NOT NULL CHECK (config_type IN ('api_key', 'processor_setting', 'global_setting', 'email')),
     is_encrypted BOOLEAN DEFAULT true,
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS platform_configurations (
 COMMENT ON TABLE platform_configurations IS 'Configurações globais da plataforma VisionKrono';
 COMMENT ON COLUMN platform_configurations.config_key IS 'Chave da configuração (ex: GEMINI_API_KEY)';
 COMMENT ON COLUMN platform_configurations.config_value IS 'Valor da configuração (encriptado se is_encrypted=true)';
-COMMENT ON COLUMN platform_configurations.config_type IS 'Tipo: api_key, processor_setting, global_setting';
+COMMENT ON COLUMN platform_configurations.config_type IS 'Tipo: api_key, processor_setting, global_setting, email';
 COMMENT ON COLUMN platform_configurations.is_encrypted IS 'Se o valor está encriptado';
 COMMENT ON COLUMN platform_configurations.description IS 'Descrição da configuração';
 
@@ -151,7 +151,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION set_platform_config(
     config_key_param TEXT,
     config_value_param TEXT,
-    config_type_param TEXT DEFAULT 'global_setting',
+    config_type_param TEXT DEFAULT 'global_setting', -- pode ser: api_key, processor_setting, global_setting, email
     is_encrypted_param BOOLEAN DEFAULT true,
     description_param TEXT DEFAULT NULL
 )

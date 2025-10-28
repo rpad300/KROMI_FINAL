@@ -52,3 +52,9 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+
+# Authentication and credentials
+auth/
+client_secret*.json
+*.json
+credentials/

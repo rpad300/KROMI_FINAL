@@ -24,7 +24,11 @@ const PORT = 1144;
 // Inicializar Supabase para server-side
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Criar cliente Supabase com Service Role Key (bypassa RLS) para operações privilegiadas
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // Inicializar sistemas de segurança
 const sessionManager = new SessionManager();
@@ -91,6 +95,65 @@ app.get('/api/config', (req, res) => {
 // ROTAS DE AUTENTICAÇÃO
 // ==========================================
 setupAuthRoutes(app, sessionManager, supabase, auditLogger);
+
+// ==========================================
+// ROTAS DE ROLES E PERMISSÕES
+// ==========================================
+
+// Rota para atualizar permissões de um perfil (usa Service Role Key)
+app.post('/api/roles/update-permissions', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { role_name, permissions } = req.body;
+        
+        if (!role_name || !permissions) {
+            return res.status(400).json({
+                success: false,
+                error: 'role_name e permissions são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            console.error('❌ Service Role Key não configurada');
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada no servidor'
+            });
+        }
+        
+        console.log('🔄 Atualizando permissões via servidor:', { role_name, permissions });
+        
+        const { data, error } = await supabaseAdmin
+            .from('role_definitions')
+            .update({
+                permissions: permissions,
+                updated_at: new Date().toISOString()
+            })
+            .eq('role_name', role_name)
+            .select();
+        
+        if (error) {
+            console.error('❌ Erro ao atualizar permissões:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+        
+        console.log('✅ Permissões atualizadas:', data);
+        
+        res.json({
+            success: true,
+            data: data
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro inesperado ao atualizar permissões:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // ==========================================
 // ROTAS DE EVENTOS (REST API)

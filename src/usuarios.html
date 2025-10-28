@@ -13,6 +13,74 @@
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
     <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        /* Tabs Styles */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--color-border);
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            color: var(--color-primary);
+            background: var(--color-bg-secondary);
+        }
+        
+        .tab-btn.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .modal-large {
+            max-width: 900px;
+            max-height: 90vh;
+        }
+        
+        .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+    </style>
 </head>
 <body data-theme="dark" class="layout-with-sidebar">
     <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
@@ -34,25 +102,50 @@
     <!-- Main Content -->
     <main class="main">
         <div id="mainContent" style="padding: var(--spacing-6);">
-                <div class="table-container">
-                    <table class="table" id="usersTable">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Perfil</th>
-                                <th>Estado</th>
-                                <th>Último Acesso</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            <!-- Users will be loaded here -->
-                        </tbody>
-                    </table>
+            <!-- Search and Filter Bar -->
+            <div class="search-filter-bar" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div class="search-box" style="flex: 1; min-width: 250px;">
+                    <input type="text" id="searchUsers" placeholder="🔍 Pesquisar por nome ou email..." 
+                           style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text);">
+                </div>
+                <div class="filter-group" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <select id="filterRole" style="padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text);">
+                        <option value="">Todos os Perfis</option>
+                        <option value="admin">👑 Administrador</option>
+                        <option value="moderator">⚙️ Moderador</option>
+                        <option value="user">👤 Utilizador</option>
+                    </select>
+                    <select id="filterStatus" style="padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text);">
+                        <option value="">Todos os Estados</option>
+                        <option value="active">✅ Ativo</option>
+                        <option value="inactive">⏸️ Inativo</option>
+                        <option value="suspended">🚫 Suspenso</option>
+                    </select>
+                    <button onclick="window.userManagement.clearFilters()" class="btn btn-sm btn-secondary">
+                        🔄 Limpar
+                    </button>
                 </div>
             </div>
-        </main>
+            
+            <div class="table-container">
+                <table class="table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Perfil</th>
+                            <th>Estado</th>
+                            <th>Último Acesso</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
     </div>
     
     <!-- Add User Modal -->
@@ -97,10 +190,12 @@
                                 <option value="suspended">🚫 Suspenso</option>
                             </select>
                         </div>
-                        <div class="form-group full-width">
-                            <label for="newUserPassword">Palavra-passe Temporária <span class="required">*</span></label>
-                            <input type="password" id="newUserPassword" name="password" autocomplete="new-password" minlength="8" required>
-                            <span class="helper-text">Mínimo 8 caracteres. O utilizador pode alterar após primeiro login.</span>
+                        <div class="form-group full-width" style="background: var(--color-bg-secondary); padding: 1rem; border-radius: var(--radius-md); border: 2px solid var(--color-primary);">
+                            <p style="color: var(--color-text); font-size: 0.9rem; margin: 0;">
+                                <span style="color: var(--color-primary); font-weight: bold;">ℹ️ Informação:</span><br>
+                                A password será gerada automaticamente e mostrada após a criação do utilizador.<br>
+                                O utilizador será obrigado a trocar a password no primeiro login.
+                            </p>
                         </div>
                     </div>
                 </form>
@@ -114,65 +209,228 @@
     
     <!-- Edit User Modal -->
     <div id="editUserModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-                <h3>✏️ Editar Utilizador</h3>
+                <h3>✏️ Ficha Completa do Utilizador</h3>
                 <button class="modal-close" onclick="hideEditUserModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('basic')">📋 Informação Básica</button>
+                    <button class="tab-btn" onclick="switchTab('personal')">👤 Informação Pessoal</button>
+                    <button class="tab-btn" onclick="switchTab('contact')">📞 Contactos</button>
+                    <button class="tab-btn" onclick="switchTab('address')">📍 Morada</button>
+                    <button class="tab-btn" onclick="switchTab('professional')">💼 Profissional</button>
+                    <button class="tab-btn" onclick="switchTab('emergency')">⚠️ Emergência</button>
+                    <button class="tab-btn" onclick="switchTab('system')">⚙️ Sistema</button>
+                </div>
+                
                 <form id="editUserForm">
                     <input type="hidden" id="editUserId" name="id">
                     <input type="hidden" id="editUserUserId" name="user_id">
                     
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="editUserName">Nome Completo <span class="required">*</span></label>
-                            <input type="text" id="editUserName" name="name" required>
+                    <!-- Tab 1: Informação Básica -->
+                    <div id="tab-basic" class="tab-content active">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserName">Nome Completo <span class="required">*</span></label>
+                                <input type="text" id="editUserName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserEmail">Email <span class="required">*</span></label>
+                                <input type="email" id="editUserEmail" name="email" autocomplete="email" readonly>
+                                <span class="helper-text">Email não pode ser alterado</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserPhone">Telefone</label>
+                                <input type="tel" id="editUserPhone" name="phone" placeholder="+351 912 345 678" autocomplete="tel">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserOrganization">Organização</label>
+                                <input type="text" id="editUserOrganization" name="organization" placeholder="Empresa XYZ">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserRole">Perfil <span class="required">*</span></label>
+                                <select id="editUserRole" name="role" required>
+                                    <option value="user">👤 Utilizador</option>
+                                    <option value="moderator">⚙️ Moderador</option>
+                                    <option value="admin">👑 Administrador</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserStatus">Estado</label>
+                                <select id="editUserStatus" name="status">
+                                    <option value="active">✅ Ativo</option>
+                                    <option value="inactive">⏸️ Inativo</option>
+                                    <option value="suspended">🚫 Suspenso</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="editUserEmail">Email <span class="required">*</span></label>
-                            <input type="email" id="editUserEmail" name="email" autocomplete="email" readonly>
-                            <span class="helper-text">Email não pode ser alterado</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="editUserPhone">Telefone</label>
-                            <input type="tel" id="editUserPhone" name="phone" placeholder="+351 912 345 678" autocomplete="tel">
-                        </div>
-                        <div class="form-group">
-                            <label for="editUserOrganization">Organização</label>
-                            <input type="text" id="editUserOrganization" name="organization" placeholder="Empresa XYZ">
-                        </div>
-                        <div class="form-group">
-                            <label for="editUserRole">Perfil <span class="required">*</span></label>
-                            <select id="editUserRole" name="role" required>
-                                <option value="user">👤 Utilizador</option>
-                                <option value="moderator">⚙️ Moderador</option>
-                                <option value="admin">👑 Administrador</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="editUserStatus">Estado</label>
-                            <select id="editUserStatus" name="status">
-                                <option value="active">✅ Ativo</option>
-                                <option value="inactive">⏸️ Inativo</option>
-                                <option value="suspended">🚫 Suspenso</option>
-                            </select>
+                        
+                        <!-- Seção de Alterar Password -->
+                        <div class="password-section">
+                            <div class="password-toggle">
+                                <input type="checkbox" id="changePassword">
+                                <label for="changePassword">Alterar Palavra-passe</label>
+                            </div>
+                            <div id="passwordFields" style="display: none;">
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label for="editUserNewPassword">Nova Palavra-passe</label>
+                                        <input type="password" id="editUserNewPassword" name="newPassword" autocomplete="new-password" minlength="8">
+                                        <span class="helper-text">Mínimo 8 caracteres. Deixe em branco para manter password atual.</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Seção de Alterar Password -->
-                    <div class="password-section">
-                        <div class="password-toggle">
-                            <input type="checkbox" id="changePassword">
-                            <label for="changePassword">Alterar Palavra-passe</label>
+                    <!-- Tab 2: Informação Pessoal -->
+                    <div id="tab-personal" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserBirthDate">Data de Nascimento</label>
+                                <input type="date" id="editUserBirthDate" name="birth_date">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserGender">Género</label>
+                                <select id="editUserGender" name="gender">
+                                    <option value="">Selecionar...</option>
+                                    <option value="male">Masculino</option>
+                                    <option value="female">Feminino</option>
+                                    <option value="other">Outro</option>
+                                    <option value="prefer_not_to_say">Prefiro não dizer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserNationality">Nacionalidade</label>
+                                <input type="text" id="editUserNationality" name="nationality" placeholder="Portuguesa">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserTaxId">NIF/NIPC</label>
+                                <input type="text" id="editUserTaxId" name="tax_id" placeholder="123456789">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="editUserBiography">Biografia</label>
+                                <textarea id="editUserBiography" name="biography" rows="4" placeholder="Informação adicional sobre o utilizador..."></textarea>
+                            </div>
                         </div>
-                        <div id="passwordFields" style="display: none;">
-                            <div class="form-grid">
-                                <div class="form-group full-width">
-                                    <label for="editUserNewPassword">Nova Palavra-passe</label>
-                                    <input type="password" id="editUserNewPassword" name="newPassword" autocomplete="new-password" minlength="8">
-                                    <span class="helper-text">Mínimo 8 caracteres. Deixe em branco para manter password atual.</span>
+                    </div>
+                    
+                    <!-- Tab 3: Contactos -->
+                    <div id="tab-contact" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserPhoneAlt">Telefone Alternativo</label>
+                                <input type="tel" id="editUserPhoneAlt" name="phone_alt" placeholder="+351 912 345 678">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserEmailAlt">Email Alternativo</label>
+                                <input type="email" id="editUserEmailAlt" name="email_alt" placeholder="email.alternativo@exemplo.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserWebsite">Website</label>
+                                <input type="url" id="editUserWebsite" name="website" placeholder="https://www.exemplo.com">
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Redes Sociais</label>
+                                <div class="form-grid">
+                                    <input type="text" id="editUserLinkedIn" name="social_linkedin" placeholder="LinkedIn">
+                                    <input type="text" id="editUserTwitter" name="social_twitter" placeholder="Twitter">
+                                    <input type="text" id="editUserFacebook" name="social_facebook" placeholder="Facebook">
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 4: Morada -->
+                    <div id="tab-address" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="editUserAddressLine1">Morada Linha 1</label>
+                                <input type="text" id="editUserAddressLine1" name="address_line1" placeholder="Rua, Avenida, Número">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="editUserAddressLine2">Morada Linha 2</label>
+                                <input type="text" id="editUserAddressLine2" name="address_line2" placeholder="Complemento, Bloco, Andar">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserCity">Cidade</label>
+                                <input type="text" id="editUserCity" name="city" placeholder="Lisboa">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserStateProvince">Distrito/Estado</label>
+                                <input type="text" id="editUserStateProvince" name="state_province" placeholder="Lisboa">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserPostalCode">Código Postal</label>
+                                <input type="text" id="editUserPostalCode" name="postal_code" placeholder="1000-001">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserCountry">País</label>
+                                <input type="text" id="editUserCountry" name="country" placeholder="Portugal" value="Portugal">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 5: Profissional -->
+                    <div id="tab-professional" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserJobTitle">Cargo</label>
+                                <input type="text" id="editUserJobTitle" name="job_title" placeholder="Gerente de Projetos">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserDepartment">Departamento</label>
+                                <input type="text" id="editUserDepartment" name="department" placeholder="TI">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserHireDate">Data de Início</label>
+                                <input type="date" id="editUserHireDate" name="hire_date">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 6: Emergência -->
+                    <div id="tab-emergency" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserEmergencyName">Nome Contacto</label>
+                                <input type="text" id="editUserEmergencyName" name="emergency_contact_name" placeholder="Nome completo">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserEmergencyPhone">Telefone</label>
+                                <input type="tel" id="editUserEmergencyPhone" name="emergency_contact_phone" placeholder="+351 912 345 678">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserEmergencyRelation">Relação</label>
+                                <input type="text" id="editUserEmergencyRelation" name="emergency_contact_relation" placeholder="Cônjuge, Pai, Mãe, etc.">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 7: Sistema -->
+                    <div id="tab-system" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserTimezone">Fuso Horário</label>
+                                <select id="editUserTimezone" name="timezone">
+                                    <option value="Europe/Lisbon">Europe/Lisbon</option>
+                                    <option value="Europe/London">Europe/London</option>
+                                    <option value="America/New_York">America/New_York</option>
+                                    <option value="America/Los_Angeles">America/Los_Angeles</option>
+                                    <option value="Asia/Tokyo">Asia/Tokyo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserLanguage">Idioma</label>
+                                <select id="editUserLanguage" name="language">
+                                    <option value="pt">Português</option>
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -202,11 +460,61 @@
     
     <script src="/user-management.js?v=2025102609" defer></script>
     <script>
+        // Tab switching function
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Show corresponding content
+            const tabContent = document.getElementById(`tab-${tabName}`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+        }
+        
+        // Search and filter functionality
+        function setupSearchAndFilters() {
+            const searchInput = document.getElementById('searchUsers');
+            const filterRole = document.getElementById('filterRole');
+            const filterStatus = document.getElementById('filterStatus');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    if (window.userManagement) {
+                        window.userManagement.applyFilters();
+                    }
+                });
+            }
+            
+            if (filterRole) {
+                filterRole.addEventListener('change', function() {
+                    if (window.userManagement) {
+                        window.userManagement.applyFilters();
+                    }
+                });
+            }
+            
+            if (filterStatus) {
+                filterStatus.addEventListener('change', function() {
+                    if (window.userManagement) {
+                        window.userManagement.applyFilters();
+                    }
+                });
+            }
+        }
+        
         // Toggle password fields
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar autenticação
             verificarAutenticacao(['admin', 'moderator']).then(autenticado => {
                 if (!autenticado) return;
+                
+                // Setup search and filters
+                setupSearchAndFilters();
                 
                 // Carregar utilizadores automaticamente
                 if (window.userManagement) {

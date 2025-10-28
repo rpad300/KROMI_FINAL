@@ -27,6 +27,7 @@ class UniversalRouteProtection {
             'perfis-permissoes.html',
             'configuracoes.html',
             'logs-auditoria.html',
+            'ai-cost-stats.html',
             'meu-perfil.html',
             'events-kromi.html',
             'participants.html',
@@ -61,6 +62,19 @@ class UniversalRouteProtection {
             console.log('⚠️ Universal Route Protection já inicializado, ignorando...');
             return;
         }
+        
+        // Guard adicional: prevenir loop infinito em páginas públicas
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('login.html')) {
+            const lastInit = sessionStorage.getItem('lastURPInit_login');
+            const now = Date.now();
+            if (lastInit && (now - parseInt(lastInit)) < 3000) {
+                console.log('⚠️ URP inicializado muito recentemente no login - abortando para prevenir loop');
+                return;
+            }
+            sessionStorage.setItem('lastURPInit_login', now.toString());
+        }
+        
         window.__URP_INITIALIZED__ = true;
         
         try {
@@ -354,6 +368,7 @@ class UniversalRouteProtection {
             'platform-config-kromi.html': ['admin'],
             'config-kromi.html': ['admin'],
             'admin-dashboard.html': ['admin'],
+            'ai-cost-stats.html': ['admin'],
 
             // Páginas para administradores e gestores de eventos
             'events-kromi.html': ['admin', 'event_manager'],
@@ -467,10 +482,29 @@ class UniversalRouteProtection {
     }
 
     redirectToLogin() {
-        if (!window.location.pathname.includes('login')) {
-            console.log('Redirecionando para login');
-            window.location.href = './login.html';
+        const currentPath = window.location.pathname;
+        
+        // Proteção contra loop - NÃO redirecionar se já estiver em login
+        if (currentPath.includes('login') || currentPath.endsWith('login.html')) {
+            console.log('⚠️ Já está na página de login - não redirecionar');
+            return;
         }
+        
+        // Proteção adicional - verificar se já redirecionou recentemente
+        const lastRedirect = sessionStorage.getItem('lastLoginRedirect');
+        const now = Date.now();
+        
+        if (lastRedirect && (now - parseInt(lastRedirect)) < 2000) {
+            console.log('⚠️ Redirecionamento muito recente - prevenindo loop');
+            return;
+        }
+        
+        console.log('🔄 Redirecionando para login...');
+        sessionStorage.setItem('lastLoginRedirect', now.toString());
+        
+        setTimeout(() => {
+            window.location.href = './login.html';
+        }, 100);
     }
 
     showAccessDenied() {

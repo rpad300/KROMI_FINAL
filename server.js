@@ -11,12 +11,14 @@ const fs = require('fs');
 const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
 const { createClient } = require('@supabase/supabase-js');
-const BackgroundImageProcessor = require('./background-processor');
-const SessionManager = require('./session-manager');
-const { createSessionMiddleware, requireAuth, requireRole } = require('./session-middleware');
-const setupAuthRoutes = require('./auth-routes');
-const AuditLogger = require('./audit-logger');
-const CSRFProtection = require('./csrf-protection');
+const nodemailer = require('nodemailer');
+const BackgroundImageProcessor = require('./src/background-processor');
+const EmailAutomation = require('./src/email-automation');
+const SessionManager = require('./src/session-manager');
+const { createSessionMiddleware, requireAuth, requireRole } = require('./src/session-middleware');
+const setupAuthRoutes = require('./src/auth-routes');
+const AuditLogger = require('./src/audit-logger');
+const CSRFProtection = require('./src/csrf-protection');
 
 const app = express();
 const PORT = 1144;
@@ -24,7 +26,11 @@ const PORT = 1144;
 // Inicializar Supabase para server-side
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Criar cliente Supabase com Service Role Key (bypassa RLS) para operações privilegiadas
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // Inicializar sistemas de segurança
 const sessionManager = new SessionManager();
@@ -43,7 +49,8 @@ app.use(express.urlencoded({ extended: true })); // Parser de form data
 app.use(createSessionMiddleware(sessionManager));
 
 // Servir arquivos estáticos
-app.use(express.static('.'));
+app.use(express.static('.'));  // Raiz (para arquivos como icons, manifest, etc.)
+app.use(express.static('src'));  // src/ (para HTML, CSS, JS em src/)
 
 // Rota para debug - escrever logs no terminal
 app.post('/api/debug', express.json(), (req, res) => {
@@ -89,12 +96,522 @@ app.get('/api/config', (req, res) => {
 // ==========================================
 // ROTAS DE AUTENTICAÇÃO
 // ==========================================
-setupAuthRoutes(app, sessionManager, supabase, auditLogger);
+setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdmin);
+
+// ==========================================
+// ROTAS DE GESTÃO DE UTILIZADORES
+// ==========================================
+
+// Função para gerar password segura
+function generateSecurePassword(length = 16) {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+}
+
+// Função para enviar email com credenciais
+async function sendWelcomeEmail(to, name, password) {
+    try {
+        // Carregar configurações de email da base de dados ou usar variáveis de ambiente
+        let emailUser, emailPassword, appUrl;
+        
+        try {
+            const { data: emailConfig, error: configError } = await supabaseAdmin
+                .from('platform_configurations')
+                .select('*')
+                .in('config_key', ['EMAIL_USER', 'EMAIL_PASSWORD', 'APP_URL']);
+            
+            if (!configError && emailConfig && emailConfig.length > 0) {
+                emailConfig.forEach(config => {
+                    if (config.config_key === 'EMAIL_USER') emailUser = config.config_value;
+                    if (config.config_key === 'EMAIL_PASSWORD') emailPassword = config.config_value;
+                    if (config.config_key === 'APP_URL') appUrl = config.config_value;
+                });
+            }
+        } catch (error) {
+            console.warn('⚠️ Não foi possível carregar configurações de email da base de dados');
+        }
+        
+        // Usar valores da base de dados ou fallback para variáveis de ambiente
+        emailUser = emailUser || process.env.EMAIL_USER || 'system@kromi.online';
+        emailPassword = emailPassword || process.env.EMAIL_PASSWORD || '';
+        appUrl = appUrl || process.env.APP_URL || 'https://kromi.online';
+        
+        // Se não houver configuração de email, não enviar
+        if (!emailPassword) {
+            console.warn('⚠️ EMAIL_PASSWORD não configurado. Email não será enviado.');
+            return { success: false, error: 'EMAIL_PASSWORD não configurado' };
+        }
+        
+        // Configurar transporter de email (usando Gmail SMTP)
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: emailUser,
+                pass: emailPassword
+            }
+        });
+        
+        // HTML do email
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .credentials { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+                    .credential-item { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+                    .credential-label { font-weight: bold; color: #667eea; }
+                    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎉 Bem-vindo ao VisionKrono!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Olá <strong>${name}</strong>,</p>
+                        <p>A sua conta foi criada com sucesso no sistema VisionKrono.</p>
+                        
+                        <div class="credentials">
+                            <h3>📧 As suas credenciais:</h3>
+                            <div class="credential-item">
+                                <span class="credential-label">Email:</span> ${to}
+                            </div>
+                            <div class="credential-item">
+                                <span class="credential-label">Password Temporária:</span> <code style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 14px;">${password}</code>
+                            </div>
+                        </div>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Importante:</strong><br>
+                            Esta é uma password temporária. Será obrigatório trocar a password no primeiro login por motivos de segurança.
+                        </div>
+                        
+                        <p><strong>Próximos passos:</strong></p>
+                        <ol>
+                            <li>Acesse o sistema através do link: <a href="${appUrl}">${appUrl}</a></li>
+                            <li>Faça login com as credenciais acima</li>
+                            <li>Complete o seu perfil</li>
+                            <li>Altere a sua password</li>
+                        </ol>
+                        
+                        <p>Se tiver alguma dúvida, não hesite em contactar-nos.</p>
+                        
+                        <div class="footer">
+                            <p>Este é um email automático, por favor não responda.</p>
+                            <p>VisionKrono - Sistema de Gestão de Eventos</p>
+                            <p>Sistema enviado por: system@kromi.online</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        // Enviar email
+        const info = await transporter.sendMail({
+            from: `"VisionKrono System" <${emailUser}>`,
+            to: to,
+            subject: '🎉 Bem-vindo ao VisionKrono - As suas credenciais',
+            html: html
+        });
+        
+        console.log(`📧 Email enviado com sucesso para ${to}:`, info.messageId);
+        return { success: true, messageId: info.messageId };
+        
+    } catch (error) {
+        console.error(`❌ Erro ao enviar email para ${to}:`, error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Rota para criar utilizador com password automática
+app.post('/api/users/create', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { email, name, phone, organization, role } = req.body;
+        
+        if (!email || !name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email e nome são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            console.error('❌ Service Role Key não configurada');
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada no servidor'
+            });
+        }
+        
+        console.log('📝 Criando novo utilizador:', email);
+        
+        // Gerar password segura
+        const temporaryPassword = generateSecurePassword(12);
+        
+        // Criar utilizador no Supabase Auth
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: email,
+            password: temporaryPassword,
+            email_confirm: true,
+            user_metadata: {
+                name: name,
+                must_change_password: true // Marcar para obrigar troca de password
+            }
+        });
+        
+        if (authError) {
+            console.error('❌ Erro ao criar utilizador no auth:', authError);
+            return res.status(400).json({
+                success: false,
+                error: authError.message
+            });
+        }
+        
+        console.log('✅ Utilizador criado no auth:', authData.user.id);
+        
+        // Criar perfil do utilizador
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .insert({
+                user_id: authData.user.id,
+                name: name,
+                email: email,
+                phone: phone || null,
+                organization: organization || null,
+                role: role || 'user',
+                status: 'active',
+                created_by: req.session.userId, // ID do admin que criou
+                must_change_password: true // Flag para obrigar troca de password
+            })
+            .select()
+            .single();
+        
+        if (profileError) {
+            console.error('❌ Erro ao criar perfil:', profileError);
+            
+            // Se falhou ao criar perfil, eliminar utilizador do auth
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            
+            return res.status(500).json({
+                success: false,
+                error: profileError.message
+            });
+        }
+        
+        console.log('✅ Perfil criado:', profileData.id);
+        
+        // Log de auditoria
+        auditLogger.log('USER_CREATED', req.session.userId, {
+            user_email: email,
+            user_name: name,
+            role: role || 'user',
+            created_at: new Date().toISOString()
+        });
+        
+        // Tentar enviar email (não bloquear se falhar)
+        const emailResult = await sendWelcomeEmail(email, name, temporaryPassword);
+        if (emailResult.success) {
+            console.log(`✅ Email de boas-vindas enviado para ${email}`);
+        } else {
+            console.warn(`⚠️ Email não enviado para ${email}: ${emailResult.error}`);
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                profile: profileData,
+                temporaryPassword: temporaryPassword, // Enviar password temporária para exibição
+                emailSent: emailResult.success, // Informar se email foi enviado
+                message: emailResult.success 
+                    ? 'Utilizador criado com sucesso! Email com credenciais enviado.' 
+                    : 'Utilizador criado com sucesso! Email não pôde ser enviado.'
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro inesperado ao criar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==========================================
+// ROTAS DE ROLES E PERMISSÕES
+// ==========================================
+
+// ==========================================
+// Rotas de Automação de Emails
+// ==========================================
+
+// Criar agendamentos para evento
+app.post('/api/email/schedule-event-emails', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { event_id } = req.body;
+        
+        if (!event_id) {
+            return res.status(400).json({ error: 'event_id é obrigatório' });
+        }
+        
+        if (global.emailAutomation) {
+            await global.emailAutomation.scheduleTimeBasedEmails(event_id);
+            res.json({ success: true, message: 'Agendamentos criados com sucesso' });
+        } else {
+            res.status(500).json({ error: 'Sistema de automação não disponível' });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao criar agendamentos:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Disparar email em tempo real (para triggers como checkpoint, finish, etc)
+app.post('/api/email/trigger', requireAuth, express.json(), async (req, res) => {
+    try {
+        const { trigger, event_id, participant_data } = req.body;
+        
+        if (!trigger || !event_id) {
+            return res.status(400).json({ error: 'trigger e event_id são obrigatórios' });
+        }
+        
+        if (global.emailAutomation) {
+            await global.emailAutomation.triggerRealtimeEmail(trigger, event_id, participant_data);
+            res.json({ success: true, message: 'Emails disparados' });
+        } else {
+            res.status(500).json({ error: 'Sistema de automação não disponível' });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao disparar emails:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Listar agendamentos de um evento
+app.get('/api/email/schedules/:event_id', requireAuth, async (req, res) => {
+    try {
+        const { event_id } = req.params;
+        
+        const { data, error } = await supabaseAdmin
+            .from('email_schedule')
+            .select(`
+                *,
+                template:email_templates(name, subject, send_trigger)
+            `)
+            .eq('event_id', event_id)
+            .order('scheduled_for');
+        
+        if (error) throw error;
+        
+        res.json(data || []);
+    } catch (error) {
+        console.error('❌ Erro ao listar agendamentos:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cancelar agendamento
+app.delete('/api/email/schedules/:schedule_id', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { schedule_id } = req.params;
+        
+        const { error } = await supabaseAdmin
+            .from('email_schedule')
+            .update({ status: 'cancelled' })
+            .eq('id', schedule_id);
+        
+        if (error) throw error;
+        
+        res.json({ success: true, message: 'Agendamento cancelado' });
+    } catch (error) {
+        console.error('❌ Erro ao cancelar agendamento:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Rota para testar envio de email de template
+app.post('/api/email/test-template', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { template_key, recipient_email, variables } = req.body;
+        
+        if (!template_key || !recipient_email) {
+            return res.status(400).json({
+                success: false,
+                error: 'template_key e recipient_email são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar template
+        const { data: template, error: templateError } = await supabaseAdmin
+            .from('email_templates')
+            .select('*')
+            .eq('template_key', template_key)
+            .single();
+        
+        if (templateError || !template) {
+            return res.status(404).json({
+                success: false,
+                error: 'Template não encontrado'
+            });
+        }
+        
+        // Renderizar template com variáveis
+        const { data: renderedTemplate, error: renderError } = await supabaseAdmin
+            .rpc('render_email_template', {
+                template_key_param: template_key,
+                variables_param: variables || {}
+            });
+        
+        if (renderError || !renderedTemplate || renderedTemplate.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao renderizar template: ' + (renderError?.message || 'Template vazio')
+            });
+        }
+        
+        const { subject, body_html } = renderedTemplate[0];
+        
+        // Carregar configurações de email
+        let emailUser, emailPassword;
+        
+        try {
+            const { data: emailConfig, error: configError } = await supabaseAdmin
+                .from('platform_configurations')
+                .select('*')
+                .in('config_key', ['EMAIL_USER', 'EMAIL_PASSWORD']);
+            
+            if (!configError && emailConfig) {
+                emailConfig.forEach(config => {
+                    if (config.config_key === 'EMAIL_USER') emailUser = config.config_value;
+                    if (config.config_key === 'EMAIL_PASSWORD') emailPassword = config.config_value;
+                });
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao carregar configurações de email');
+        }
+        
+        emailUser = emailUser || process.env.EMAIL_USER || 'system@kromi.online';
+        emailPassword = emailPassword || process.env.EMAIL_PASSWORD || '';
+        
+        if (!emailPassword) {
+            return res.json({
+                success: false,
+                error: 'EMAIL_PASSWORD não configurado. Configure na página de Configurações.'
+            });
+        }
+        
+        // Configurar transporter
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: emailUser,
+                pass: emailPassword
+            }
+        });
+        
+        // Enviar email de teste
+        const info = await transporter.sendMail({
+            from: `"VisionKrono System (Teste)" <${emailUser}>`,
+            to: recipient_email,
+            subject: `[TESTE] ${subject}`,
+            html: body_html
+        });
+        
+        console.log(`📧 Email de teste enviado para ${recipient_email}:`, info.messageId);
+        
+        res.json({
+            success: true,
+            message: `Email de teste enviado para ${recipient_email}`,
+            messageId: info.messageId
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao enviar email de teste:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para atualizar permissões de um perfil (usa Service Role Key)
+app.post('/api/roles/update-permissions', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { role_name, permissions } = req.body;
+        
+        if (!role_name || !permissions) {
+            return res.status(400).json({
+                success: false,
+                error: 'role_name e permissions são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            console.error('❌ Service Role Key não configurada');
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada no servidor'
+            });
+        }
+        
+        console.log('🔄 Atualizando permissões via servidor:', { role_name, permissions });
+        
+        const { data, error } = await supabaseAdmin
+            .from('role_definitions')
+            .update({
+                permissions: permissions,
+                updated_at: new Date().toISOString()
+            })
+            .eq('role_name', role_name)
+            .select();
+        
+        if (error) {
+            console.error('❌ Erro ao atualizar permissões:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+        
+        console.log('✅ Permissões atualizadas:', data);
+        
+        res.json({
+            success: true,
+            data: data
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro inesperado ao atualizar permissões:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // ==========================================
 // ROTAS DE EVENTOS (REST API)
 // ==========================================
-const setupEventsRoutes = require('./events-routes');
+const setupEventsRoutes = require('./src/events-routes');
 setupEventsRoutes(app, sessionManager);
 
 // ==========================================
@@ -102,6 +619,25 @@ setupEventsRoutes(app, sessionManager);
 // ==========================================
 const setupDatabaseRoutes = require('./src/database-routes');
 setupDatabaseRoutes(app, sessionManager);
+
+// ==========================================
+// ROTAS DE AI COST STATS (REST API)
+// ==========================================
+const aiCostStatsRoutes = require('./src/ai-cost-stats-api');
+// Configurar sessionManager no módulo
+aiCostStatsRoutes.setSessionManager(sessionManager);
+// Inicializar sistema de sincronização automática
+aiCostStatsRoutes.initSync();
+// Registar rotas
+app.use('/api/ai-costs', aiCostStatsRoutes);
+console.log('💰 Rotas de AI Cost Stats carregadas');
+console.log('   GET    /api/ai-costs/indicators');
+console.log('   POST   /api/ai-costs/query');
+console.log('   POST   /api/ai-costs/aggregate');
+console.log('   POST   /api/ai-costs/export');
+console.log('   GET    /api/ai-costs/event/:eventId');
+console.log('   POST   /api/ai-costs/sync');
+console.log('   GET    /api/ai-costs/filters');
 
 // Rota para obter CSRF token
 app.get('/api/csrf-token', (req, res) => {
@@ -134,7 +670,30 @@ app.get('/api/processor-config/:eventId', async (req, res) => {
 
 // Rotas principais
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'index-kromi.html'));
+});
+
+// Página de login
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'login.html'));
+});
+
+// Páginas de gestão de utilizadores e permissões
+app.get('/usuarios', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'usuarios.html'));
+});
+
+app.get('/perfis-permissoes', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'perfis-permissoes.html'));
+});
+
+// Páginas de templates de email
+app.get('/email-templates-platform', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'email-templates-platform.html'));
+});
+
+app.get('/email-templates-event', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'email-templates-event.html'));
 });
 
 // Rota legada
@@ -143,19 +702,19 @@ app.get('/index-old', (req, res) => {
 });
 
 app.get('/platform-config', (req, res) => {
-    res.sendFile(path.join(__dirname, 'configuracoes.html'));
+    res.sendFile(path.join(__dirname, 'src', 'configuracoes.html'));
 });
 
 app.get('/detection', (req, res) => {
-    res.sendFile(path.join(__dirname, 'detection-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'detection-kromi.html'));
 });
 
 app.get('/debug', (req, res) => {
-    res.sendFile(path.join(__dirname, 'debug-mobile.html'));
+    res.sendFile(path.join(__dirname, 'src', 'debug-mobile.html'));
 });
 
 app.get('/events', (req, res) => {
-    res.sendFile(path.join(__dirname, 'events-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'events-kromi.html'));
 });
 
 // Rota legada (manter para compatibilidade)
@@ -164,48 +723,48 @@ app.get('/events-old', (req, res) => {
 });
 
 app.get('/detection-debug', (req, res) => {
-    res.sendFile(path.join(__dirname, 'detection-debug.html'));
+    res.sendFile(path.join(__dirname, 'src', 'detection-debug.html'));
 });
 
 app.get('/image-processor', (req, res) => {
-    res.sendFile(path.join(__dirname, 'image-processor-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'image-processor-kromi.html'));
 });
 
 // Página de gestão da base de dados
 app.get('/database-management', (req, res) => {
-    res.sendFile(path.join(__dirname, 'database-management-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'database-management-kromi.html'));
 });
 
 // Página de classificações
 app.get('/classifications', (req, res) => {
-    res.sendFile(path.join(__dirname, 'classifications-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'classifications-kromi.html'));
 });
 
 // Página de gestão de participantes
 app.get('/participants', (req, res) => {
-    res.sendFile(path.join(__dirname, 'participants-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'participants-kromi.html'));
 });
 
 // Página de configurações do evento
 app.get('/config', (req, res) => {
-    res.sendFile(path.join(__dirname, 'config-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'config-kromi.html'));
 });
 
 // Página de rankings por categoria
 app.get('/category-rankings', (req, res) => {
-    res.sendFile(path.join(__dirname, 'category-rankings-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'category-rankings-kromi.html'));
 });
 
 app.get('/devices', (req, res) => {
-    res.sendFile(path.join(__dirname, 'devices-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'devices-kromi.html'));
 });
 
 app.get('/checkpoint-order', (req, res) => {
-    res.sendFile(path.join(__dirname, 'checkpoint-order-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'checkpoint-order-kromi.html'));
 });
 
 app.get('/calibration', (req, res) => {
-    res.sendFile(path.join(__dirname, 'calibration-kromi.html'));
+    res.sendFile(path.join(__dirname, 'src', 'calibration-kromi.html'));
 });
 
 // Rotas legadas (para compatibilidade)
@@ -463,6 +1022,11 @@ server.listen(PORT, '0.0.0.0', () => {
             console.log('❌ Falha ao iniciar processador de imagens');
         }
     });
+    
+    // Iniciar sistema de automação de emails
+    console.log('📧 Iniciando sistema de automação de emails...');
+    global.emailAutomation = new EmailAutomation(supabaseAdmin);
+    global.emailAutomation.start();
 });
 
 // Tratamento de erros
@@ -477,10 +1041,16 @@ server.on('error', (err) => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('\n🛑 Parando servidor...');
     console.log('🛑 Parando processador de imagens...');
     imageProcessor.stop();
+    
+    if (global.emailAutomation) {
+        console.log('🛑 Parando automação de emails...');
+        await global.emailAutomation.stop();
+    }
+    
     server.close(() => {
         console.log('✅ Servidor parado com sucesso!');
         process.exit(0);

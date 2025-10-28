@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cost Stats - VisionKrono</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        .ai-cost-stats-container {
+            padding: var(--spacing-5);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: var(--spacing-6);
+        }
+
+        .page-header h1 {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        /* Indicadores de topo */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+        }
+
+        .indicator-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            border-left: 4px solid var(--success);
+            transition: all var(--transition-base);
+        }
+
+        .indicator-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .indicator-card.primary {
+            border-left-color: var(--primary);
+        }
+
+        .indicator-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .indicator-card.info {
+            border-left-color: var(--info);
+        }
+
+        .indicator-card .label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--spacing-2);
+            font-weight: 600;
+        }
+
+        .indicator-card .value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .indicator-card .value .currency {
+            font-size: var(--font-size-lg);
+            color: var(--text-secondary);
+        }
+
+        .indicator-card .subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-top: var(--spacing-1);
+        }
+
+        /* Seção de filtros */
+        .filters-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            margin-bottom: var(--spacing-6);
+        }
+
+        .filters-section h2 {
+            font-size: var(--font-size-lg);
+            margin-bottom: var(--spacing-4);
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: var(--spacing-2);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: var(--spacing-2) var(--spacing-4);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tabs de visualização */
+        .tabs-container {
+            margin-bottom: var(--spacing-4);
+        }
+
+        .tabs {
+            display: flex;
+            gap: var(--spacing-1);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab {
+            padding: var(--spacing-3) var(--spacing-5);
+            background: transparent;
+            border: none;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all var(--transition-base);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab:hover {
+            color: var(--primary);
+            background: var(--bg-primary);
+        }
+
+        /* Conteúdo das tabs */
+        .tab-content {
+            display: none;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Gráfico */
+        .chart-container {
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        #timelineChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Tabelas */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+
+        table th {
+            background: var(--bg-primary);
+            padding: var(--spacing-3);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        table td {
+            padding: var(--spacing-3);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        table tr:hover {
+            background: var(--bg-primary);
+        }
+
+        table .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        table .sortable:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Paginação */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #f5f5f5;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Estados */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: var(--error-light);
+            color: var(--error-dark);
+            padding: var(--spacing-3);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-4);
+            border-left: 4px solid var(--error);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-8) var(--spacing-4);
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-4);
+        }
+
+        .empty-state h3 {
+            font-size: var(--font-size-lg);
+            margin-bottom: var(--spacing-2);
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: var(--font-size-sm);
+        }
+
+        /* Alert de última sincronização */
+        .sync-alert {
+            background: var(--info-light);
+            color: var(--info-dark);
+            padding: var(--spacing-3) var(--spacing-4);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-sm);
+            border: 1px solid var(--info);
+        }
+
+        .sync-alert .sync-time {
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .indicators-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+            }
+
+            .filter-actions button {
+                width: 100%;
+            }
+        }
+
+        /* Highlight de valores */
+        .cost-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .cost-value.high {
+            color: var(--error);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success-dark);
+        }
+
+        .badge-warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+        }
+
+        .badge-info {
+            background: var(--info-light);
+            color: var(--info-dark);
+        }
+
+        /* Títulos dentro das tabs */
+        .tab-content h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-4);
+            padding-bottom: var(--spacing-3);
+            border-bottom: 2px solid var(--border-color);
+        }
+    </style>
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="ai-cost-stats-container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>📊 AI Cost Stats</h1>
+            <p>Visualização e análise de custos reais de IA da plataforma</p>
+        </div>
+
+        <!-- Alert de sincronização -->
+        <div id="syncAlert" class="sync-alert" style="display: none;">
+            <span>Última sincronização: <span class="sync-time" id="lastSyncTime">-</span></span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="syncCosts(event); return false;" id="syncButton">
+                🔄 Sincronizar agora
+            </button>
+        </div>
+
+        <!-- Mensagens de erro -->
+        <div id="errorContainer"></div>
+
+        <!-- Indicadores de topo -->
+        <div class="indicators-grid">
+            <div class="indicator-card primary">
+                <div class="label">Período Total</div>
+                <div class="value">
+                    <span class="currency">$</span>
+                    <span id="totalPeriod">0.00</span>
+                </div>
+                <div class="subtitle">Custo acumulado</div>
+            </div>
+
+            <div class="indicator-card">
+                <div class="label">Últimas 24 horas</div>
+                <div class="value">
+                    <span class="currency">$</span>
+                    <span id="last24h">0.00</span>
+                </div>
+                <div class="subtitle">Custo recente</div>
+            </div>
+
+            <div class="indicator-card warning">
+                <div class="label">Últimas 72 horas</div>
+                <div class="value">
+                    <span class="currency">$</span>
+                    <span id="last72h">0.00</span>
+                </div>
+                <div class="subtitle">Últimos 3 dias</div>
+            </div>
+
+            <div class="indicator-card info">
+                <div class="label">Mês Corrente</div>
+                <div class="value">
+                    <span class="currency">$</span>
+                    <span id="currentMonth">0.00</span>
+                </div>
+                <div class="subtitle" id="currentMonthLabel">-</div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <h2>🔍 Filtros e Período</h2>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="startDate">Data de Início</label>
+                    <input type="datetime-local" id="startDate" />
+                </div>
+
+                <div class="filter-group">
+                    <label for="endDate">Data de Fim</label>
+                    <input type="datetime-local" id="endDate" />
+                </div>
+
+                <div class="filter-group">
+                    <label for="serviceFilter">Serviço</label>
+                    <select id="serviceFilter">
+                        <option value="">Todos os serviços</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="modelFilter">Modelo</label>
+                    <select id="modelFilter">
+                        <option value="">Todos os modelos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="eventFilter">Evento</label>
+                    <select id="eventFilter">
+                        <option value="">Todos os eventos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="regionFilter">Região</label>
+                    <select id="regionFilter">
+                        <option value="">Todas as regiões</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="button" class="btn btn-secondary" onclick="resetFilters(event); return false;">Limpar Filtros</button>
+                <button type="button" class="btn btn-primary" onclick="applyFilters(event); return false;">Aplicar Filtros</button>
+                <button type="button" class="btn btn-success" onclick="exportData(event); return false;">📥 Exportar CSV</button>
+            </div>
+        </div>
+
+        <!-- Tabs de visualização -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button type="button" class="tab active" onclick="switchTab('timeline', event); return false;">Evolução Temporal</button>
+                <button type="button" class="tab" onclick="switchTab('dimensions', event); return false;">Custos por Dimensão</button>
+                <button type="button" class="tab" onclick="switchTab('events', event); return false;">Por Evento</button>
+                <button type="button" class="tab" onclick="switchTab('detail', event); return false;">Detalhe de Pedidos</button>
+            </div>
+        </div>
+
+        <!-- Tab: Evolução Temporal -->
+        <div id="timeline" class="tab-content active">
+            <h3>📈 Evolução de Custos no Tempo</h3>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tab: Custos por Dimensão -->
+        <div id="dimensions" class="tab-content">
+            <h3>📊 Agregação por Dimensão</h3>
+            <div style="margin-bottom: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="loadDimension('service', event); return false;">Por Serviço</button>
+                <button type="button" class="btn btn-secondary" onclick="loadDimension('model', event); return false;">Por Modelo</button>
+                <button type="button" class="btn btn-secondary" onclick="loadDimension('region', event); return false;">Por Região</button>
+            </div>
+            <div id="dimensionLoading" class="loading" style="display: none;">Carregando...</div>
+            <div class="table-container">
+                <table id="dimensionTable">
+                    <thead>
+                        <tr>
+                            <th>Dimensão</th>
+                            <th>Nº Pedidos</th>
+                            <th>Custo Total</th>
+                            <th>Total Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dimensionTableBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                <div class="icon">📊</div>
+                                <h3>Selecione uma dimensão</h3>
+                                <p>Escolha uma dimensão acima para visualizar os dados agregados</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Por Evento -->
+        <div id="events" class="tab-content">
+            <h3>🎯 Custos por Evento</h3>
+            <div id="eventLoading" class="loading" style="display: none;">Carregando...</div>
+            <div class="table-container">
+                <table id="eventTable">
+                    <thead>
+                        <tr>
+                            <th>Evento</th>
+                            <th>Nº Pedidos</th>
+                            <th>Custo Total</th>
+                            <th>Total Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventTableBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                <div class="icon">🎯</div>
+                                <h3>Nenhum evento com custos</h3>
+                                <p>Não foram encontrados eventos com custos de IA no período selecionado</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Detalhe de Pedidos -->
+        <div id="detail" class="tab-content">
+            <h3>📋 Detalhe de Pedidos de IA</h3>
+            <div id="detailLoading" class="loading" style="display: none;">Carregando...</div>
+            <div class="table-container">
+                <table id="detailTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" onclick="sortTable('timestamp')">Data/Hora</th>
+                            <th>Serviço</th>
+                            <th>Modelo</th>
+                            <th>Região</th>
+                            <th>Tokens</th>
+                            <th>Duração (ms)</th>
+                            <th class="sortable" onclick="sortTable('cost')">Custo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody">
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <div class="icon">📋</div>
+                                <h3>Nenhum pedido encontrado</h3>
+                                <p>Não foram encontrados pedidos no período selecionado</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="detailPagination" style="display: none;">
+                <button type="button" onclick="previousPage(event); return false;">← Anterior</button>
+                <span class="page-info" id="pageInfo">Página 1 de 1</span>
+                <button type="button" onclick="nextPage(event); return false;">Próxima →</button>
+            </div>
+        </div>
+        </div> <!-- .ai-cost-stats-container -->
+    </div> <!-- .main-content -->
+
+    <!-- Supabase e Autenticação -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/supabase.js?v=2025102605"></script>
+    <script src="/auth-client.js?v=2025102616"></script>
+    <script src="/auth-helper.js?v=2025102620"></script>
+
+    <!-- Sistema de Navegação -->
+    <script src="/navigation-config.js?v=2025102601"></script>
+    <script src="/navigation-service.js?v=2025102601"></script>
+    <script src="/navigation-component.js?v=2025102601"></script>
+    <script src="/navigation-init.js?v=2025102601"></script>
+
+    <!-- Proteção de Rota -->
+    <script src="/universal-route-protection.js?v=2025102818"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Script principal da página -->
+    <script src="ai-cost-stats.js"></script>
+</body>
+</html>
+

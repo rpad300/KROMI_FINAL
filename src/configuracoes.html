@@ -147,6 +147,42 @@
                 </div>
                 
                 <div class="section">
+                    <h3>📧 Configurações de Email</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                        Configure o envio de emails para notificações e criação de utilizadores.
+                    </p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Email do Sistema</label>
+                            <input type="email" id="emailUser" placeholder="system@kromi.online">
+                            <span class="helper-text">Email usado para enviar notificações</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Password do Email</label>
+                            <div class="api-key-input">
+                                <input type="password" id="emailPassword" placeholder="Password do email">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('emailPassword')">👁️</button>
+                            </div>
+                            <span class="helper-text">App Password do Gmail (recommendado)</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>URL da Aplicação</label>
+                            <input type="text" id="appUrl" placeholder="https://kromi.online">
+                            <span class="helper-text">URL usada nos emails (links de acesso)</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <button class="btn btn-primary" onclick="saveEmailSettings()">
+                                💾 Salvar Configurações de Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
                     <h3>🤖 Configurações de Processador</h3>
                     <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
                         Configure o comportamento padrão dos processadores para toda a plataforma.
@@ -311,6 +347,7 @@
             
             loadSystemStats();
             loadApiConfigurations();
+            loadEmailSettings();
             loadProcessorSettings();
         });
         
@@ -353,6 +390,14 @@
         async function loadApiConfigurations() {
             try {
                 console.log('📥 Carregando configurações de API...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
                 
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
                     console.log('⚠️ Supabase não disponível, usando configurações padrão');
@@ -423,6 +468,14 @@
             try {
                 console.log('💾 Salvando configurações de API...');
                 
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
+                
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
                     alert('❌ Supabase não disponível. Não foi possível salvar as configurações.');
                     return;
@@ -464,11 +517,122 @@
             }
         }
         
+        // ==================== CONFIGURAÇÕES DE EMAIL ====================
+        
+        async function loadEmailSettings() {
+            try {
+                console.log('📥 Carregando configurações de email...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.log('⚠️ Supabase não disponível para configurações de email');
+                    return;
+                }
+                
+                const { data, error } = await window.supabaseClient.supabase.rpc('get_platform_config', {
+                    config_key_param: null
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar configurações de email:', error);
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    data.forEach(config => {
+                        const fieldMap = {
+                            'EMAIL_USER': 'emailUser',
+                            'EMAIL_PASSWORD': 'emailPassword',
+                            'APP_URL': 'appUrl'
+                        };
+                        
+                        const fieldId = fieldMap[config.config_key];
+                        if (fieldId) {
+                            const input = document.getElementById(fieldId);
+                            if (input) {
+                                input.value = config.config_value;
+                            }
+                        }
+                    });
+                    console.log('✅ Configurações de email carregadas da base de dados');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar configurações de email:', error);
+            }
+        }
+        
+        async function saveEmailSettings() {
+            try {
+                console.log('💾 Salvando configurações de email...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    alert('❌ Supabase não disponível. Não foi possível salvar as configurações.');
+                    return;
+                }
+                
+                const emailConfigs = [
+                    { key: 'EMAIL_USER', value: document.getElementById('emailUser').value },
+                    { key: 'EMAIL_PASSWORD', value: document.getElementById('emailPassword').value },
+                    { key: 'APP_URL', value: document.getElementById('appUrl').value }
+                ];
+                
+                let savedCount = 0;
+                for (const config of emailConfigs) {
+                    if (config.value.trim()) {
+                        const { error } = await window.supabaseClient.supabase.rpc('set_platform_config', {
+                            config_key_param: config.key,
+                            config_value_param: config.value,
+                            config_type_param: 'email',
+                            is_encrypted_param: true,
+                            description_param: `Configuração de email: ${config.key}`
+                        });
+                        
+                        if (error) {
+                            console.error(`❌ Erro ao salvar ${config.key}:`, error);
+                        } else {
+                            savedCount++;
+                        }
+                    }
+                }
+                
+                alert(`✅ Configurações de email salvas com sucesso! (${savedCount} configurações)`);
+                console.log('✅ Configurações de email salvas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar configurações de email:', error);
+                alert('❌ Erro ao salvar configurações: ' + error.message);
+            }
+        }
+        
         // ==================== CONFIGURAÇÕES DE PROCESSADOR ====================
         
         async function loadProcessorSettings() {
             try {
                 console.log('📥 Carregando configurações de processador...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
                 
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
                     console.log('⚠️ Supabase não disponível para configurações de processador');
@@ -529,6 +693,14 @@
         async function saveProcessorSettings() {
             try {
                 console.log('💾 Salvando configurações de processador...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
                 
                 if (!window.supabaseClient || !window.supabaseClient.supabase) {
                     alert('❌ Supabase não disponível. Não foi possível salvar as configurações.');

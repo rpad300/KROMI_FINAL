@@ -16,32 +16,89 @@ class UserManagement {
         this.supabase = null;
         this.currentUser = null;
         this.userProfile = null;
+        this.allUsers = []; // Armazenar todos os utilizadores
+        this.filteredUsers = []; // Utilizadores após filtros
         this.init();
     }
 
     async init() {
         console.log('[USER MANAGEMENT] Inicializando sistema de gestão de utilizadores...');
         
-        // Aguardar inicialização do auth system
+        // Aguardar inicialização do auth system ou Supabase Client
         if (window.authSystem && window.authSystem.supabase) {
             this.supabase = window.authSystem.supabase;
             this.currentUser = window.authSystem.currentUser;
             this.userProfile = window.authSystem.userProfile;
             this.setupEventListeners();
+        } else if (window.supabaseClient) {
+            // Inicializar Supabase se necessário
+            if (!window.supabaseClient.initialized) {
+                console.log('[USER MANAGEMENT] Inicializando Supabase...');
+                await window.supabaseClient.init();
+            }
+            
+            if (window.supabaseClient.supabase) {
+                this.supabase = window.supabaseClient.supabase;
+                this.setupEventListeners();
+            }
         } else {
-            // Aguardar auth system estar disponível
-            const checkAuth = setInterval(() => {
+            // Aguardar auth system ou supabase client estar disponível
+            const checkAuth = setInterval(async () => {
                 if (window.authSystem && window.authSystem.supabase) {
                     this.supabase = window.authSystem.supabase;
                     this.currentUser = window.authSystem.currentUser;
                     this.userProfile = window.authSystem.userProfile;
                     clearInterval(checkAuth);
                     this.setupEventListeners();
+                } else if (window.supabaseClient && window.supabaseClient.supabase) {
+                    this.supabase = window.supabaseClient.supabase;
+                    clearInterval(checkAuth);
+                    this.setupEventListeners();
+                } else if (window.supabaseClient && !window.supabaseClient.initialized) {
+                    await window.supabaseClient.init();
+                    if (window.supabaseClient.supabase) {
+                        this.supabase = window.supabaseClient.supabase;
+                        clearInterval(checkAuth);
+                        this.setupEventListeners();
+                    }
                 }
             }, 100);
         }
     }
 
+    async ensureSupabase() {
+        // Aguardar até Supabase estar disponível
+        if (this.supabase) return;
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 segundos no total
+        
+        while (!this.supabase && attempts < maxAttempts) {
+            if (window.authSystem && window.authSystem.supabase) {
+                this.supabase = window.authSystem.supabase;
+                this.currentUser = window.authSystem.currentUser;
+                this.userProfile = window.authSystem.userProfile;
+                break;
+            } else if (window.supabaseClient && window.supabaseClient.supabase) {
+                this.supabase = window.supabaseClient.supabase;
+                break;
+            } else if (window.supabaseClient && !window.supabaseClient.initialized) {
+                await window.supabaseClient.init();
+                if (window.supabaseClient.supabase) {
+                    this.supabase = window.supabaseClient.supabase;
+                    break;
+                }
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!this.supabase && attempts >= maxAttempts) {
+            console.error('[USER MANAGEMENT] Timeout aguardando Supabase');
+        }
+    }
+    
     setupEventListeners() {
         // Event listeners para formulários
         const addUserForm = document.getElementById('addUserForm');
@@ -70,6 +127,16 @@ class UserManagement {
         try {
             console.log('[USER MANAGEMENT] Carregando utilizadores...');
             
+            // Garantir que Supabase está disponível
+            if (!this.supabase) {
+                console.log('[USER MANAGEMENT] Supabase não disponível, aguardando...');
+                await this.ensureSupabase();
+            }
+            
+            if (!this.supabase) {
+                throw new Error('Supabase não disponível');
+            }
+            
             const { data: users, error } = await this.supabase
                 .from('user_profiles')
                 .select(`
@@ -94,6 +161,16 @@ class UserManagement {
             }
 
             console.log('[USER MANAGEMENT] Utilizadores carregados:', users?.length || 0);
+            
+            // Debug: verificar valores de last_login
+            if (users && users.length > 0) {
+                console.log('[USER MANAGEMENT] Exemplo de dados carregados:', {
+                    name: users[0].name,
+                    last_login: users[0].last_login,
+                    login_count: users[0].login_count
+                });
+            }
+            
             return users || [];
         } catch (error) {
             console.error('[USER MANAGEMENT] Erro ao carregar utilizadores:', error);
@@ -106,41 +183,40 @@ class UserManagement {
         try {
             console.log('[USER MANAGEMENT] Criando utilizador:', userData.email);
             
-            // Criar utilizador no Supabase Auth
-            const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
-                email: userData.email,
-                password: userData.password,
-                email_confirm: true
-            });
-
-            if (authError) {
-                console.error('[USER MANAGEMENT] Erro ao criar utilizador no auth:', authError);
-                throw authError;
-            }
-
-            // Criar perfil do utilizador
-            const { data: profileData, error: profileError } = await this.supabase
-                .from('user_profiles')
-                .insert({
-                    user_id: authData.user.id,
-                    name: userData.name,
+            // Chamar rota server-side para criar utilizador com password automática
+            const response = await fetch('/api/users/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
                     email: userData.email,
+                    name: userData.name,
                     phone: userData.phone || null,
                     organization: userData.organization || null,
-                    role: userData.role || 'user',
-                    status: 'active',
-                    created_by: this.currentUser.id
+                    role: userData.role || 'user'
                 })
-                .select()
-                .single();
-
-            if (profileError) {
-                console.error('[USER MANAGEMENT] Erro ao criar perfil:', profileError);
-                throw profileError;
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Erro ao criar utilizador');
             }
-
-            console.log('[USER MANAGEMENT] Utilizador criado com sucesso:', profileData);
-            return profileData;
+            
+            console.log('[USER MANAGEMENT] Utilizador criado com sucesso');
+            
+            // Mostrar password temporária ao admin
+            const message = `✅ Utilizador criado com sucesso!\n\n` +
+                          `📧 Email: ${result.data.profile.email}\n` +
+                          `🔑 Password Temporária: ${result.data.temporaryPassword}\n\n` +
+                          `⚠️ IMPORTANTE: Guarde esta password e partilhe-a com o utilizador de forma segura.\n` +
+                          `O utilizador será obrigado a trocar a password no primeiro login.`;
+            
+            alert(message);
+            
+            return result.data.profile;
         } catch (error) {
             console.error('[USER MANAGEMENT] Erro ao criar utilizador:', error);
             throw error;
@@ -151,13 +227,49 @@ class UserManagement {
         try {
             console.log('[USER MANAGEMENT] Atualizando utilizador:', userId);
             
-            // Atualizar perfil
+            // Atualizar perfil - incluir todos os campos da ficha completa
             const updateData = {
                 name: userData.name,
                 phone: userData.phone,
                 organization: userData.organization,
                 role: userData.role,
                 status: userData.status,
+                
+                // Informação pessoal
+                birth_date: userData.birth_date || null,
+                gender: userData.gender || null,
+                nationality: userData.nationality || null,
+                tax_id: userData.tax_id || null,
+                biography: userData.biography || null,
+                
+                // Contactos adicionais
+                phone_alt: userData.phone_alt || null,
+                email_alt: userData.email_alt || null,
+                website: userData.website || null,
+                social_media: userData.social_media || null,
+                
+                // Morada
+                address_line1: userData.address_line1 || null,
+                address_line2: userData.address_line2 || null,
+                city: userData.city || null,
+                state_province: userData.state_province || null,
+                postal_code: userData.postal_code || null,
+                country: userData.country || null,
+                
+                // Informação profissional
+                job_title: userData.job_title || null,
+                department: userData.department || null,
+                hire_date: userData.hire_date || null,
+                
+                // Contacto de emergência
+                emergency_contact_name: userData.emergency_contact_name || null,
+                emergency_contact_phone: userData.emergency_contact_phone || null,
+                emergency_contact_relation: userData.emergency_contact_relation || null,
+                
+                // Sistema
+                timezone: userData.timezone || null,
+                language: userData.language || null,
+                
                 updated_at: new Date().toISOString()
             };
             
@@ -377,11 +489,53 @@ class UserManagement {
 
     async loadUsersTable() {
         try {
+            console.log('[USER MANAGEMENT] Carregando tabela de utilizadores...');
             const users = await this.getAllUsers();
-            this.renderUsersTable(users);
+            this.allUsers = users; // Armazenar todos os utilizadores
+            console.log('[USER MANAGEMENT] Total de utilizadores:', this.allUsers.length);
+            this.applyFilters(); // Aplicar filtros
         } catch (error) {
             this.showError('Erro ao carregar utilizadores: ' + error.message);
         }
+    }
+    
+    // Aplicar filtros e pesquisa
+    applyFilters() {
+        const searchTerm = document.getElementById('searchUsers')?.value.toLowerCase() || '';
+        const filterRole = document.getElementById('filterRole')?.value || '';
+        const filterStatus = document.getElementById('filterStatus')?.value || '';
+        
+        // Filtrar utilizadores
+        this.filteredUsers = this.allUsers.filter(user => {
+            // Filtro de pesquisa (nome ou email)
+            const matchesSearch = !searchTerm || 
+                (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm));
+            
+            // Filtro de perfil
+            const matchesRole = !filterRole || user.role === filterRole;
+            
+            // Filtro de estado
+            const matchesStatus = !filterStatus || user.status === filterStatus;
+            
+            return matchesSearch && matchesRole && matchesStatus;
+        });
+        
+        // Renderizar tabela com utilizadores filtrados
+        this.renderUsersTable(this.filteredUsers);
+    }
+    
+    // Limpar filtros
+    clearFilters() {
+        const searchInput = document.getElementById('searchUsers');
+        const filterRole = document.getElementById('filterRole');
+        const filterStatus = document.getElementById('filterStatus');
+        
+        if (searchInput) searchInput.value = '';
+        if (filterRole) filterRole.value = '';
+        if (filterStatus) filterStatus.value = '';
+        
+        this.applyFilters();
     }
 
     renderUsersTable(users) {
@@ -389,11 +543,17 @@ class UserManagement {
         if (!tbody) return;
 
         if (users.length === 0) {
+            const searchTerm = document.getElementById('searchUsers')?.value || '';
+            const filterRole = document.getElementById('filterRole')?.value || '';
+            const filterStatus = document.getElementById('filterStatus')?.value || '';
+            
+            const hasFilters = searchTerm || filterRole || filterStatus;
+            
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="empty-state">
-                        <p>Nenhum utilizador encontrado</p>
-                        <small>Clique em "Adicionar Utilizador" para começar</small>
+                        <p>${hasFilters ? 'Nenhum utilizador encontrado com os filtros aplicados' : 'Nenhum utilizador encontrado'}</p>
+                        <small>${hasFilters ? 'Tente ajustar os filtros ou clique em "Limpar"' : 'Clique em "Adicionar Utilizador" para começar'}</small>
                     </td>
                 </tr>
             `;
@@ -456,11 +616,19 @@ class UserManagement {
         const diffTime = Math.abs(now - date);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (diffDays === 1) return 'Hoje';
+        if (diffDays === 0 || diffDays === 1) return 'Hoje';
         if (diffDays === 2) return 'Ontem';
         if (diffDays <= 7) return `${diffDays - 1} dias atrás`;
+        if (diffDays <= 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
+        if (diffDays <= 365) return `${Math.floor(diffDays / 30)} meses atrás`;
         
-        return date.toLocaleDateString('pt-PT');
+        return date.toLocaleDateString('pt-PT', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     // ==========================================
@@ -477,14 +645,13 @@ class UserManagement {
             phone: formData.get('phone'),
             organization: formData.get('organization'),
             role: formData.get('role'),
-            status: formData.get('status') || 'active',
-            password: formData.get('password')
+            status: formData.get('status') || 'active'
         };
 
         try {
             this.showLoading('Criando utilizador...');
             await this.createUser(userData);
-            this.showSuccess('Utilizador criado com sucesso!');
+            // Não mostrar "sucesso" adicional - a mensagem com a password já foi mostrada
             this.hideAddUserModal();
             await this.loadUsersTable();
         } catch (error) {
@@ -499,12 +666,57 @@ class UserManagement {
         
         const formData = new FormData(event.target);
         const userId = formData.get('id');
+        
+        // Processar redes sociais
+        const socialMedia = {};
+        const linkedIn = formData.get('social_linkedin');
+        const twitter = formData.get('social_twitter');
+        const facebook = formData.get('social_facebook');
+        if (linkedIn) socialMedia.linkedin = linkedIn;
+        if (twitter) socialMedia.twitter = twitter;
+        if (facebook) socialMedia.facebook = facebook;
+        
         const userData = {
             name: formData.get('name'),
             phone: formData.get('phone'),
             organization: formData.get('organization'),
             role: formData.get('role'),
-            status: formData.get('status')
+            status: formData.get('status'),
+            
+            // Informação pessoal
+            birth_date: formData.get('birth_date') || null,
+            gender: formData.get('gender') || null,
+            nationality: formData.get('nationality') || null,
+            tax_id: formData.get('tax_id') || null,
+            biography: formData.get('biography') || null,
+            
+            // Contactos adicionais
+            phone_alt: formData.get('phone_alt') || null,
+            email_alt: formData.get('email_alt') || null,
+            website: formData.get('website') || null,
+            social_media: Object.keys(socialMedia).length > 0 ? socialMedia : null,
+            
+            // Morada
+            address_line1: formData.get('address_line1') || null,
+            address_line2: formData.get('address_line2') || null,
+            city: formData.get('city') || null,
+            state_province: formData.get('state_province') || null,
+            postal_code: formData.get('postal_code') || null,
+            country: formData.get('country') || null,
+            
+            // Profissional
+            job_title: formData.get('job_title') || null,
+            department: formData.get('department') || null,
+            hire_date: formData.get('hire_date') || null,
+            
+            // Emergência
+            emergency_contact_name: formData.get('emergency_contact_name') || null,
+            emergency_contact_phone: formData.get('emergency_contact_phone') || null,
+            emergency_contact_relation: formData.get('emergency_contact_relation') || null,
+            
+            // Sistema
+            timezone: formData.get('timezone') || null,
+            language: formData.get('language') || null
         };
         
         // Se checkbox de alterar password estiver marcada, incluir nova password
@@ -594,7 +806,7 @@ class UserManagement {
             
             console.log('[USER MANAGEMENT] Dados carregados:', user);
             
-            // Preencher formulário
+            // Preencher formulário - Informação Básica
             document.getElementById('editUserId').value = user.id;
             document.getElementById('editUserUserId').value = user.user_id;
             document.getElementById('editUserName').value = user.name || '';
@@ -603,6 +815,47 @@ class UserManagement {
             document.getElementById('editUserOrganization').value = user.organization || '';
             document.getElementById('editUserRole').value = user.role || 'user';
             document.getElementById('editUserStatus').value = user.status || 'active';
+            
+            // Informação Pessoal
+            document.getElementById('editUserBirthDate').value = user.birth_date || '';
+            document.getElementById('editUserGender').value = user.gender || '';
+            document.getElementById('editUserNationality').value = user.nationality || '';
+            document.getElementById('editUserTaxId').value = user.tax_id || '';
+            document.getElementById('editUserBiography').value = user.biography || '';
+            
+            // Contactos
+            document.getElementById('editUserPhoneAlt').value = user.phone_alt || '';
+            document.getElementById('editUserEmailAlt').value = user.email_alt || '';
+            document.getElementById('editUserWebsite').value = user.website || '';
+            
+            // Redes Sociais
+            if (user.social_media && typeof user.social_media === 'object') {
+                document.getElementById('editUserLinkedIn').value = user.social_media.linkedin || '';
+                document.getElementById('editUserTwitter').value = user.social_media.twitter || '';
+                document.getElementById('editUserFacebook').value = user.social_media.facebook || '';
+            }
+            
+            // Morada
+            document.getElementById('editUserAddressLine1').value = user.address_line1 || '';
+            document.getElementById('editUserAddressLine2').value = user.address_line2 || '';
+            document.getElementById('editUserCity').value = user.city || '';
+            document.getElementById('editUserStateProvince').value = user.state_province || '';
+            document.getElementById('editUserPostalCode').value = user.postal_code || '';
+            document.getElementById('editUserCountry').value = user.country || '';
+            
+            // Profissional
+            document.getElementById('editUserJobTitle').value = user.job_title || '';
+            document.getElementById('editUserDepartment').value = user.department || '';
+            document.getElementById('editUserHireDate').value = user.hire_date || '';
+            
+            // Emergência
+            document.getElementById('editUserEmergencyName').value = user.emergency_contact_name || '';
+            document.getElementById('editUserEmergencyPhone').value = user.emergency_contact_phone || '';
+            document.getElementById('editUserEmergencyRelation').value = user.emergency_contact_relation || '';
+            
+            // Sistema
+            document.getElementById('editUserTimezone').value = user.timezone || 'Europe/Lisbon';
+            document.getElementById('editUserLanguage').value = user.language || 'pt';
             
             // Resetar campos de password
             const changePasswordCheckbox = document.getElementById('changePassword');

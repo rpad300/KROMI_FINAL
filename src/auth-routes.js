@@ -17,7 +17,7 @@ const router = express.Router();
 /**
  * Configurar rotas de autenticação
  */
-function setupAuthRoutes(app, sessionManager, supabase, auditLogger) {
+function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdmin) {
     
     // ==========================================
     // POST /api/auth/login
@@ -68,6 +68,29 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger) {
                     role: 'admin',
                     status: 'active'
                 };
+            }
+            
+            // Atualizar último login e contador de logins
+            try {
+                // Usar supabaseAdmin (Service Role Key) para bypass RLS
+                const clientToUse = supabaseAdmin || supabase;
+                
+                const { error: updateError } = await clientToUse
+                    .from('user_profiles')
+                    .update({
+                        last_login: new Date().toISOString(),
+                        login_count: (profile.login_count || 0) + 1
+                    })
+                    .eq('user_id', data.user.id);
+                
+                if (updateError) {
+                    console.error(`⚠️ Erro ao atualizar último login: ${updateError.message}`);
+                } else {
+                    console.log(`📊 Último login atualizado para: ${email}`);
+                }
+            } catch (updateError) {
+                console.error(`⚠️ Erro ao atualizar último login: ${updateError.message}`);
+                // Não bloquear login - apenas logar o erro
             }
             
             // Criar sessão

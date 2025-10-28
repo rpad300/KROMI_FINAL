@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Templates de Email - VisionKrono</title>
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <style>
+        /* Editor de HTML */
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-4);
+            margin: var(--spacing-4) 0;
+        }
+        
+        .editor-panel {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            border: 1px solid var(--border-color);
+        }
+        
+        .editor-panel h4 {
+            margin: 0 0 var(--spacing-3) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+        }
+        
+        textarea.code-editor {
+            width: 100%;
+            min-height: 400px;
+            padding: var(--spacing-3);
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: var(--font-size-sm);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            resize: vertical;
+        }
+        
+        /* Preview */
+        .email-preview {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-4);
+            background: white;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .email-preview iframe {
+            width: 100%;
+            min-height: 400px;
+            border: none;
+            border-radius: var(--radius-md);
+        }
+        
+        /* Variáveis */
+        .variables-panel {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            border: 1px solid var(--border-color);
+            margin-top: var(--spacing-4);
+        }
+        
+        .variable-item {
+            background: var(--bg-primary);
+            padding: var(--spacing-3);
+            margin: var(--spacing-2) 0;
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--primary);
+        }
+        
+        .variable-name {
+            font-weight: 600;
+            color: var(--primary);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .variable-description {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-1);
+        }
+        
+        /* Templates list */
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+            margin-top: var(--spacing-4);
+        }
+        
+        .template-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .template-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .template-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+        
+        .template-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: var(--spacing-3);
+        }
+        
+        .template-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .template-key {
+            font-family: 'Courier New', monospace;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: rgb(34, 197, 94);
+        }
+        
+        .status-badge.inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: rgb(239, 68, 68);
+        }
+    </style>
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">📧 Gestão de Templates de Email</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" onclick="createNewTemplate()">
+                ➕ Novo Template
+            </button>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+            
+            <!-- Templates List -->
+            <div class="section">
+                <h3>📋 Templates Disponíveis</h3>
+                <div class="templates-grid" id="templatesList">
+                    <!-- Templates will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Template Editor -->
+            <div class="section" id="templateEditor" style="display: none;">
+                <h3 id="editorTitle">✏️ Editar Template</h3>
+                
+                <!-- Basic Info -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Chave do Template <span class="required">*</span></label>
+                        <input type="text" id="templateKey" placeholder="welcome_user" required readonly>
+                        <span class="helper-text">Identificador único do template</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nome <span class="required">*</span></label>
+                        <input type="text" id="templateName" placeholder="Email de Boas-vindas" required>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Assunto <span class="required">*</span></label>
+                        <input type="text" id="templateSubject" placeholder="Bem-vindo ao VisionKrono!" required>
+                    </div>
+                </div>
+                
+                <!-- HTML Editor -->
+                <div class="editor-container">
+                    <div class="editor-panel">
+                        <h4>📝 Código HTML</h4>
+                        <textarea id="templateBody" class="code-editor" placeholder="<html>...</html>"></textarea>
+                    </div>
+                    
+                    <div class="editor-panel">
+                        <h4>👁️ Preview</h4>
+                        <div class="email-preview" id="emailPreview"></div>
+                    </div>
+                </div>
+                
+                <!-- Send Trigger Configuration -->
+                <div class="variables-panel" style="margin-top: var(--spacing-4);">
+                    <h4>⏰ Configurações de Envio</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sendTrigger">Quando enviar?</label>
+                            <select id="sendTrigger" onchange="updateTriggerConfig()">
+                                <option value="manual">📧 Manual (apenas teste)</option>
+                                <option value="registration">✅ Na inscrição do participante</option>
+                                <option value="event_start">🏁 No início do evento</option>
+                                <option value="event_end">🏁 No fim do evento</option>
+                                <option value="checkpoint">📍 Ao passar por checkpoint</option>
+                                <option value="finish">🏆 Ao terminar a prova</option>
+                                <option value="classification">📊 Após classificação final</option>
+                                <option value="day_before">📅 1 dia antes do evento</option>
+                                <option value="days_before">📅 X dias antes do evento</option>
+                                <option value="day_after">📅 1 dia depois do evento</option>
+                                <option value="days_after">📅 X dias depois do evento</option>
+                                <option value="scheduled">🕐 Data/hora específica</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="triggerConfigFields" style="display: none;">
+                            <!-- Campos dinâmicos baseados no trigger selecionado -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recipient Configuration -->
+                <div class="variables-panel" style="margin-top: var(--spacing-4);">
+                    <h4>👥 Destinatários</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="recipientType">Para quem enviar?</label>
+                            <select id="recipientType" onchange="updateRecipientConfig()">
+                                <option value="all_participants">👥 Todos os participantes do evento</option>
+                                <option value="specific_category">🏃 Participantes de categoria específica</option>
+                                <option value="specific_participants">👤 Participantes específicos</option>
+                                <option value="specific_emails">📧 Emails específicos</option>
+                                <option value="checkpoint_participants">📍 Participantes que passaram por checkpoint</option>
+                                <option value="organizer">👔 Organizador do evento</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="recipientConfigFields" style="display: none;">
+                            <!-- Campos dinâmicos baseados no tipo de destinatário -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Variables -->
+                <div class="variables-panel" style="margin-top: var(--spacing-4);">
+                    <h4>🔧 Variáveis Disponíveis</h4>
+                    <div id="variablesList"></div>
+                    <button class="btn btn-secondary" onclick="addVariable()" style="margin-top: var(--spacing-3);">
+                        ➕ Adicionar Variável
+                    </button>
+                </div>
+                
+                <!-- Actions -->
+                <div class="form-group full-width" style="margin-top: var(--spacing-4);">
+                    <button class="btn btn-primary" onclick="saveTemplate()">
+                        💾 Salvar Template
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelEdit()" style="margin-left: var(--spacing-3);">
+                        ❌ Cancelar
+                    </button>
+                    <button class="btn btn-secondary" onclick="testEmail()" style="margin-left: var(--spacing-3);">
+                        ✉️ Testar Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="/supabase.js?v=2025102605" defer></script>
+    <script src="/auth-client.js?v=2025102616" defer></script>
+    <script src="/auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="/navigation-config.js?v=2025102601" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="/universal-route-protection.js?v=2025102618" defer></script>
+    
+    <script>
+        let currentEditingTemplate = null;
+        
+        // Inicializar quando DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔄 [EVENT-TEMPLATES] DOMContentLoaded disparado');
+            
+            const autenticado = await verificarAutenticacao(['admin']);
+            if (!autenticado) {
+                console.log('❌ [EVENT-TEMPLATES] Não autenticado');
+                return;
+            }
+            
+            console.log('✅ [EVENT-TEMPLATES] Autenticado, aguardando inicialização do Supabase...');
+            
+            // Aguardar um pouco para garantir que o Supabase está inicializado
+            setTimeout(() => {
+                console.log('🚀 [EVENT-TEMPLATES] Carregando templates...');
+                loadTemplates();
+            }, 1000);
+            
+            // Listener para atualizar preview em tempo real
+            const templateBody = document.getElementById('templateBody');
+            if (templateBody) {
+                templateBody.addEventListener('input', updatePreview);
+                templateBody.addEventListener('paste', () => setTimeout(updatePreview, 100));
+            }
+        });
+        
+        // Carregar lista de templates
+        async function loadTemplates() {
+            try {
+                console.log('📋 [EVENT-TEMPLATES] Iniciando carregamento...');
+                
+                // Garantir que o Supabase está inicializado
+                if (window.supabaseClient) {
+                    if (!window.supabaseClient.initialized) {
+                        console.log('⏳ [EVENT-TEMPLATES] Inicializando Supabase...');
+                        await window.supabaseClient.init();
+                    }
+                }
+                
+                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                    console.error('❌ [EVENT-TEMPLATES] Supabase não disponível');
+                    return;
+                }
+                
+                // Obter event_id do URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                
+                console.log('🔍 [EVENT-TEMPLATES] Event ID do URL:', eventId);
+                
+                if (!eventId) {
+                    console.warn('⚠️ [EVENT-TEMPLATES] Nenhum event_id encontrado no URL. Mostrando todos os templates de evento.');
+                }
+                
+                let query = window.supabaseClient.supabase
+                    .from('email_templates')
+                    .select('*');
+                
+                if (eventId) {
+                    // Filtrar por event_id específico
+                    query = query.eq('event_id', eventId);
+                    console.log('🔍 [EVENT-TEMPLATES] Filtrando por event_id:', eventId);
+                } else {
+                    // Mostrar todos os templates de evento (event_id IS NOT NULL)
+                    query = query.not('event_id', 'is', null);
+                    console.log('🔍 [EVENT-TEMPLATES] Buscando todos os templates de evento (event_id IS NOT NULL)');
+                }
+                
+                const { data: templates, error } = await query.order('name');
+                
+                if (error) {
+                    console.error('❌ [EVENT-TEMPLATES] Erro na query:', error);
+                    throw error;
+                }
+                
+                console.log(`✅ [EVENT-TEMPLATES] Templates carregados: ${templates?.length || 0}`);
+                console.log('📊 [EVENT-TEMPLATES] Dados:', templates);
+                
+                renderTemplatesList(templates || []);
+            } catch (error) {
+                console.error('❌ [EVENT-TEMPLATES] Erro ao carregar templates:', error);
+            }
+        }
+        
+        // Renderizar lista de templates
+        function renderTemplatesList(templates) {
+            const container = document.getElementById('templatesList');
+            if (!container) return;
+            
+            container.innerHTML = templates.map(template => `
+                <div class="template-card" onclick="selectTemplate('${template.id}', '${template.template_key}')">
+                    <div class="template-header">
+                        <div>
+                            <h4 class="template-name">${template.name}</h4>
+                            <div class="template-key">${template.template_key}</div>
+                        </div>
+                        <span class="status-badge ${template.is_active ? 'active' : 'inactive'}">
+                            ${template.is_active ? '✅ Ativo' : '⏸️ Inativo'}
+                        </span>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: var(--font-size-sm); margin: var(--spacing-2) 0;">
+                        ${template.description || 'Sem descrição'}
+                    </p>
+                    <div style="display: flex; gap: var(--spacing-2); flex-wrap: wrap; margin: var(--spacing-2) 0;">
+                        ${template.send_trigger ? `<span style="background: var(--bg-primary); padding: 4px 8px; border-radius: 4px; font-size: var(--font-size-xs);">⏰ ${getTriggerLabel(template.send_trigger)}</span>` : ''}
+                        ${template.recipient_type ? `<span style="background: var(--bg-primary); padding: 4px 8px; border-radius: 4px; font-size: var(--font-size-xs);">👥 ${getRecipientLabel(template.recipient_type)}</span>` : ''}
+                    </div>
+                    <p style="color: var(--text-tertiary); font-size: var(--font-size-xs);">
+                        Variáveis: ${(() => {
+                            try {
+                                const vars = typeof template.variables === 'string' 
+                                    ? JSON.parse(template.variables) 
+                                    : template.variables || [];
+                                return Array.isArray(vars) ? vars.length : 0;
+                            } catch (e) {
+                                return 0;
+                            }
+                        })()}
+                    </p>
+                </div>
+            `).join('');
+        }
+        
+        // Selecionar template para edição
+        async function selectTemplate(id, key) {
+            currentEditingTemplate = id;
+            
+            const { data: template, error } = await window.supabaseClient.supabase
+                .from('email_templates')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (error) throw error;
+            
+            // Preencher formulário
+            document.getElementById('templateKey').value = template.template_key;
+            document.getElementById('templateName').value = template.name;
+            document.getElementById('templateSubject').value = template.subject;
+            document.getElementById('templateBody').value = template.body_html;
+            
+            // Renderizar variáveis (parsing seguro)
+            let vars = [];
+            try {
+                if (template.variables) {
+                    if (typeof template.variables === 'string') {
+                        vars = JSON.parse(template.variables);
+                    } else if (Array.isArray(template.variables)) {
+                        vars = template.variables;
+                    } else if (typeof template.variables === 'object') {
+                        // Se for um objeto, tentar extrair valores
+                        vars = Object.values(template.variables);
+                    }
+                }
+                
+                renderVariables(Array.isArray(vars) ? vars : []);
+            } catch (e) {
+                console.error('❌ Erro ao parsear variáveis:', e);
+                console.error('🔍 Debug variables:', template.variables);
+                renderVariables([]);
+            }
+            
+            // Carregar configurações de trigger e destinatários
+            document.getElementById('sendTrigger').value = template.send_trigger || 'manual';
+            document.getElementById('recipientType').value = template.recipient_type || 'all_participants';
+            
+            // Atualizar campos dinâmicos
+            updateTriggerConfig();
+            updateRecipientConfig();
+            
+            // Preencher campos de configuração se existirem
+            if (template.trigger_config) {
+                setTimeout(() => {
+                    if (template.trigger_config.days) {
+                        const daysField = document.getElementById('triggerDays');
+                        if (daysField) daysField.value = template.trigger_config.days;
+                    }
+                    if (template.trigger_config.time) {
+                        const timeField = document.getElementById('triggerTime');
+                        if (timeField) timeField.value = template.trigger_config.time;
+                    }
+                    if (template.trigger_config.checkpoint) {
+                        const checkpointField = document.getElementById('triggerCheckpoint');
+                        if (checkpointField) checkpointField.value = template.trigger_config.checkpoint;
+                    }
+                    if (template.trigger_config.datetime) {
+                        const datetimeField = document.getElementById('triggerDateTime');
+                        if (datetimeField) datetimeField.value = template.trigger_config.datetime;
+                    }
+                }, 100);
+            }
+            
+            if (template.recipient_config) {
+                setTimeout(() => {
+                    if (template.recipient_config.category) {
+                        const categoryField = document.getElementById('recipientCategory');
+                        if (categoryField) categoryField.value = template.recipient_config.category;
+                    }
+                    if (template.recipient_config.bibs) {
+                        const bibsField = document.getElementById('recipientBibs');
+                        if (bibsField) bibsField.value = template.recipient_config.bibs.join(', ');
+                    }
+                    if (template.recipient_config.emails) {
+                        const emailsField = document.getElementById('recipientEmails');
+                        if (emailsField) emailsField.value = template.recipient_config.emails.join(', ');
+                    }
+                    if (template.recipient_config.checkpoint) {
+                        const checkpointField = document.getElementById('recipientCheckpoint');
+                        if (checkpointField) checkpointField.value = template.recipient_config.checkpoint;
+                    }
+                }, 100);
+            }
+            
+            // Mostrar editor
+            document.getElementById('templateEditor').style.display = 'block';
+            document.getElementById('editorTitle').textContent = `✏️ Editar: ${template.name}`;
+            
+            // Atualizar preview inicial
+            updatePreview();
+            
+            // Scroll to editor
+            document.getElementById('templateEditor').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Renderizar variáveis
+        function renderVariables(variables) {
+            const container = document.getElementById('variablesList');
+            container.innerHTML = variables.map((var_, index) => `
+                <div class="variable-item" id="var-${index}">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div class="variable-name">{{${var_.name}}}</div>
+                            <div class="variable-description">${var_.description || ''}</div>
+                        </div>
+                        <button onclick="removeVariable(${index})" style="background: red; color: white; border: none; padding: 4px 8px; border-radius: var(--radius-sm); cursor: pointer;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Atualizar preview em tempo real
+        function updatePreview() {
+            const html = document.getElementById('templateBody').value;
+            const preview = document.getElementById('emailPreview');
+            
+            if (!html || html.trim() === '') {
+                preview.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Nenhum conteúdo HTML para preview</p>';
+                return;
+            }
+            
+            try {
+                // Escapar aspas simples e duplas
+                const escapedHtml = html.replace(/'/g, "&#39;").replace(/"/g, "&#34;");
+                
+                // Criar iframe para preview seguro
+                preview.innerHTML = `<iframe 
+                    srcdoc="${escapedHtml}"
+                    style="width: 100%; min-height: 400px; border: 1px solid #ddd; background: white;"
+                ></iframe>`;
+            } catch (e) {
+                console.error('❌ Erro ao renderizar preview:', e);
+                preview.innerHTML = '<p style="padding: 20px; color: red;">Erro ao renderizar preview</p>';
+            }
+        }
+        
+        // Adicionar variável
+        function addVariable() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>➕ Adicionar Variável</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
+                    </div>
+                    <form id="addVariableForm" class="modal-body">
+                        <div class="form-group">
+                            <label for="varName">Nome da Variável *</label>
+                            <input type="text" id="varName" required 
+                                   placeholder="Ex: participant_phone"
+                                   pattern="[a-z0-9_]+"
+                                   title="Apenas letras minúsculas, números e underscores">
+                            <span class="helper-text">Será usada como {{nome_da_variavel}}</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="varDescription">Descrição *</label>
+                            <input type="text" id="varDescription" required 
+                                   placeholder="Ex: Telefone do participante">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="varExample">Valor de Exemplo</label>
+                            <input type="text" id="varExample" 
+                                   placeholder="Ex: +351 912 345 678">
+                            <span class="helper-text">Usado no preview do template</span>
+                        </div>
+                    </form>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                            Cancelar
+                        </button>
+                        <button type="submit" form="addVariableForm" class="btn btn-primary">
+                            ✅ Adicionar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            setTimeout(() => modal.classList.add('active'), 10);
+            
+            document.getElementById('addVariableForm').onsubmit = (e) => {
+                e.preventDefault();
+                const varName = document.getElementById('varName').value;
+                const varDescription = document.getElementById('varDescription').value;
+                const varExample = document.getElementById('varExample').value || `{{${varName}}}`;
+                
+                // Adicionar à lista de variáveis
+                const variablesList = document.getElementById('variablesList');
+                const newVarHTML = `
+                    <div class="variable-item">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div class="variable-name">{{${varName}}}</div>
+                                <div class="variable-description">${varDescription}</div>
+                                <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--spacing-1);">
+                                    Exemplo: ${varExample}
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-danger" onclick="this.closest('.variable-item').remove()" style="padding: 4px 8px;">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+                variablesList.insertAdjacentHTML('beforeend', newVarHTML);
+                
+                modal.remove();
+                alert('✅ Variável adicionada! Não esqueça de salvar o template.');
+            };
+        }
+        
+        // Remover variável
+        function removeVariable(varName) {
+            if (confirm(`Remover variável {{${varName}}}?`)) {
+                // A remoção é feita pelo botão inline agora
+            }
+        }
+        
+        // Salvar template
+        async function saveTemplate() {
+            try {
+                const templateKey = document.getElementById('templateKey').value.trim();
+                const templateName = document.getElementById('templateName').value.trim();
+                const templateSubject = document.getElementById('templateSubject').value.trim();
+                const templateBody = document.getElementById('templateBody').value;
+                
+                if (!templateKey || !templateName || !templateSubject || !templateBody) {
+                    alert('❌ Preencha todos os campos obrigatórios');
+                    return;
+                }
+                
+                // Obter event_id do URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                
+                if (!eventId) {
+                    alert('❌ Event ID não encontrado');
+                    return;
+                }
+                
+                // Coletar variáveis do painel
+                const variables = [];
+                const exampleData = {};
+                document.querySelectorAll('.variable-item').forEach(item => {
+                    const varName = item.querySelector('.variable-name').textContent.replace(/[{}]/g, '');
+                    const varDesc = item.querySelector('.variable-description').textContent;
+                    variables.push({
+                        name: varName,
+                        description: varDesc,
+                        required: true
+                    });
+                    exampleData[varName] = getExampleValue(varName);
+                });
+                
+                // Coletar configurações de trigger e destinatários
+                const sendTrigger = document.getElementById('sendTrigger').value;
+                const triggerConfig = getTriggerConfig();
+                const recipientType = document.getElementById('recipientType').value;
+                const recipientConfig = getRecipientConfig();
+                
+                const templateData = {
+                    template_key: templateKey,
+                    name: templateName,
+                    subject: templateSubject,
+                    body_html: templateBody,
+                    variables: variables,
+                    example_data: exampleData,
+                    is_active: true,
+                    event_id: eventId,
+                    send_trigger: sendTrigger,
+                    trigger_config: triggerConfig,
+                    recipient_type: recipientType,
+                    recipient_config: recipientConfig
+                };
+                
+                let result;
+                if (currentEditingTemplate === 'new') {
+                    // Criar novo template
+                    result = await window.supabaseClient.supabase
+                        .from('email_templates')
+                        .insert(templateData)
+                        .select();
+                } else {
+                    // Atualizar template existente
+                    result = await window.supabaseClient.supabase
+                        .from('email_templates')
+                        .update(templateData)
+                        .eq('id', currentEditingTemplate)
+                        .select();
+                }
+                
+                if (result.error) throw result.error;
+                
+                alert('✅ Template salvo com sucesso!');
+                loadTemplates();
+                cancelEdit();
+            } catch (error) {
+                console.error('❌ Erro ao salvar template:', error);
+                alert('❌ Erro ao salvar template: ' + error.message);
+            }
+        }
+        
+        // Cancelar edição
+        function cancelEdit() {
+            document.getElementById('templateEditor').style.display = 'none';
+            document.getElementById('templateKey').readOnly = true;
+            currentEditingTemplate = null;
+        }
+        
+        // Testar email
+        async function testEmail() {
+            if (!currentEditingTemplate) {
+                alert('⚠️ Selecione um template primeiro');
+                return;
+            }
+            
+            try {
+                const recipientEmail = prompt('📧 Email para envio de teste:');
+                if (!recipientEmail) return;
+                
+                if (!recipientEmail.includes('@')) {
+                    alert('❌ Email inválido');
+                    return;
+                }
+                
+                // Obter variáveis do template
+                const templateKey = document.getElementById('templateKey').value;
+                const { data: template } = await window.supabaseClient.supabase
+                    .from('email_templates')
+                    .select('example_data, variables')
+                    .eq('template_key', templateKey)
+                    .single();
+                
+                // Usar dados de exemplo ou valores padrão
+                let variables = {};
+                if (template && template.example_data) {
+                    try {
+                        const exampleData = typeof template.example_data === 'string' 
+                            ? JSON.parse(template.example_data) 
+                            : template.example_data;
+                        variables = exampleData || {};
+                    } catch (e) {
+                        console.error('Erro ao parsear example_data:', e);
+                    }
+                }
+                
+                // Adicionar valores padrão para variáveis comuns
+                variables = {
+                    user_name: variables.user_name || 'João Silva',
+                    user_email: variables.user_email || recipientEmail,
+                    temporary_password: variables.temporary_password || 'TempPass123!',
+                    app_url: variables.app_url || 'https://kromi.online',
+                    ...variables
+                };
+                
+                console.log('🔄 Enviando email de teste...', { template_key: templateKey, recipient_email: recipientEmail, variables });
+                
+                // Enviar pedido ao servidor
+                const response = await fetch('/api/email/test-template', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        template_key: templateKey,
+                        recipient_email: recipientEmail,
+                        variables: variables
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Email de teste enviado com sucesso para ' + recipientEmail);
+                } else {
+                    alert('❌ Erro ao enviar email: ' + (result.error || 'Erro desconhecido'));
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao testar email:', error);
+                alert('❌ Erro ao testar email: ' + error.message);
+            }
+        }
+        
+        // Criar novo template - usando a interface de edição existente
+        async function createNewTemplate() {
+            // Limpar editor
+            currentEditingTemplate = 'new';
+            
+            // Obter event_id do URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            
+            if (!eventId) {
+                alert('❌ Event ID não encontrado. Por favor, acesse esta página através de um evento.');
+                return;
+            }
+            
+            // Mostrar editor
+            document.getElementById('templateEditor').style.display = 'block';
+            document.getElementById('editorTitle').textContent = '➕ Criar Novo Template';
+            
+            // Limpar campos
+            document.getElementById('templateKey').value = '';
+            document.getElementById('templateKey').readOnly = false; // Permitir edição ao criar
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateSubject').value = '';
+            document.getElementById('templateBody').value = getDefaultTemplateHTML();
+            
+            // Configurações padrão de envio e destinatários
+            document.getElementById('sendTrigger').value = 'manual';
+            document.getElementById('recipientType').value = 'all_participants';
+            updateTriggerConfig();
+            updateRecipientConfig();
+            
+            // Definir variáveis padrão para eventos (agrupadas por categoria)
+            const defaultVariables = [
+                // Informações do Evento
+                { name: 'event_name', description: 'Nome do evento', required: true },
+                { name: 'event_date', description: 'Data do evento', required: true },
+                { name: 'event_location', description: 'Local do evento', required: false },
+                { name: 'event_url', description: 'URL do evento', required: false },
+                { name: 'start_time', description: 'Hora de início', required: false },
+                { name: 'end_time', description: 'Hora de fim', required: false },
+                
+                // Informações do Participante
+                { name: 'participant_name', description: 'Nome do participante', required: true },
+                { name: 'participant_email', description: 'Email do participante', required: false },
+                { name: 'participant_bib', description: 'Número de dorsal', required: false },
+                { name: 'participant_category', description: 'Categoria', required: false },
+                { name: 'registration_date', description: 'Data de inscrição', required: false },
+                
+                // Informações do Organizador
+                { name: 'organizer_name', description: 'Nome do organizador', required: false },
+                { name: 'organizer_email', description: 'Email do organizador', required: false },
+                
+                // Deteções e Passagens
+                { name: 'checkpoint_name', description: 'Nome do checkpoint', required: false },
+                { name: 'checkpoint_number', description: 'Número do checkpoint', required: false },
+                { name: 'detection_time', description: 'Hora da deteção', required: false },
+                { name: 'lap_number', description: 'Número da volta', required: false },
+                { name: 'split_time', description: 'Tempo parcial', required: false },
+                
+                // Classificações
+                { name: 'overall_position', description: 'Posição geral', required: false },
+                { name: 'category_position', description: 'Posição na categoria', required: false },
+                { name: 'total_time', description: 'Tempo total', required: false },
+                { name: 'average_pace', description: 'Ritmo médio', required: false },
+                { name: 'total_distance', description: 'Distância total', required: false },
+                
+                // Estatísticas
+                { name: 'total_laps', description: 'Total de voltas', required: false },
+                { name: 'fastest_lap', description: 'Volta mais rápida', required: false },
+                { name: 'slowest_lap', description: 'Volta mais lenta', required: false },
+                { name: 'total_participants', description: 'Total de participantes', required: false },
+                { name: 'participants_finished', description: 'Participantes que terminaram', required: false },
+                
+                // Pagamento e QR Code
+                { name: 'payment_amount', description: 'Valor do pagamento', required: false },
+                { name: 'payment_status', description: 'Estado do pagamento', required: false },
+                { name: 'qr_code_url', description: 'URL do QR Code', required: false }
+            ];
+            
+            renderVariables(defaultVariables);
+            updatePreview();
+            
+            // Scroll para o editor
+            document.getElementById('templateEditor').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function getDefaultTemplateHTML() {
+            return `<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+        }
+        .header { 
+            background: linear-gradient(135deg, #FC6B03 0%, #FF8800 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+            border-radius: 8px 8px 0 0;
+        }
+        .content { 
+            background: #f5f5f5; 
+            padding: 30px; 
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 15px 0; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FC6B03;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .footer { 
+            text-align: center; 
+            color: #666; 
+            font-size: 12px; 
+            margin-top: 30px; 
+            padding: 20px; 
+            background: #f5f5f5;
+            border-radius: 0 0 8px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{event_name}}</h1>
+            <p style="margin: 0; opacity: 0.9;">{{event_date}} • {{event_location}}</p>
+        </div>
+        <div class="content">
+            <div class="card">
+                <h2 style="margin-top: 0; color: #FC6B03;">Olá {{participant_name}}!</h2>
+                <p>Parabéns pela sua participação no <strong>{{event_name}}</strong>!</p>
+                
+                <h3 style="color: #333; border-bottom: 2px solid #FC6B03; padding-bottom: 10px;">📊 Sua Classificação</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{overall_position}}</div>
+                        <div class="stat-label">Posição Geral</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{category_position}}</div>
+                        <div class="stat-label">Posição na Categoria</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{total_time}}</div>
+                        <div class="stat-label">Tempo Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{average_pace}}</div>
+                        <div class="stat-label">Ritmo Médio</div>
+                    </div>
+                </div>
+                
+                <p><strong>Dorsal:</strong> {{participant_bib}} | <strong>Categoria:</strong> {{participant_category}}</p>
+                <p><strong>Total de Voltas:</strong> {{total_laps}} | <strong>Volta Mais Rápida:</strong> {{fastest_lap}}</p>
+                
+                <p style="margin-top: 20px;">Personalize este template de acordo com as suas necessidades!</p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Atenciosamente,<br><strong>{{organizer_name}}</strong></p>
+            <p>{{organizer_email}}</p>
+            <p style="margin-top: 15px;">© 2025 VisionKrono. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+        }
+        
+        function cancelEdit() {
+            currentEditingTemplate = null;
+            document.getElementById('templateEditor').style.display = 'none';
+            document.getElementById('templateKey').readOnly = true;
+        }
+        
+        // Atualizar campos de configuração de trigger
+        function updateTriggerConfig() {
+            const trigger = document.getElementById('sendTrigger').value;
+            const configFields = document.getElementById('triggerConfigFields');
+            
+            let html = '';
+            
+            if (trigger === 'days_before' || trigger === 'days_after') {
+                html = `
+                    <label for="triggerDays">Quantos dias?</label>
+                    <input type="number" id="triggerDays" min="1" max="365" value="1" placeholder="Ex: 3">
+                    <label for="triggerTime" style="margin-top: var(--spacing-2);">Hora do envio</label>
+                    <input type="time" id="triggerTime" value="09:00">
+                `;
+            } else if (trigger === 'scheduled') {
+                html = `
+                    <label for="triggerDateTime">Data e hora</label>
+                    <input type="datetime-local" id="triggerDateTime">
+                `;
+            } else if (trigger === 'checkpoint') {
+                html = `
+                    <label for="triggerCheckpoint">Checkpoint específico (opcional)</label>
+                    <input type="text" id="triggerCheckpoint" placeholder="Ex: Meta, Km 21">
+                    <span class="helper-text">Deixe em branco para qualquer checkpoint</span>
+                `;
+            } else if (trigger === 'event_start' || trigger === 'event_end') {
+                html = `
+                    <label for="triggerTime">Hora do envio</label>
+                    <input type="time" id="triggerTime" value="09:00">
+                    <span class="helper-text">Se deixado em branco, usa a hora do evento</span>
+                `;
+            }
+            
+            configFields.innerHTML = html;
+            configFields.style.display = html ? 'block' : 'none';
+        }
+        
+        // Atualizar campos de configuração de destinatários
+        function updateRecipientConfig() {
+            const recipientType = document.getElementById('recipientType').value;
+            const configFields = document.getElementById('recipientConfigFields');
+            
+            let html = '';
+            
+            if (recipientType === 'specific_category') {
+                html = `
+                    <label for="recipientCategory">Categoria</label>
+                    <input type="text" id="recipientCategory" placeholder="Ex: Masculino 30-39">
+                    <span class="helper-text">Apenas participantes desta categoria</span>
+                `;
+            } else if (recipientType === 'specific_participants') {
+                html = `
+                    <label for="recipientBibs">Números de dorsal (separados por vírgula)</label>
+                    <input type="text" id="recipientBibs" placeholder="Ex: 123, 456, 789">
+                `;
+            } else if (recipientType === 'specific_emails') {
+                html = `
+                    <label for="recipientEmails">Emails (separados por vírgula)</label>
+                    <textarea id="recipientEmails" rows="3" placeholder="Ex: email1@example.com, email2@example.com"></textarea>
+                `;
+            } else if (recipientType === 'checkpoint_participants') {
+                html = `
+                    <label for="recipientCheckpoint">Checkpoint</label>
+                    <input type="text" id="recipientCheckpoint" placeholder="Ex: Meta, Km 21">
+                    <span class="helper-text">Apenas quem passou por este checkpoint</span>
+                `;
+            }
+            
+            configFields.innerHTML = html;
+            configFields.style.display = html ? 'block' : 'none';
+        }
+        
+        // Coletar configurações de trigger
+        function getTriggerConfig() {
+            const trigger = document.getElementById('sendTrigger').value;
+            const config = {};
+            
+            if (trigger === 'days_before' || trigger === 'days_after') {
+                config.days = parseInt(document.getElementById('triggerDays')?.value || 1);
+                config.time = document.getElementById('triggerTime')?.value || '09:00';
+            } else if (trigger === 'scheduled') {
+                config.datetime = document.getElementById('triggerDateTime')?.value;
+            } else if (trigger === 'checkpoint') {
+                config.checkpoint = document.getElementById('triggerCheckpoint')?.value || null;
+            } else if (trigger === 'event_start' || trigger === 'event_end') {
+                config.time = document.getElementById('triggerTime')?.value || null;
+            }
+            
+            return config;
+        }
+        
+        // Coletar configurações de destinatários
+        function getRecipientConfig() {
+            const recipientType = document.getElementById('recipientType').value;
+            const config = {};
+            
+            if (recipientType === 'specific_category') {
+                config.category = document.getElementById('recipientCategory')?.value;
+            } else if (recipientType === 'specific_participants') {
+                const bibs = document.getElementById('recipientBibs')?.value || '';
+                config.bibs = bibs.split(',').map(b => b.trim()).filter(b => b);
+            } else if (recipientType === 'specific_emails') {
+                const emails = document.getElementById('recipientEmails')?.value || '';
+                config.emails = emails.split(',').map(e => e.trim()).filter(e => e);
+            } else if (recipientType === 'checkpoint_participants') {
+                config.checkpoint = document.getElementById('recipientCheckpoint')?.value;
+            }
+            
+            return config;
+        }
+        
+        function getTriggerLabel(trigger) {
+            const labels = {
+                manual: 'Manual',
+                registration: 'Na Inscrição',
+                event_start: 'Início do Evento',
+                event_end: 'Fim do Evento',
+                checkpoint: 'Ao Passar Checkpoint',
+                finish: 'Ao Terminar',
+                classification: 'Após Classificação',
+                day_before: '1 Dia Antes',
+                days_before: 'X Dias Antes',
+                day_after: '1 Dia Depois',
+                days_after: 'X Dias Depois',
+                scheduled: 'Agendado'
+            };
+            return labels[trigger] || trigger;
+        }
+        
+        function getRecipientLabel(type) {
+            const labels = {
+                all_participants: 'Todos os Participantes',
+                specific_category: 'Categoria Específica',
+                specific_participants: 'Participantes Específicos',
+                specific_emails: 'Emails Específicos',
+                checkpoint_participants: 'Participantes de Checkpoint',
+                organizer: 'Organizador'
+            };
+            return labels[type] || type;
+        }
+        
+        function getExampleValue(varName) {
+            const examples = {
+                // Evento
+                event_name: 'Corrida de São Silvestre',
+                event_date: '31/12/2025',
+                event_location: 'Avenida Paulista, São Paulo',
+                event_url: 'https://kromi.online/eventos/sao-silvestre',
+                start_time: '09:00',
+                end_time: '14:00',
+                
+                // Participante
+                participant_name: 'João Silva',
+                participant_bib: '1234',
+                participant_email: 'joao@exemplo.com',
+                participant_category: 'Masculino 30-39',
+                registration_date: '15/10/2025',
+                
+                // Organizador
+                organizer_name: 'Comité Organizador',
+                organizer_email: 'contato@evento.com',
+                
+                // Deteções
+                checkpoint_name: 'Meta',
+                checkpoint_number: '5',
+                detection_time: '10:45:23',
+                lap_number: '3',
+                split_time: '00:32:15',
+                
+                // Classificações
+                overall_position: '42º',
+                category_position: '8º',
+                total_time: '01:35:42',
+                average_pace: '4:35 min/km',
+                total_distance: '21.1 km',
+                
+                // Estatísticas
+                total_laps: '5',
+                fastest_lap: '00:28:30',
+                slowest_lap: '00:35:12',
+                total_participants: '250',
+                participants_finished: '238',
+                
+                // Pagamento
+                payment_amount: '€50.00',
+                payment_status: 'Confirmado',
+                qr_code_url: 'https://kromi.online/qr/12345'
+            };
+            return examples[varName] || `{{${varName}}}`;
+        }
+    </script>
+</body>
+</html>
+
