@@ -728,6 +728,7 @@
                                 <select id="processorType" class="form-select">
                                     <option value="gemini">🤖 Gemini AI (Recomendado)</option>
                                     <option value="openai">🤖 OpenAI GPT-4</option>
+                                    <option value="deepseek">🤖 DeepSeek AI</option>
                                     <option value="google-vision">👁️ Google Vision API</option>
                                     <option value="ocr">📄 OCR Tradicional</option>
                                     <option value="hybrid">🔄 Híbrido (Gemini + OCR)</option>
@@ -749,6 +750,15 @@
                                     <option value="">Carregando modelos...</option>
                                 </select>
                                 <button type="button" id="reloadModelsBtn" class="btn btn-secondary" style="margin-top: 8px;">
+                                    🔄 Recarregar Modelos
+                                </button>
+                            </div>
+                            <div class="form-group" id="deepseekModelGroup" style="display: none;">
+                                <label class="form-label" for="deepseekModel">Modelo DeepSeek:</label>
+                                <select id="deepseekModel" class="form-select">
+                                    <option value="">Carregando modelos...</option>
+                                </select>
+                                <button type="button" id="reloadDeepSeekModelsBtn" class="btn btn-secondary" style="margin-top: 8px;">
                                     🔄 Recarregar Modelos
                                 </button>
                             </div>
@@ -1757,6 +1767,20 @@
                 });
             }
             
+            // DeepSeek model reload button
+            const reloadDeepSeekModelsBtn = document.getElementById('reloadDeepSeekModelsBtn');
+            if (reloadDeepSeekModelsBtn) {
+                reloadDeepSeekModelsBtn.addEventListener('click', () => {
+                    loadDeepSeekModels();
+                });
+            }
+            
+            // DeepSeek model selection
+            const deepseekModelSelect = document.getElementById('deepseekModel');
+            if (deepseekModelSelect) {
+                deepseekModelSelect.addEventListener('change', saveProcessorConfig);
+            }
+            
             // Processor info cards
             const processorCards = document.querySelectorAll('.processor-info-card');
             processorCards.forEach(card => {
@@ -1777,9 +1801,10 @@
             // Update processor speed options based on type
             updateProcessorSpeedOptions(selectedType);
             
-            // Show/hide OpenAI model selector
+            // Show/hide model selectors
             const openaiModelGroup = document.getElementById('openaiModelGroup');
             const geminiModelGroup = document.getElementById('geminiModelGroup');
+            const deepseekModelGroup = document.getElementById('deepseekModelGroup');
             
             if (openaiModelGroup) {
                 if (selectedType === 'openai') {
@@ -1796,6 +1821,15 @@
                     loadGeminiModels();
                 } else {
                     geminiModelGroup.style.display = 'none';
+                }
+            }
+            
+            if (deepseekModelGroup) {
+                if (selectedType === 'deepseek') {
+                    deepseekModelGroup.style.display = 'block';
+                    loadDeepSeekModels();
+                } else {
+                    deepseekModelGroup.style.display = 'none';
                 }
             }
             
@@ -1873,6 +1907,53 @@
             } catch (error) {
                 console.error('Erro ao carregar modelos OpenAI:', error);
                 openaiModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            }
+        }
+        
+        async function loadDeepSeekModels() {
+            const deepseekModelSelect = document.getElementById('deepseekModel');
+            if (!deepseekModelSelect) return;
+            
+            try {
+                deepseekModelSelect.innerHTML = '<option value="">Carregando...</option>';
+                
+                const response = await fetch('/api/deepseek/models');
+                const data = await response.json();
+                
+                if (data.success && data.models) {
+                    deepseekModelSelect.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = `${model.name} ($${model.pricing.input}/1M input, $${model.pricing.output}/1M output)`;
+                        deepseekModelSelect.appendChild(option);
+                    });
+                    
+                    // Se há valor salvo, selecionar
+                    const savedConfig = localStorage.getItem(`visionkrono_processor_config_${currentEvent?.id}`);
+                    if (savedConfig) {
+                        try {
+                            const config = JSON.parse(savedConfig);
+                            if (config.deepseekModel) {
+                                deepseekModelSelect.value = config.deepseekModel;
+                            }
+                        } catch (e) {
+                            console.error('Erro ao carregar configuração salva:', e);
+                        }
+                    }
+                    
+                    // Default para deepseek-chat se não houver seleção
+                    if (!deepseekModelSelect.value && data.models.length > 0) {
+                        const defaultModel = data.models.find(m => m.id.includes('deepseek-chat')) || data.models[0];
+                        deepseekModelSelect.value = defaultModel.id;
+                    }
+                } else {
+                    throw new Error(data.error || 'Erro ao carregar modelos');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar modelos DeepSeek:', error);
+                deepseekModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
             }
         }
         
@@ -2026,7 +2107,8 @@
                 processorSpeed: document.getElementById('processorSpeed')?.value || 'balanced',
                 processorConfidence: parseFloat(document.getElementById('processorConfidence')?.value || '0.7'),
                 openaiModel: document.getElementById('openaiModel')?.value || 'gpt-4o',
-                geminiModel: document.getElementById('geminiModel')?.value || 'gemini-1.5-flash'
+                geminiModel: document.getElementById('geminiModel')?.value || 'gemini-1.5-flash',
+                deepseekModel: document.getElementById('deepseekModel')?.value || 'deepseek-chat'
             };
             
             console.log('💾 Salvando configuração do processador:', config);
@@ -2051,7 +2133,8 @@
                     processor_speed_param: config.processorSpeed,
                     processor_confidence_param: config.processorConfidence,
                     openai_model_param: config.openaiModel || 'gpt-4o',
-                    gemini_model_param: config.geminiModel || 'gemini-1.5-flash'
+                    gemini_model_param: config.geminiModel || 'gemini-1.5-flash',
+                    deepseek_model_param: config.deepseekModel || 'deepseek-chat'
                 });
                 
                 if (error) {
@@ -2096,7 +2179,8 @@
                     processorSpeed: 'balanced',
                     processorConfidence: 0.7,
                     openaiModel: 'gpt-4o',
-                    geminiModel: 'gemini-1.5-flash'
+                    geminiModel: 'gemini-1.5-flash',
+                    deepseekModel: 'deepseek-chat'
                 };
                 console.log('📥 Usando configuração padrão:', config);
             }
@@ -2108,6 +2192,7 @@
             const confidenceValue = document.getElementById('confidenceValue');
             const openaiModelSelect = document.getElementById('openaiModel');
             const geminiModelSelect = document.getElementById('geminiModel');
+            const deepseekModelSelect = document.getElementById('deepseekModel');
             
             if (processorTypeSelect) {
                 processorTypeSelect.value = config.processorType;
@@ -2134,6 +2219,10 @@
             if (geminiModelSelect && config.geminiModel) {
                 geminiModelSelect.value = config.geminiModel;
             }
+            
+            if (deepseekModelSelect && config.deepseekModel) {
+                deepseekModelSelect.value = config.deepseekModel;
+            }
         }
         
         async function loadProcessorConfigFromSupabase() {
@@ -2157,7 +2246,8 @@
                         processorSpeed: data[0].processor_speed,
                         processorConfidence: parseFloat(data[0].processor_confidence),
                         openaiModel: data[0].openai_model || 'gpt-4o',
-                        geminiModel: data[0].gemini_model || 'gemini-1.5-flash'
+                        geminiModel: data[0].gemini_model || 'gemini-1.5-flash',
+                        deepseekModel: data[0].deepseek_model || 'deepseek-chat'
                     };
                     console.log('📥 Configuração carregada do Supabase:', config);
                     return config;

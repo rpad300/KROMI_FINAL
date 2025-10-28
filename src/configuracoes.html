@@ -115,6 +115,15 @@
                         </div>
                         
                         <div class="form-group">
+                            <label>DeepSeek API Key</label>
+                            <div class="api-key-input">
+                                <input type="password" id="deepseekApiKey" placeholder="Digite sua chave da API DeepSeek">
+                                <button type="button" class="api-key-toggle" onclick="togglePasswordVisibility('deepseekApiKey')">👁️</button>
+                            </div>
+                            <span class="helper-text">Chave para processamento com DeepSeek AI</span>
+                        </div>
+                        
+                        <div class="form-group">
                             <label>Google Vision API Key</label>
                             <div class="api-key-input">
                                 <input type="password" id="googleVisionApiKey" placeholder="Digite sua chave da API Google Vision">
@@ -203,6 +212,7 @@
                             <select id="defaultProcessorType">
                                 <option value="gemini">🤖 Gemini AI</option>
                                 <option value="openai">🤖 OpenAI GPT-4</option>
+                                <option value="deepseek">🤖 DeepSeek AI</option>
                                 <option value="google-vision">👁️ Google Vision</option>
                                 <option value="ocr">📄 OCR Tradicional</option>
                                 <option value="hybrid">🔄 Sistema Híbrido</option>
@@ -231,6 +241,17 @@
                                 🔄 Recarregar Modelos
                             </button>
                             <span class="helper-text">Modelo OpenAI usado por padrão</span>
+                        </div>
+                        
+                        <div class="form-group" id="deepseekModelGroup" style="display: none;">
+                            <label>Modelo DeepSeek Padrão</label>
+                            <select id="deepseekModel">
+                                <option value="">Carregando modelos...</option>
+                            </select>
+                            <button type="button" id="reloadDeepSeekModelsBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%;">
+                                🔄 Recarregar Modelos
+                            </button>
+                            <span class="helper-text">Modelo DeepSeek usado por padrão</span>
                         </div>
                         
                         <div class="form-group">
@@ -400,11 +421,17 @@
             if (reloadGeminiModelsBtn) {
                 reloadGeminiModelsBtn.addEventListener('click', loadGeminiModels);
             }
+            
+            const reloadDeepSeekModelsBtn = document.getElementById('reloadDeepSeekModelsBtn');
+            if (reloadDeepSeekModelsBtn) {
+                reloadDeepSeekModelsBtn.addEventListener('click', loadDeepSeekModels);
+            }
         });
         
         function handleProcessorTypeChange(selectedType) {
             const openaiModelGroup = document.getElementById('openaiModelGroup');
             const geminiModelGroup = document.getElementById('geminiModelGroup');
+            const deepseekModelGroup = document.getElementById('deepseekModelGroup');
             
             if (openaiModelGroup) {
                 if (selectedType === 'openai') {
@@ -421,6 +448,15 @@
                     loadGeminiModels();
                 } else {
                     geminiModelGroup.style.display = 'none';
+                }
+            }
+            
+            if (deepseekModelGroup) {
+                if (selectedType === 'deepseek') {
+                    deepseekModelGroup.style.display = 'block';
+                    loadDeepSeekModels();
+                } else {
+                    deepseekModelGroup.style.display = 'none';
                 }
             }
         }
@@ -482,6 +518,40 @@
             } catch (error) {
                 console.error('Erro ao carregar modelos OpenAI:', error);
                 openaiModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            }
+        }
+        
+        async function loadDeepSeekModels() {
+            const deepseekModelSelect = document.getElementById('deepseekModel');
+            if (!deepseekModelSelect) return;
+            
+            try {
+                deepseekModelSelect.innerHTML = '<option value="">Carregando...</option>';
+                
+                const response = await fetch('/api/deepseek/models');
+                const data = await response.json();
+                
+                if (data.success && data.models) {
+                    deepseekModelSelect.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = `${model.name} ($${model.pricing.input}/1M input, $${model.pricing.output}/1M output)`;
+                        deepseekModelSelect.appendChild(option);
+                    });
+                    
+                    // Default para deepseek-chat
+                    if (data.models.length > 0) {
+                        const defaultModel = data.models.find(m => m.id.includes('deepseek-chat')) || data.models[0];
+                        deepseekModelSelect.value = defaultModel.id;
+                    }
+                } else {
+                    throw new Error(data.error || 'Erro ao carregar modelos');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar modelos DeepSeek:', error);
+                deepseekModelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
             }
         }
         
@@ -554,6 +624,7 @@
                         const fieldMap = {
                             'GEMINI_API_KEY': 'geminiApiKey',
                             'OPENAI_API_KEY': 'openaiApiKey',
+                            'DEEPSEEK_API_KEY': 'deepseekApiKey',
                             'GOOGLE_VISION_API_KEY': 'googleVisionApiKey',
                             'SUPABASE_URL': 'supabaseUrl',
                             'SUPABASE_ANON_KEY': 'supabaseAnonKey',
@@ -616,9 +687,21 @@
                     return;
                 }
                 
+                // Mapear config_type baseado no nome da chave (deve corresponder à constraint da tabela)
+                const getConfigType = (key) => {
+                    if (key.includes('GEMINI')) return 'gemini-api-key';
+                    if (key.includes('OPENAI')) return 'openai';
+                    if (key.includes('DEEPSEEK')) return 'deepseek';
+                    if (key.includes('GOOGLE_VISION')) return 'google-vision-api-key';
+                    if (key.includes('SUPABASE_URL')) return 'supabase-url';
+                    if (key.includes('SUPABASE')) return 'supabase-key';
+                    return 'openai'; // fallback
+                };
+                
                 const apiConfigs = [
                     { key: 'GEMINI_API_KEY', value: document.getElementById('geminiApiKey').value },
                     { key: 'OPENAI_API_KEY', value: document.getElementById('openaiApiKey').value },
+                    { key: 'DEEPSEEK_API_KEY', value: document.getElementById('deepseekApiKey').value },
                     { key: 'GOOGLE_VISION_API_KEY', value: document.getElementById('googleVisionApiKey').value },
                     { key: 'SUPABASE_URL', value: document.getElementById('supabaseUrl').value },
                     { key: 'SUPABASE_ANON_KEY', value: document.getElementById('supabaseAnonKey').value },
@@ -628,10 +711,11 @@
                 let savedCount = 0;
                 for (const config of apiConfigs) {
                     if (config.value.trim()) {
+                        const configType = getConfigType(config.key);
                         const { error } = await window.supabaseClient.supabase.rpc('set_platform_config', {
                             config_key_param: config.key,
                             config_value_param: config.value,
-                            config_type_param: 'api_key',
+                            config_type_param: configType,
                             is_encrypted_param: true,
                             description_param: `Chave da API ${config.key}`
                         });
@@ -816,6 +900,10 @@
                                 const geminiModelSelect = document.getElementById('geminiModel');
                                 if (geminiModelSelect) geminiModelSelect.value = setting.setting_value;
                                 break;
+                            case 'default_deepseek_model':
+                                const deepseekModelSelect = document.getElementById('deepseekModel');
+                                if (deepseekModelSelect) deepseekModelSelect.value = setting.setting_value;
+                                break;
                         }
                     });
                 }
@@ -859,7 +947,8 @@
                     { key: 'default_processor_speed', value: document.getElementById('defaultProcessorSpeed').value },
                     { key: 'default_processor_confidence', value: document.getElementById('defaultProcessorConfidence').value },
                     { key: 'default_openai_model', value: document.getElementById('openaiModel').value || 'gpt-4o' },
-                    { key: 'default_gemini_model', value: document.getElementById('geminiModel').value || 'gemini-1.5-flash' }
+                    { key: 'default_gemini_model', value: document.getElementById('geminiModel').value || 'gemini-1.5-flash' },
+                    { key: 'default_deepseek_model', value: document.getElementById('deepseekModel').value || 'deepseek-chat' }
                 ];
                 
                 let savedCount = 0;

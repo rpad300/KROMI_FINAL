@@ -32,6 +32,37 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Criar cliente Supabase com Service Role Key (bypassa RLS) para operações privilegiadas
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
+// Função helper para carregar API keys da base de dados com fallback para .env
+async function getApiKeyFromDatabase(keyName, defaultValue = null) {
+    try {
+        const { data, error } = await supabase
+            .from('platform_configurations')
+            .select('config_value')
+            .eq('config_key', keyName)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.warn(`⚠️ Erro ao buscar ${keyName} da base de dados:`, error.message);
+        }
+        
+        if (data && data.config_value) {
+            return data.config_value;
+        }
+        
+        // Fallback para .env
+        const envKey = process.env[keyName];
+        if (envKey) {
+            return envKey;
+        }
+        
+        return defaultValue;
+    } catch (error) {
+        console.warn(`⚠️ Erro ao buscar ${keyName}:`, error.message);
+        // Fallback para .env
+        return process.env[keyName] || defaultValue;
+    }
+}
+
 // Inicializar sistemas de segurança
 const sessionManager = new SessionManager();
 const auditLogger = new AuditLogger(supabase);
@@ -87,6 +118,8 @@ app.get('/api/config', (req, res) => {
     res.json({
         GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || null,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY || null,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY || null,
+        DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || null,
         SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || null,
         SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null,
         SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY || null
@@ -672,13 +705,38 @@ function getGeminiPricing(modelId) {
     return { input: 0.000075, output: 0.0003 };
 }
 
+// Função helper para obter preços DeepSeek
+function getDeepSeekPricing(modelId) {
+    const pricing = {
+        'deepseek-chat': { input: 0.14, output: 0.28 },
+        'deepseek-chat-0324': { input: 0.14, output: 0.28 },
+        'deepseek-reasoner': { input: 0.55, output: 2.19 },
+        'deepseek-reasoner-0324': { input: 0.55, output: 2.19 }
+    };
+    
+    // Tentar encontrar o modelo exato
+    if (pricing[modelId]) {
+        return pricing[modelId];
+    }
+    
+    // Fallback para modelos similares
+    if (modelId.includes('reasoner')) {
+        return pricing['deepseek-reasoner'];
+    } else if (modelId.includes('chat')) {
+        return pricing['deepseek-chat'];
+    }
+    
+    // Default
+    return { input: 0.14, output: 0.28 };
+}
+
 // ==========================================
 // ROTA PARA LISTAR MODELOS GEMINI
 // ==========================================
 app.get('/api/gemini/models', async (req, res) => {
     console.log('🔍 Rota /api/gemini/models foi chamada!');
     try {
-        const geminiKey = process.env.GEMINI_API_KEY;
+        const geminiKey = await getApiKeyFromDatabase('GEMINI_API_KEY');
         
         if (!geminiKey) {
             return res.status(400).json({
@@ -707,6 +765,7 @@ app.get('/api/gemini/models', async (req, res) => {
                 id: m.id,
                 name: m.name,
                 description: m.description,
+                has_vision: true, // Todos os modelos Gemini na lista têm visão
                 pricing: getGeminiPricing(m.id)
             }))
         });
@@ -726,7 +785,7 @@ app.get('/api/gemini/models', async (req, res) => {
 app.get('/api/openai/models', async (req, res) => {
     console.log('🔍 Rota /api/openai/models foi chamada!');
     try {
-        const openaiKey = process.env.OPENAI_API_KEY;
+        const openaiKey = await getApiKeyFromDatabase('OPENAI_API_KEY');
         
         if (!openaiKey) {
             return res.status(400).json({
@@ -751,11 +810,14 @@ app.get('/api/openai/models', async (req, res) => {
         
         const data = await response.json();
         
-        // Filtrar apenas modelos com suporte a visão
+        // Filtrar apenas modelos com suporte a visão (gpt-4o, gpt-4-turbo, etc)
         const visionModels = data.data.filter(model => 
-            model.id.includes('gpt-4') && 
-            (model.id.includes('o') || model.id.includes('turbo') || model.id.includes('vision'))
-        );
+            (model.id.startsWith('gpt-4o') || 
+             model.id.startsWith('gpt-4-turbo') || 
+             model.id.startsWith('o1') ||
+             model.id.includes('vision')) &&
+            !model.id.includes('preview') // Excluir modelos de preview
+        ).slice(0, 20); // Limitar a 20 resultados
         
         console.log(`✅ Encontrados ${visionModels.length} modelos com visão`);
         
@@ -764,14 +826,61 @@ app.get('/api/openai/models', async (req, res) => {
             models: visionModels.map(m => ({
                 id: m.id,
                 name: m.id,
-                description: `Modelo ${m.id} com suporte a visão`,
-                context_window: m.context_window,
+                description: m.object === 'model' ? `Modelo ${m.id} com suporte a visão` : m.id,
+                has_vision: true, // Todos os modelos filtrados têm visão
+                context_window: m.context_window || '128k',
                 pricing: getOpenAIPricing(m.id)
             }))
         });
         
     } catch (error) {
         console.error('❌ Erro ao consultar modelos OpenAI:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==========================================
+// ROTA PARA LISTAR MODELOS DEEPSEEK
+// ==========================================
+app.get('/api/deepseek/models', async (req, res) => {
+    console.log('🔍 Rota /api/deepseek/models foi chamada!');
+    try {
+        const deepseekKey = await getApiKeyFromDatabase('DEEPSEEK_API_KEY');
+        
+        if (!deepseekKey) {
+            return res.status(400).json({
+                success: false,
+                error: 'DEEPSEEK_API_KEY não configurada'
+            });
+        }
+        
+        console.log('📡 Consultando modelos disponíveis no DeepSeek...');
+        
+        // Lista de modelos DeepSeek disponíveis
+        const visionModels = [
+            { id: 'deepseek-chat', name: 'DeepSeek Chat', description: 'Modelo conversacional com suporte a visão', has_vision: true },
+            { id: 'deepseek-chat-0324', name: 'DeepSeek Chat (0324)', description: 'Versão de março 2024 com visão', has_vision: true },
+            { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', description: 'Modelo avançado com raciocínio profundo', has_vision: false }
+        ];
+        
+        console.log(`✅ Retornando ${visionModels.length} modelos do DeepSeek`);
+        
+        res.json({
+            success: true,
+            models: visionModels.map(m => ({
+                id: m.id,
+                name: m.name,
+                description: m.description,
+                has_vision: m.has_vision, // Campo explícito para indicar suporte a visão
+                pricing: getDeepSeekPricing(m.id)
+            }))
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao listar modelos DeepSeek:', error);
         res.status(500).json({
             success: false,
             error: error.message

@@ -29,7 +29,13 @@ class AICostTracker {
             'gpt-4o-mini-2024-07-18': { input: 0.15, output: 0.6 },
             'gpt-4-turbo': { input: 10, output: 30 },
             'gpt-4-turbo-2024-04-09': { input: 10, output: 30 },
-            'gpt-4': { input: 30, output: 60 }
+            'gpt-4': { input: 30, output: 60 },
+            
+            // DeepSeek
+            'deepseek-chat': { input: 0.14, output: 0.28 },
+            'deepseek-chat-0324': { input: 0.14, output: 0.28 },
+            'deepseek-reasoner': { input: 0.55, output: 2.19 },
+            'deepseek-reasoner-0324': { input: 0.55, output: 2.19 }
         };
     }
     
@@ -48,7 +54,13 @@ class AICostTracker {
             outputPricePerMillion = modelPricing.output;
         } else {
             // Fallback para modelos similares
-            if (model.includes('flash')) {
+            if (model.includes('deepseek-reasoner')) {
+                inputPricePerMillion = 0.55;
+                outputPricePerMillion = 2.19;
+            } else if (model.includes('deepseek-chat') || model.includes('deepseek')) {
+                inputPricePerMillion = 0.14;
+                outputPricePerMillion = 0.28;
+            } else if (model.includes('flash')) {
                 inputPricePerMillion = 0.000075;
                 outputPricePerMillion = 0.0003;
             } else if (model.includes('pro')) {
@@ -107,9 +119,19 @@ class AICostTracker {
                 return;
             }
             
+            // Mapear serviço para nome padronizado
+            let serviceName = service;
+            if (service === 'gemini') {
+                serviceName = 'google-vertex';
+            } else if (service === 'deepseek') {
+                serviceName = 'deepseek';
+            } else if (service === 'openai') {
+                serviceName = 'openai';
+            }
+            
             const costRecord = {
                 timestamp: new Date().toISOString(),
-                service: service === 'gemini' ? 'google-vertex' : service,
+                service: serviceName,
                 model: model,
                 region: region,
                 environment: 'production',

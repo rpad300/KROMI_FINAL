@@ -11,15 +11,17 @@ class BackgroundImageProcessor {
         this.geminiApiKey = process.env.GEMINI_API_KEY;
         this.googleVisionApiKey = process.env.GOOGLE_VISION_API_KEY;
         this.openaiApiKey = process.env.OPENAI_API_KEY;
+        this.deepseekApiKey = process.env.DEEPSEEK_API_KEY;
         this.batchSize = 5;
         this.checkInterval = 10000; // 10 segundos
         
         // Processor configuration
-        this.processorType = 'gemini'; // gemini, openai, google-vision, ocr, hybrid, manual
+        this.processorType = 'gemini'; // gemini, openai, deepseek, google-vision, ocr, hybrid, manual
         this.processorSpeed = 'balanced'; // fast, balanced, accurate
         this.processorConfidence = 0.7;
         this.openaiModel = 'gpt-4o'; // OpenAI model to use
         this.geminiModel = 'gemini-1.5-flash'; // Gemini model to use
+        this.deepseekModel = 'deepseek-chat'; // DeepSeek model to use
         
         // AI Cost Tracker
         this.costTracker = new AICostTracker();
@@ -63,6 +65,16 @@ class BackgroundImageProcessor {
             if (apiConfigs.geminiApiKey) {
                 this.geminiApiKey = apiConfigs.geminiApiKey;
                 this.log('Chave Gemini carregada da base de dados', 'info');
+            }
+            
+            if (apiConfigs.openaiApiKey) {
+                this.openaiApiKey = apiConfigs.openaiApiKey;
+                this.log('Chave OpenAI carregada da base de dados', 'info');
+            }
+            
+            if (apiConfigs.deepseekApiKey) {
+                this.deepseekApiKey = apiConfigs.deepseekApiKey;
+                this.log('Chave DeepSeek carregada da base de dados', 'info');
             }
             
             if (apiConfigs.googleVisionApiKey) {
@@ -139,6 +151,12 @@ class BackgroundImageProcessor {
                 switch (config.config_key) {
                     case 'GEMINI_API_KEY':
                         apiConfigs.geminiApiKey = config.config_value;
+                        break;
+                    case 'OPENAI_API_KEY':
+                        apiConfigs.openaiApiKey = config.config_value;
+                        break;
+                    case 'DEEPSEEK_API_KEY':
+                        apiConfigs.deepseekApiKey = config.config_value;
                         break;
                     case 'GOOGLE_VISION_API_KEY':
                         apiConfigs.googleVisionApiKey = config.config_value;
@@ -355,6 +373,12 @@ class BackgroundImageProcessor {
                     return false;
                 }
                 break;
+            case 'deepseek':
+                if (!this.deepseekApiKey) {
+                    this.log('ERRO: DEEPSEEK_API_KEY não configurada para processador DeepSeek', 'error');
+                    return false;
+                }
+                break;
             case 'google-vision':
                 if (!this.googleVisionApiKey) {
                     this.log('ERRO: GOOGLE_VISION_API_KEY não configurada para processador Google Vision', 'error');
@@ -506,28 +530,137 @@ class BackgroundImageProcessor {
     }
 
     async processImagesWithProcessor(images) {
-        switch (this.processorType) {
+        // Definir ordem de fallback baseado no processador principal
+        const fallbackChain = this.getFallbackChain();
+        
+        // Tentar cada processador na cadeia
+        for (let i = 0; i < fallbackChain.length; i++) {
+            const processorType = fallbackChain[i];
+            const isPrimary = i === 0;
+            
+            if (!isPrimary) {
+                this.log(`🔄 Tentando fallback para ${processorType}...`, 'info');
+            }
+            
+            try {
+                switch (processorType) {
+                    case 'gemini':
+                        await this.processImagesWithGemini(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return; // Sucesso! Sair do loop
+                        
+                    case 'openai':
+                        await this.processImagesWithOpenAI(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    case 'deepseek':
+                        await this.processImagesWithDeepSeek(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    case 'google-vision':
+                        await this.processImagesWithGoogleVision(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    case 'ocr':
+                        await this.processImagesWithOCR(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    case 'hybrid':
+                        await this.processImagesWithHybrid(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    case 'manual':
+                        await this.processImagesWithManual(images);
+                        if (!isPrimary) {
+                            this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        }
+                        return;
+                        
+                    default:
+                        this.log(`Tipo de processador desconhecido: ${processorType}`, 'error');
+                        throw new Error(`Tipo de processador desconhecido: ${processorType}`);
+                }
+            } catch (error) {
+                this.log(`❌ Falha com ${processorType}: ${error.message}`, 'error');
+                
+                // Se não é o último da cadeia, continuar para o próximo
+                if (i < fallbackChain.length - 1) {
+                    this.log(`⏭️ Tentando próximo serviço na cadeia...`, 'info');
+                    continue;
+                } else {
+                    // Último da cadeia falhou, reportar erro
+                    this.log(`❌ Todos os serviços na cadeia falharam`, 'error');
+                    throw new Error(`Todos os fallbacks falharam: ${error.message}`);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Determina a cadeia de fallback baseado no processador principal
+     */
+    getFallbackChain() {
+        // Ordem padrão de fallback (custos e qualidade)
+        const priorityOrder = [
+            'gemini',        // Mais barato e rápido
+            'openai',       // Média qualidade
+            'deepseek',     // Alternativa econômica
+            'google-vision' // OCR tradicional
+        ];
+        
+        // Remover o processador principal e adicionar no início
+        const mainProcessor = this.processorType;
+        const fallbackChain = [mainProcessor];
+        
+        // Adicionar fallbacks disponíveis (excluindo o principal e híbrido/manual)
+        const excludedTypes = ['hybrid', 'manual', 'ocr'];
+        
+        for (const processor of priorityOrder) {
+            if (processor !== mainProcessor && !excludedTypes.includes(processor)) {
+                // Verificar se tem API key configurada
+                if (this.hasApiKeyForProcessor(processor)) {
+                    fallbackChain.push(processor);
+                }
+            }
+        }
+        
+        this.log(`🔗 Cadeia de fallback: ${fallbackChain.join(' → ')}`, 'info');
+        
+        return fallbackChain;
+    }
+    
+    /**
+     * Verifica se tem API key configurada para um processador
+     */
+    hasApiKeyForProcessor(processorType) {
+        switch (processorType) {
             case 'gemini':
-                await this.processImagesWithGemini(images);
-                break;
+                return !!this.geminiApiKey;
             case 'openai':
-                await this.processImagesWithOpenAI(images);
-                break;
+                return !!this.openaiApiKey;
+            case 'deepseek':
+                return !!this.deepseekApiKey;
             case 'google-vision':
-                await this.processImagesWithGoogleVision(images);
-                break;
-            case 'ocr':
-                await this.processImagesWithOCR(images);
-                break;
-            case 'hybrid':
-                await this.processImagesWithHybrid(images);
-                break;
-            case 'manual':
-                await this.processImagesWithManual(images);
-                break;
+                return !!this.googleVisionApiKey;
             default:
-                this.log(`Tipo de processador desconhecido: ${this.processorType}`, 'error');
-                throw new Error(`Tipo de processador desconhecido: ${this.processorType}`);
+                return false;
         }
     }
     
@@ -964,6 +1097,238 @@ Analise as imagens:`
                 await this.updateImageStatus(image.id, 'error', { error: error.message });
             }
         }
+    }
+    
+    async processImagesWithDeepSeek(images) {
+        // Marcar como processando
+        for (const image of images) {
+            await this.updateImageStatus(image.id, 'processing');
+        }
+
+        // Preparar imagens para DeepSeek
+        const imageParts = images.map(img => {
+            let base64 = img.image_data;
+            // Remover prefixo data: se existir
+            if (base64.includes('base64,')) {
+                base64 = base64.split('base64,')[1];
+            }
+            
+            return {
+                type: "image_url",
+                image_url: {
+                    url: `data:image/jpeg;base64,${base64}`
+                }
+            };
+        });
+
+        const requestBody = JSON.stringify({
+            model: this.deepseekModel || "deepseek-chat",
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: `Analise estas ${images.length} imagens de uma corrida esportiva. Para cada imagem, identifique o número do dorsal (bib number) do atleta.
+
+IMPORTANTE:
+- Retorne APENAS números válidos (0-9999)
+- Se não identificar número, retorne "NENHUM"
+- Um número por linha
+- Formato: apenas o número, nada mais
+
+Exemplos:
+407
+156
+NENHUM
+42
+
+Analise as imagens:`
+                        },
+                        ...imageParts
+                    ]
+                }
+            ],
+            temperature: 0.1,
+            max_tokens: 1000
+        });
+
+        try {
+            this.log('📡 Enviando requisição para DeepSeek...', 'info');
+            
+            const startTime = Date.now();
+            const response = await this.callDeepSeekAPI(requestBody);
+            const duration = Date.now() - startTime;
+            
+            this.log('✅ Resposta recebida do DeepSeek', 'success');
+            
+            // Extrair uso de tokens da resposta (se disponível)
+            const usage = response.usage || {};
+            const tokensInput = usage.prompt_tokens || 0;
+            const tokensOutput = usage.completion_tokens || 0;
+            const tokensTotal = usage.total_tokens || tokensInput + tokensOutput;
+            
+            // Registar custo para cada imagem
+            for (const image of images) {
+                await this.costTracker.logApiCall({
+                    service: 'deepseek',
+                    model: this.deepseekModel,
+                    eventId: image.event_id,
+                    tokensInput: Math.floor(tokensInput / images.length),
+                    tokensOutput: Math.floor(tokensOutput / images.length),
+                    tokensTotal: Math.floor(tokensTotal / images.length),
+                    requestDurationMs: duration,
+                    metadata: {
+                        image_id: image.id,
+                        batch_size: images.length,
+                        method: 'background-processor'
+                    }
+                });
+            }
+            
+            const detectedInSession = {};
+            
+            // Processar resposta
+            const responseText = response.choices[0].message.content;
+            const lines = responseText.split('\n').map(line => line.trim()).filter(line => line);
+            
+            for (let i = 0; i < lines.length && i < images.length; i++) {
+                const line = lines[i];
+                const image = images[i];
+                
+                if (line === 'NENHUM' || line === 'NONE' || line === '') {
+                    await this.updateImageStatus(image.id, 'processed', { 
+                        number_detected: null,
+                        reason: 'no_dorsal_detected'
+                    });
+                    this.log(`Nenhum dorsal detectado na imagem ${i + 1}`, 'info');
+                    continue;
+                }
+                
+                // Extrair número
+                const numberMatch = line.match(/\b(\d{1,4})\b/);
+                if (!numberMatch) {
+                    await this.updateImageStatus(image.id, 'error', { 
+                        error: 'formato_invalido',
+                        raw_text: line
+                    });
+                    continue;
+                }
+                
+                const number = parseInt(numberMatch[1]);
+                
+                if (number < 0 || number > 9999) {
+                    await this.updateImageStatus(image.id, 'processed', { 
+                        number_detected: null,
+                        reason: 'numero_invalido'
+                    });
+                    continue;
+                }
+                
+                // Verificar duplicatas
+                const sessionKey = `${image.event_id}_${image.device_id}_${image.session_id}`;
+                const alreadyDetectedInBatch = detectedInSession[`${sessionKey}_${number}`];
+                
+                if (alreadyDetectedInBatch) {
+                    await this.updateImageStatus(image.id, 'discarded', { 
+                        reason: 'duplicate',
+                        number: number
+                    });
+                    continue;
+                }
+                
+                detectedInSession[`${sessionKey}_${number}`] = true;
+                
+                // Salvar detecção
+                const savedDetection = await this.saveDetection({
+                    number: number,
+                    timestamp: image.captured_at,
+                    latitude: image.latitude,
+                    longitude: image.longitude,
+                    accuracy: image.accuracy,
+                    device_type: 'mobile',
+                    session_id: image.session_id,
+                    event_id: image.event_id,
+                    proof_image: image.display_image,
+                    dorsal_region: null,
+                    detection_method: 'DeepSeek'
+                });
+                
+                // Salvar classificação se evento estiver ativo
+                if (savedDetection && image.event_id) {
+                    try {
+                        const deviceOrder = 1;
+                        
+                        await this.saveClassification({
+                            event_id: image.event_id,
+                            dorsal_number: number,
+                            device_order: deviceOrder,
+                            checkpoint_time: image.captured_at,
+                            detection_id: savedDetection.id
+                        });
+                        this.log(`✅ Classificação criada para dorsal ${number} (checkpoint ${deviceOrder})`, 'success');
+                    } catch (error) {
+                        this.log(`❌ Erro ao criar classificação: ${error.message}`, 'error');
+                    }
+                }
+
+                await this.updateImageStatus(image.id, 'processed', { 
+                    number_detected: number,
+                    detection_id: savedDetection?.id
+                });
+                
+                this.log(`✅ Detecção salva: ${number}`, 'success');
+            }
+
+        } catch (error) {
+            this.log(`Erro no DeepSeek: ${error.message}`, 'error');
+            
+            // Marcar como erro
+            for (const image of images) {
+                await this.updateImageStatus(image.id, 'error', { error: error.message });
+            }
+        }
+    }
+    
+    async callDeepSeekAPI(requestBody) {
+        return new Promise((resolve, reject) => {
+            const url = 'https://api.deepseek.com/v1/chat/completions';
+            
+            const urlObj = new URL(url);
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.deepseekApiKey}`,
+                    'Content-Length': Buffer.byteLength(requestBody)
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve(JSON.parse(data));
+                    } else {
+                        reject(new Error(`DeepSeek API ${res.statusCode}: ${data}`));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                reject(error);
+            });
+
+            req.write(requestBody);
+            req.end();
+        });
     }
 
     async callOpenAIAPI(requestBody) {
