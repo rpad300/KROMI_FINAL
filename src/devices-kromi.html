@@ -943,47 +943,103 @@ Esta ação é útil quando:
 
 Digite "LIMPAR" (em maiúsculas) para confirmar:`;
             
-            const confirmation = prompt(confirmMessage);
+            let confirmation;
+            try {
+                confirmation = prompt(confirmMessage);
+            } catch (error) {
+                console.error('Erro ao mostrar prompt:', error);
+                return;
+            }
             
-            if (confirmation !== 'LIMPAR') {
-                showError('Limpeza cancelada. Digite exatamente "LIMPAR" para confirmar.');
+            if (!confirmation || confirmation !== 'LIMPAR') {
+                if (confirmation !== null) { // Só mostrar erro se não foi cancelado
+                    showError('Limpeza cancelada. Digite exatamente "LIMPAR" para confirmar.');
+                }
+                return;
+            }
+            
+            if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                console.error('❌ Supabase não disponível');
+                showError('Supabase não disponível');
                 return;
             }
             
             try {
                 console.log('🧹 Limpando sessões do dispositivo:', deviceId);
                 
-                // 1. Marcar todas as sessões como inativas
-                const { error: sessionError } = await window.supabaseClient.supabase
-                    .from('device_sessions')
-                    .update({ 
-                        is_active: false,
-                        ended_at: new Date().toISOString()
-                    })
-                    .eq('device_id', deviceId)
-                    .eq('event_id', currentEvent.id);
+                // 1. Marcar todas as sessões como inativas (com timeout)
+                let sessionError = null;
+                try {
+                    const queryPromise = window.supabaseClient.supabase
+                        .from('device_sessions')
+                        .update({ 
+                            is_active: false,
+                            ended_at: new Date().toISOString()
+                        })
+                        .eq('device_id', deviceId)
+                        .eq('event_id', currentEvent.id);
+                    
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), 5000)
+                    );
+                    
+                    const result = await Promise.race([queryPromise, timeoutPromise]);
+                    sessionError = result.error;
+                } catch (error) {
+                    console.warn('⚠️ Erro/timeout ao atualizar device_sessions:', error);
+                    sessionError = error;
+                }
                 
-                if (sessionError && sessionError.code !== '42P01') { // Ignorar se tabela não existe
+                // Ignorar se tabela não existe ou timeout
+                if (sessionError && sessionError.code !== '42P01' && sessionError.message !== 'Timeout') {
                     console.warn('⚠️ Erro ao atualizar device_sessions:', sessionError);
                 }
                 
-                // 2. Resetar contador active_sessions para 0
-                const { error: updateError } = await window.supabaseClient.supabase
-                    .from('event_devices')
-                    .update({ active_sessions: 0 })
-                    .eq('event_id', currentEvent.id)
-                    .eq('device_id', deviceId);
+                // 2. Resetar contador active_sessions para 0 (com timeout)
+                console.log('🔄 Resetando contador de sessões...');
+                try {
+                    const updatePromise = window.supabaseClient.supabase
+                        .from('event_devices')
+                        .update({ active_sessions: 0 })
+                        .eq('event_id', currentEvent.id)
+                        .eq('device_id', deviceId);
+                    
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), 5000)
+                    );
+                    
+                    const result = await Promise.race([updatePromise, timeoutPromise]);
+                    
+                    if (result.error) {
+                        console.error('❌ Erro ao resetar sessões:', result.error);
+                        throw result.error;
+                    }
+                } catch (error) {
+                    if (error.message === 'Timeout') {
+                        console.error('❌ Timeout ao atualizar event_devices');
+                        showError('Timeout ao limpar sessões. Tente novamente.');
+                        return;
+                    }
+                    throw error;
+                }
                 
-                if (updateError) throw updateError;
+                console.log('✅ Sessões limpas com sucesso');
                 
-                console.log('✅ Sessões limpas');
+                // Mostrar sucesso SEM recarregar a página (evita loop)
                 showSuccess('Todas as sessões foram encerradas! Operadores terão que inserir PIN novamente.');
                 
-                await loadDevices();
+                // Recarregar dispositivos após um delay
+                setTimeout(async () => {
+                    try {
+                        await loadDevices();
+                    } catch (error) {
+                        console.error('Erro ao recarregar dispositivos:', error);
+                    }
+                }, 500);
                 
             } catch (error) {
                 console.error('❌ Erro ao limpar sessões:', error);
-                showError('Erro ao limpar sessões');
+                showError(`Erro ao limpar sessões: ${error.message || 'Erro desconhecido'}`);
             }
         }
         

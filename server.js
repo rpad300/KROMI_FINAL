@@ -12,6 +12,8 @@ const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
+// Limpar cache do módulo para forçar reload
+delete require.cache[require.resolve('./src/background-processor')];
 const BackgroundImageProcessor = require('./src/background-processor');
 const EmailAutomation = require('./src/email-automation');
 const SessionManager = require('./src/session-manager');
@@ -642,6 +644,51 @@ app.post('/api/roles/update-permissions', requireAuth, requireRole('admin'), asy
 });
 
 // ==========================================
+// ROTA PARA LISTAR CLASSIFICAÇÕES (LÓGICA DO SERVIDOR)
+// ==========================================
+app.get('/api/classifications/list', async (req, res) => {
+    try {
+        const eventId = req.query.event;
+        
+        console.log('📋 [GET /api/classifications/list] Event ID:', eventId);
+        
+        if (!eventId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Event ID requerido'
+            });
+        }
+        
+        // Usar módulo de lógica centralizada
+        const ClassificationLogic = require('./src/classification-logic');
+        const classLogic = new ClassificationLogic(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY  // Service role para contornar RLS
+        );
+        
+        console.log('🔍 Processando classificações com lógica do servidor...');
+        
+        // Processar com TODA a lógica (ranking, gaps, velocidade, etc)
+        const classifications = await classLogic.processCompleteClassifications(eventId);
+        
+        console.log(`✅ Retornando ${classifications.length} classificações processadas`);
+        
+        res.json({
+            success: true,
+            classifications: classifications,
+            count: classifications.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro na rota /api/classifications/list:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==========================================
 // ROTAS DE EVENTOS (REST API)
 // ==========================================
 const setupEventsRoutes = require('./src/events-routes');
@@ -678,12 +725,27 @@ function getOpenAIPricing(modelId) {
 // Função helper para obter preços Gemini
 function getGeminiPricing(modelId) {
     const pricing = {
+        // VEo (Video)
+        'veo-3.1': { input: 0.001, output: 0.02 }, // $1/1M input, $20/1M output
+        'veo-3': { input: 0.001, output: 0.02 },
+        'veo-2': { input: 0.001, output: 0.025 },
+        
+        // Modelos 2.5 (mais recentes)
+        'gemini-2.5-pro': { input: 0.00125, output: 0.005 },
+        'gemini-2.5-flash': { input: 0.000075, output: 0.0003 },
+        'gemini-2.5-flash-lite': { input: 0.00005, output: 0.0002 },
+        
+        // Modelos 2.0
+        'gemini-2.0-flash-exp': { input: 0.000075, output: 0.0003 },
+        'gemini-2.0-flash-thinking-exp': { input: 0.000075, output: 0.0003 },
+        
+        // Modelos 1.5
         'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
         'gemini-1.5-pro-latest': { input: 0.00125, output: 0.005 },
         'gemini-1.5-flash': { input: 0.000075, output: 0.0003 },
         'gemini-1.5-flash-latest': { input: 0.000075, output: 0.0003 },
-        'gemini-2.0-flash-exp': { input: 0.000075, output: 0.0003 },
-        'gemini-2.0-flash-thinking-exp': { input: 0.000075, output: 0.0003 },
+        
+        // Ultra
         'gemini-ultra': { input: 0.0025, output: 0.01 }
     };
     
@@ -693,12 +755,20 @@ function getGeminiPricing(modelId) {
     }
     
     // Fallback para modelos similares
-    if (modelId.includes('ultra')) {
+    if (modelId.includes('veo')) {
+        // Modelos VEo (geração de vídeo)
+        return pricing['veo-3.1'] || pricing['veo-3'] || pricing['veo-2'];
+    } else if (modelId.includes('ultra')) {
         return pricing['gemini-ultra'];
     } else if (modelId.includes('pro')) {
-        return pricing['gemini-1.5-pro'];
+        // Modelos Pro (mais caros)
+        return pricing['gemini-2.5-pro'] || pricing['gemini-1.5-pro'];
+    } else if (modelId.includes('lite')) {
+        // Modelos Lite (mais baratos)
+        return pricing['gemini-2.5-flash-lite'];
     } else if (modelId.includes('flash')) {
-        return pricing['gemini-1.5-flash'];
+        // Modelos Flash (padrão)
+        return pricing['gemini-2.5-flash'] || pricing['gemini-1.5-flash'];
     }
     
     // Default (flash é mais barato)
@@ -745,29 +815,116 @@ app.get('/api/gemini/models', async (req, res) => {
             });
         }
         
-        console.log('📡 Consultando modelos disponíveis no Gemini...');
+        console.log('📡 Consultando modelos disponíveis no Gemini via API...');
         
-        // Lista de modelos Gemini com visão
-        const visionModels = [
-            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Modelo rápido e eficiente com suporte a visão' },
-            { id: 'gemini-1.5-flash-latest', name: 'Gemini 1.5 Flash (Latest)', description: 'Versão mais recente do Flash' },
-            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Modelo avançado com melhor precisão' },
-            { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro (Latest)', description: 'Versão mais recente do Pro' },
-            { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash Experimental', description: 'Modelo experimental mais rápido' },
-            { id: 'gemini-ultra', name: 'Gemini Ultra', description: 'Modelo mais poderoso (quando disponível)' }
-        ];
+        // Chamar API oficial do Gemini para listar modelos
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
-        console.log(`✅ Retornando ${visionModels.length} modelos do Gemini`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Erro na API Gemini: ${response.status} - ${errorText}`);
+            throw new Error(`Gemini API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Filtrar TODOS os modelos Gemini (incluindo VEo, Lite, etc)
+        const geminiModels = data.models
+            .filter(model => 
+                model.name.startsWith('models/') &&
+                (model.name.includes('gemini') || model.name.includes('veo')) &&
+                model.supportedGenerationMethods && 
+                model.supportedGenerationMethods.includes('generateContent')
+            )
+            .map(model => {
+                // Extrair nome simplificado
+                const modelId = model.name.replace('models/', '');
+                const nameParts = modelId.split('-');
+                let displayName = nameParts
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' ')
+                    .replace('Gemini', 'Gemini')
+                    .replace('Veo', 'VEo');
+                
+                // Adicionar descrição baseada no tipo de modelo
+                let description = '';
+                let hasVision = false;
+                
+                if (modelId.includes('veo')) {
+                    description = 'Modelo de geração de vídeo com áudio nativo';
+                    hasVision = false;
+                } else if (modelId.includes('lite')) {
+                    description = 'Modelo mais rápido e econômico - Processamento de alta frequência';
+                    hasVision = true;
+                } else if (modelId.includes('flash')) {
+                    description = 'Modelo rápido e eficiente com suporte a visão';
+                    hasVision = true;
+                } else if (modelId.includes('pro')) {
+                    description = 'Modelo avançado com alta precisão e raciocínio complexo';
+                    hasVision = true;
+                } else if (modelId.includes('ultra')) {
+                    description = 'Modelo mais poderoso (quando disponível)';
+                    hasVision = true;
+                } else {
+                    description = 'Modelo multimodal com suporte avançado';
+                    hasVision = true;
+                }
+                
+                // Extrair categoria do modelo
+                let category = 'text';
+                if (modelId.includes('veo')) {
+                    category = 'video';
+                } else if (modelId.includes('image') || modelId.includes('nano')) {
+                    category = 'image';
+                }
+                
+                return {
+                    id: modelId,
+                    name: displayName,
+                    description: description,
+                    has_vision: hasVision,
+                    category: category,
+                    pricing: getGeminiPricing(modelId)
+                };
+            })
+            .sort((a, b) => {
+                // Ordenar: video primeiro, depois text, depois outros
+                const order = { video: 0, text: 1, image: 2 };
+                const orderA = order[a.category] || 3;
+                const orderB = order[b.category] || 3;
+                return orderA - orderB;
+            });
+        
+        console.log(`✅ Retornando ${geminiModels.length} modelos do Gemini`);
+        
+        // Se não retornar modelos da API, usar lista fallback
+        if (geminiModels.length === 0) {
+            console.warn('⚠️ API não retornou modelos, usando lista fallback');
+            const fallbackModels = [
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Modelo equilibrado com contexto longo' },
+                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Modelo avançado com raciocínio complexo' },
+                { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Modelo rápido e eficiente' },
+                { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Modelo avançado com alta precisão' }
+            ];
+            
+            return res.json({
+                success: true,
+                models: fallbackModels.map(m => ({
+                    ...m,
+                    has_vision: true,
+                    pricing: getGeminiPricing(m.id)
+                }))
+            });
+        }
         
         res.json({
             success: true,
-            models: visionModels.map(m => ({
-                id: m.id,
-                name: m.name,
-                description: m.description,
-                has_vision: true, // Todos os modelos Gemini na lista têm visão
-                pricing: getGeminiPricing(m.id)
-            }))
+            models: geminiModels
         });
         
     } catch (error) {
@@ -1022,6 +1179,11 @@ app.get('/participants', (req, res) => {
 // Página de configurações do evento
 app.get('/config', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'config-kromi.html'));
+});
+
+// Rota de compatibilidade para /config/image-processor
+app.get('/config/image-processor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'image-processor-kromi.html'));
 });
 
 // Página de rankings por categoria

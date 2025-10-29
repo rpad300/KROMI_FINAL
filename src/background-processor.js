@@ -1,6 +1,7 @@
 // Background Image Processor - Roda no servidor Node.js
 const https = require('https');
 const AICostTracker = require('./ai-cost-tracker');
+const ClassificationLogic = require('./classification-logic');
 
 class BackgroundImageProcessor {
     constructor() {
@@ -8,6 +9,10 @@ class BackgroundImageProcessor {
         this.processInterval = null;
         this.supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         this.supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        this.supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        
+        // Inicializar lógica de classificações (usar SERVICE_ROLE para contornar RLS)
+        this.classificationLogic = new ClassificationLogic(this.supabaseUrl, this.supabaseServiceKey);
         this.geminiApiKey = process.env.GEMINI_API_KEY;
         this.googleVisionApiKey = process.env.GOOGLE_VISION_API_KEY;
         this.openaiApiKey = process.env.OPENAI_API_KEY;
@@ -20,7 +25,7 @@ class BackgroundImageProcessor {
         this.processorSpeed = 'balanced'; // fast, balanced, accurate
         this.processorConfidence = 0.7;
         this.openaiModel = 'gpt-4o'; // OpenAI model to use
-        this.geminiModel = 'gemini-1.5-flash'; // Gemini model to use
+        this.geminiModel = 'gemini-2.5-flash'; // Gemini model to use
         this.deepseekModel = 'deepseek-chat'; // DeepSeek model to use
         
         // AI Cost Tracker
@@ -274,7 +279,7 @@ class BackgroundImageProcessor {
                 this.processorSpeed = config.processorSpeed || 'balanced';
                 this.processorConfidence = config.processorConfidence || 0.7;
                 this.openaiModel = config.openaiModel || 'gpt-4o';
-                this.geminiModel = config.geminiModel || 'gemini-1.5-flash';
+                this.geminiModel = config.geminiModel || 'gemini-2.5-flash';
                 this.log(`Configuração carregada: ${this.processorType} (${this.processorSpeed})`, 'info');
                 return;
             }
@@ -430,10 +435,20 @@ class BackgroundImageProcessor {
             if (!pendingImages || pendingImages.length === 0) {
                 return;
             }
+            
+            // Filtrar imagens descartadas (pode ter sido descartada após o fetch)
+            const validImages = pendingImages.filter(img => img.status === 'pending');
+            
+            if (validImages.length === 0) {
+                this.log('Todas as imagens foram descartadas durante o processamento', 'info');
+                return;
+            }
+            
+            this.log(`Processando ${validImages.length} de ${pendingImages.length} imagens`, 'info');
 
             // Agrupar por evento para aplicar configurações específicas
             const eventGroups = {};
-            for (const image of pendingImages) {
+            for (const image of validImages) {
                 if (!eventGroups[image.event_id]) {
                     eventGroups[image.event_id] = [];
                 }
@@ -476,7 +491,7 @@ class BackgroundImageProcessor {
             this.processorSpeed = eventConfig.processorSpeed;
             this.processorConfidence = eventConfig.processorConfidence;
             this.openaiModel = eventConfig.openaiModel || 'gpt-4o';
-            this.geminiModel = eventConfig.geminiModel || 'gemini-1.5-flash';
+            this.geminiModel = eventConfig.geminiModel || 'gemini-2.5-flash';
             
             try {
                 // Processar com configuração do evento
@@ -518,7 +533,11 @@ class BackgroundImageProcessor {
 
                 res.on('end', () => {
                     if (res.statusCode === 200) {
-                        resolve(JSON.parse(data));
+                        const images = JSON.parse(data);
+                        if (images && images.length > 0) {
+                            this.log(`📥 Buscadas ${images.length} imagens pendentes do buffer`, 'info');
+                        }
+                        resolve(images);
                     } else {
                         reject(new Error(`HTTP ${res.statusCode}: ${data}`));
                     }
@@ -605,8 +624,16 @@ class BackgroundImageProcessor {
                     this.log(`⏭️ Tentando próximo serviço na cadeia...`, 'info');
                     continue;
                 } else {
-                    // Último da cadeia falhou, reportar erro
+                    // Último da cadeia falhou, marcar imagens como erro
                     this.log(`❌ Todos os serviços na cadeia falharam`, 'error');
+                    
+                    // Marcar todas as imagens como erro
+                    for (const image of images) {
+                        await this.updateImageStatus(image.id, 'error', { 
+                            error: `Todos os fallbacks falharam: ${error.message}` 
+                        });
+                    }
+                    
                     throw new Error(`Todos os fallbacks falharam: ${error.message}`);
                 }
             }
@@ -815,18 +842,38 @@ NENHUM
                 // Salvar classificação se evento estiver ativo
                 if (savedDetection && image.event_id) {
                     try {
-                        // Determinar device_order baseado na configuração do evento
-                        // Se não há configuração, usar 1 (primeiro checkpoint = meta se for o único)
-                        const deviceOrder = 1; // TODO: Implementar lógica de múltiplos checkpoints
+                        // Buscar informações do dispositivo
+                        const deviceInfo = await this.getDeviceInfo(image.device_id, image.event_id);
+                        const checkpointOrder = deviceInfo?.checkpoint_order || 1;
+                        
+                        // USAR MÓDULO CENTRALIZADO (passando deviceInfo para evitar queries duplicadas)
+                        const times = await this.classificationLogic.calculateClassificationTimes({
+                            eventId: image.event_id,
+                            dorsalNumber: number,
+                            deviceOrder: checkpointOrder,
+                            checkpointTime: image.captured_at,
+                            deviceInfo: deviceInfo  // Passar dados já carregados
+                        });
+                        
+                        // Log detalhado
+                        if (times.total_time) {
+                            this.log(`⏱️ META FINAL: total_time calculado`, 'success');
+                        } else if (times.split_time) {
+                            this.log(`ℹ️ Checkpoint intermediário: split_time calculado`, 'info');
+                        } else {
+                            this.log(`ℹ️ Checkpoint ${times.metadata.checkpoint_type}`, 'info');
+                        }
                         
                         await this.saveClassification({
                             event_id: image.event_id,
                             dorsal_number: number,
-                            device_order: deviceOrder,
+                            device_order: checkpointOrder,
                             checkpoint_time: image.captured_at,
-                            detection_id: savedDetection.id
+                            detection_id: savedDetection.id,
+                            total_time: times.total_time,
+                            split_time: times.split_time
                         });
-                        this.log(`✅ Classificação criada para dorsal ${number} (checkpoint ${deviceOrder})`, 'success');
+                        this.log(`✅ Classificação criada: dorsal ${number}, checkpoint ${checkpointOrder}`, 'success');
                     } catch (error) {
                         this.log(`❌ Erro ao criar classificação: ${error.message}`, 'error');
                         // Não falhar o processamento por causa da classificação
@@ -844,10 +891,8 @@ NENHUM
         } catch (error) {
             this.log(`Erro no Gemini: ${error.message}`, 'error');
             
-            // Marcar como erro
-            for (const image of images) {
-                await this.updateImageStatus(image.id, 'error', { error: error.message });
-            }
+            // NÃO marcar como error aqui - deixar o sistema de fallback tentar outros modelos
+            throw error; // Re-lançar para o fallback tentar próximo modelo
         }
     }
 
@@ -1066,16 +1111,38 @@ Analise as imagens:`
                 // Salvar classificação se evento estiver ativo
                 if (savedDetection && image.event_id) {
                     try {
-                        const deviceOrder = 1;
+                        // Buscar informações do dispositivo
+                        const deviceInfo = await this.getDeviceInfo(image.device_id, image.event_id);
+                        const checkpointOrder = deviceInfo?.checkpoint_order || 1;
+                        
+                        // USAR MÓDULO CENTRALIZADO (passando deviceInfo)
+                        const times = await this.classificationLogic.calculateClassificationTimes({
+                            eventId: image.event_id,
+                            dorsalNumber: number,
+                            deviceOrder: checkpointOrder,
+                            checkpointTime: image.captured_at,
+                            deviceInfo: deviceInfo  // Passar dados já carregados
+                        });
+                        
+                        // Log detalhado
+                        if (times.total_time) {
+                            this.log(`⏱️ META FINAL: total_time calculado`, 'success');
+                        } else if (times.split_time) {
+                            this.log(`ℹ️ Checkpoint intermediário: split_time calculado`, 'info');
+                        } else {
+                            this.log(`ℹ️ Checkpoint ${times.metadata.checkpoint_type}`, 'info');
+                        }
                         
                         await this.saveClassification({
                             event_id: image.event_id,
                             dorsal_number: number,
-                            device_order: deviceOrder,
+                            device_order: checkpointOrder,
                             checkpoint_time: image.captured_at,
-                            detection_id: savedDetection.id
+                            detection_id: savedDetection.id,
+                            total_time: times.total_time,
+                            split_time: times.split_time
                         });
-                        this.log(`✅ Classificação criada para dorsal ${number} (checkpoint ${deviceOrder})`, 'success');
+                        this.log(`✅ Classificação criada: dorsal ${number}, checkpoint ${checkpointOrder}`, 'success');
                     } catch (error) {
                         this.log(`❌ Erro ao criar classificação: ${error.message}`, 'error');
                     }
@@ -1092,10 +1159,8 @@ Analise as imagens:`
         } catch (error) {
             this.log(`Erro no OpenAI: ${error.message}`, 'error');
             
-            // Marcar como erro
-            for (const image of images) {
-                await this.updateImageStatus(image.id, 'error', { error: error.message });
-            }
+            // NÃO marcar como error aqui - deixar o sistema de fallback tentar outros modelos
+            throw error; // Re-lançar para o fallback tentar próximo modelo
         }
     }
     
@@ -1105,230 +1170,14 @@ Analise as imagens:`
             await this.updateImageStatus(image.id, 'processing');
         }
 
-        // Preparar imagens para DeepSeek
-        const imageParts = images.map(img => {
-            let base64 = img.image_data;
-            // Remover prefixo data: se existir
-            if (base64.includes('base64,')) {
-                base64 = base64.split('base64,')[1];
-            }
-            
-            return {
-                type: "image_url",
-                image_url: {
-                    url: `data:image/jpeg;base64,${base64}`
-                }
-            };
-        });
-
-        const requestBody = JSON.stringify({
-            model: this.deepseekModel || "deepseek-chat",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "text",
-                            text: `Analise estas ${images.length} imagens de uma corrida esportiva. Para cada imagem, identifique o número do dorsal (bib number) do atleta.
-
-IMPORTANTE:
-- Retorne APENAS números válidos (0-9999)
-- Se não identificar número, retorne "NENHUM"
-- Um número por linha
-- Formato: apenas o número, nada mais
-
-Exemplos:
-407
-156
-NENHUM
-42
-
-Analise as imagens:`
-                        },
-                        ...imageParts
-                    ]
-                }
-            ],
-            temperature: 0.1,
-            max_tokens: 1000
-        });
-
-        try {
-            this.log('📡 Enviando requisição para DeepSeek...', 'info');
-            
-            const startTime = Date.now();
-            const response = await this.callDeepSeekAPI(requestBody);
-            const duration = Date.now() - startTime;
-            
-            this.log('✅ Resposta recebida do DeepSeek', 'success');
-            
-            // Extrair uso de tokens da resposta (se disponível)
-            const usage = response.usage || {};
-            const tokensInput = usage.prompt_tokens || 0;
-            const tokensOutput = usage.completion_tokens || 0;
-            const tokensTotal = usage.total_tokens || tokensInput + tokensOutput;
-            
-            // Registar custo para cada imagem
-            for (const image of images) {
-                await this.costTracker.logApiCall({
-                    service: 'deepseek',
-                    model: this.deepseekModel,
-                    eventId: image.event_id,
-                    tokensInput: Math.floor(tokensInput / images.length),
-                    tokensOutput: Math.floor(tokensOutput / images.length),
-                    tokensTotal: Math.floor(tokensTotal / images.length),
-                    requestDurationMs: duration,
-                    metadata: {
-                        image_id: image.id,
-                        batch_size: images.length,
-                        method: 'background-processor'
-                    }
-                });
-            }
-            
-            const detectedInSession = {};
-            
-            // Processar resposta
-            const responseText = response.choices[0].message.content;
-            const lines = responseText.split('\n').map(line => line.trim()).filter(line => line);
-            
-            for (let i = 0; i < lines.length && i < images.length; i++) {
-                const line = lines[i];
-                const image = images[i];
-                
-                if (line === 'NENHUM' || line === 'NONE' || line === '') {
-                    await this.updateImageStatus(image.id, 'processed', { 
-                        number_detected: null,
-                        reason: 'no_dorsal_detected'
-                    });
-                    this.log(`Nenhum dorsal detectado na imagem ${i + 1}`, 'info');
-                    continue;
-                }
-                
-                // Extrair número
-                const numberMatch = line.match(/\b(\d{1,4})\b/);
-                if (!numberMatch) {
-                    await this.updateImageStatus(image.id, 'error', { 
-                        error: 'formato_invalido',
-                        raw_text: line
-                    });
-                    continue;
-                }
-                
-                const number = parseInt(numberMatch[1]);
-                
-                if (number < 0 || number > 9999) {
-                    await this.updateImageStatus(image.id, 'processed', { 
-                        number_detected: null,
-                        reason: 'numero_invalido'
-                    });
-                    continue;
-                }
-                
-                // Verificar duplicatas
-                const sessionKey = `${image.event_id}_${image.device_id}_${image.session_id}`;
-                const alreadyDetectedInBatch = detectedInSession[`${sessionKey}_${number}`];
-                
-                if (alreadyDetectedInBatch) {
-                    await this.updateImageStatus(image.id, 'discarded', { 
-                        reason: 'duplicate',
-                        number: number
-                    });
-                    continue;
-                }
-                
-                detectedInSession[`${sessionKey}_${number}`] = true;
-                
-                // Salvar detecção
-                const savedDetection = await this.saveDetection({
-                    number: number,
-                    timestamp: image.captured_at,
-                    latitude: image.latitude,
-                    longitude: image.longitude,
-                    accuracy: image.accuracy,
-                    device_type: 'mobile',
-                    session_id: image.session_id,
-                    event_id: image.event_id,
-                    proof_image: image.display_image,
-                    dorsal_region: null,
-                    detection_method: 'DeepSeek'
-                });
-                
-                // Salvar classificação se evento estiver ativo
-                if (savedDetection && image.event_id) {
-                    try {
-                        const deviceOrder = 1;
-                        
-                        await this.saveClassification({
-                            event_id: image.event_id,
-                            dorsal_number: number,
-                            device_order: deviceOrder,
-                            checkpoint_time: image.captured_at,
-                            detection_id: savedDetection.id
-                        });
-                        this.log(`✅ Classificação criada para dorsal ${number} (checkpoint ${deviceOrder})`, 'success');
-                    } catch (error) {
-                        this.log(`❌ Erro ao criar classificação: ${error.message}`, 'error');
-                    }
-                }
-
-                await this.updateImageStatus(image.id, 'processed', { 
-                    number_detected: number,
-                    detection_id: savedDetection?.id
-                });
-                
-                this.log(`✅ Detecção salva: ${number}`, 'success');
-            }
-
-        } catch (error) {
-            this.log(`Erro no DeepSeek: ${error.message}`, 'error');
-            
-            // Marcar como erro
-            for (const image of images) {
-                await this.updateImageStatus(image.id, 'error', { error: error.message });
-            }
-        }
+        // DeepSeek NÃO suporta visão (não aceita image_url)
+        this.log('⚠️ DeepSeek não suporta análise de imagens, pulando...', 'warn');
+        throw new Error('DeepSeek não suporta análise de imagens (apenas texto)');
     }
     
     async callDeepSeekAPI(requestBody) {
-        return new Promise((resolve, reject) => {
-            const url = 'https://api.deepseek.com/v1/chat/completions';
-            
-            const urlObj = new URL(url);
-            const options = {
-                hostname: urlObj.hostname,
-                path: urlObj.pathname,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.deepseekApiKey}`,
-                    'Content-Length': Buffer.byteLength(requestBody)
-                }
-            };
-
-            const req = https.request(options, (res) => {
-                let data = '';
-                
-                res.on('data', (chunk) => {
-                    data += chunk;
-                });
-
-                res.on('end', () => {
-                    if (res.statusCode === 200) {
-                        resolve(JSON.parse(data));
-                    } else {
-                        reject(new Error(`DeepSeek API ${res.statusCode}: ${data}`));
-                    }
-                });
-            });
-
-            req.on('error', (error) => {
-                reject(error);
-            });
-
-            req.write(requestBody);
-            req.end();
-        });
+        // Função removida - DeepSeek não suporta visão
+        throw new Error('DeepSeek não suporta análise de imagens');
     }
 
     async callOpenAIAPI(requestBody) {
@@ -1375,7 +1224,7 @@ Analise as imagens:`
     async checkExistingDetection(number, eventId, deviceId) {
         return new Promise((resolve, reject) => {
             // Verificar se já existe classificação para este dorsal neste checkpoint
-            const url = `${this.supabaseUrl}/rest/v1/classifications?dorsal_number=eq.${number}&event_id=eq.${eventId}&device_order=eq.1&select=id&limit=1`;
+            const url = `${this.supabaseUrl}/rest/v1/classifications?dorsal_number=eq.${number}&event_id=eq.${eventId}&checkpoint_order=eq.1&select=id&limit=1`;
             const urlObj = new URL(url);
             
             const options = {
@@ -1413,12 +1262,56 @@ Analise as imagens:`
         });
     }
 
+    async checkExistingClassification(dorsalNumber, eventId, checkpointOrder = 1) {
+        return new Promise((resolve) => {
+            // Verificar se já existe classificação para este dorsal neste checkpoint
+            const url = `${this.supabaseUrl}/rest/v1/classifications?dorsal_number=eq.${dorsalNumber}&event_id=eq.${eventId}&device_order=eq.${checkpointOrder}&select=id&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            https.get(url, options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const results = JSON.parse(data);
+                            resolve(results && results.length > 0 ? results[0] : null);
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                });
+            }).on('error', () => {
+                resolve(null);
+            });
+        });
+    }
+
     async saveDetection(detection) {
         return new Promise((resolve, reject) => {
             const url = `${this.supabaseUrl}/rest/v1/detections`;
             const urlObj = new URL(url);
             
             const postData = JSON.stringify([detection]);
+            
+            this.log(`📤 Salvando detecção: dorsal ${detection.number}`, 'info');
             
             const options = {
                 hostname: urlObj.hostname,
@@ -1441,20 +1334,31 @@ Analise as imagens:`
                 });
 
                 res.on('end', () => {
+                    this.log(`📥 Resposta detecção: ${res.statusCode}`, 'info');
+                    
                     if (res.statusCode === 201 || res.statusCode === 200) {
                         try {
                             const result = JSON.parse(data);
-                            resolve(result && result.length > 0 ? result[0] : null);
+                            if (result && result.length > 0) {
+                                this.log(`✅ Detecção salva: ID ${result[0].id}`, 'success');
+                                resolve(result[0]);
+                            } else {
+                                this.log(`⚠️ Detecção criada mas sem dados retornados`, 'warn');
+                                resolve(null);
+                            }
                         } catch (e) {
+                            this.log(`❌ Erro ao parsear resposta da detecção: ${e.message}`, 'error');
                             resolve(null);
                         }
                     } else {
+                        this.log(`❌ Erro ao salvar detecção: ${res.statusCode} - ${data}`, 'error');
                         reject(new Error(`Supabase ${res.statusCode}: ${data}`));
                     }
                 });
             });
 
             req.on('error', (error) => {
+                this.log(`❌ Erro na requisição de detecção: ${error.message}`, 'error');
                 reject(error);
             });
 
@@ -1463,12 +1367,75 @@ Analise as imagens:`
         });
     }
 
+    async createClassificationFromDetection(image, detectionResult) {
+        try {
+            // Salvar detecção primeiro
+                const savedDetection = await this.saveDetection({
+                number: detectionResult.number,
+                    timestamp: image.captured_at,
+                    latitude: image.latitude,
+                    longitude: image.longitude,
+                    accuracy: image.accuracy,
+                    device_type: 'mobile',
+                    session_id: image.session_id,
+                    event_id: image.event_id,
+                proof_image: image.display_image || image.image_data,
+                    dorsal_region: null,
+                detection_method: detectionResult.source || detectionResult.method || 'AI'
+            });
+            
+            if (!savedDetection || !image.event_id) {
+                this.log('Sem detecção salva ou evento, pulando classificação', 'warn');
+                return;
+            }
+            
+            // Buscar informações do dispositivo
+            const deviceInfo = await this.getDeviceInfo(image.device_id, image.event_id);
+            const deviceOrder = deviceInfo?.checkpoint_order || 1;
+            
+            // USAR MÓDULO CENTRALIZADO (passando deviceInfo)
+            const times = await this.classificationLogic.calculateClassificationTimes({
+                eventId: image.event_id,
+                dorsalNumber: detectionResult.number,
+                deviceOrder: deviceOrder,
+                checkpointTime: image.captured_at,
+                deviceInfo: deviceInfo  // Passar dados já carregados
+            });
+            
+            // Log detalhado
+            if (times.total_time) {
+                this.log(`⏱️ META FINAL: total_time calculado`, 'success');
+            } else if (times.split_time) {
+                this.log(`ℹ️ Checkpoint intermediário: split_time calculado`, 'info');
+            }
+            
+            // Criar classificação
+            await this.saveClassification({
+                event_id: image.event_id,
+                dorsal_number: detectionResult.number,
+                device_order: deviceOrder,
+                checkpoint_time: image.captured_at,
+                detection_id: savedDetection.id,
+                total_time: times.total_time,
+                split_time: times.split_time
+            });
+            
+            this.log(`✅ Classificação criada: dorsal ${detectionResult.number}`, 'success');
+
+        } catch (error) {
+            this.log(`Erro ao criar classificação: ${error.message}`, 'error');
+            // Não falhar o processamento por causa da classificação
+        }
+    }
+    
     async saveClassification(classification) {
         return new Promise((resolve, reject) => {
             const url = `${this.supabaseUrl}/rest/v1/classifications`;
             const urlObj = new URL(url);
             
             const postData = JSON.stringify([classification]);
+            
+            this.log(`📤 Enviando classificação: ${JSON.stringify(classification)}`, 'info');
             
             const options = {
                 hostname: urlObj.hostname,
@@ -1478,7 +1445,7 @@ Analise as imagens:`
                     'apikey': this.supabaseKey,
                     'Authorization': `Bearer ${this.supabaseKey}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal',
+                    'Prefer': 'return=minimal',  // Minimal para triggers executarem
                     'Content-Length': Buffer.byteLength(postData)
                 }
             };
@@ -1491,18 +1458,20 @@ Analise as imagens:`
                 });
 
                 res.on('end', () => {
-                    if (res.statusCode === 201 || res.statusCode === 200) {
-                        this.log(`Classificação salva: dorsal ${classification.dorsal_number}`, 'success');
+                    if (res.statusCode === 201 || res.statusCode === 200 || res.statusCode === 204) {
+                        this.log(`✅ Classificação salva: dorsal ${classification.dorsal_number} (trigger calculará tempos)`, 'success');
                         resolve();
                     } else {
-                        this.log(`Erro ao salvar classificação: ${res.statusCode} - ${data}`, 'error');
+                        this.log(`❌ ERRO ao salvar classificação: ${res.statusCode}`, 'error');
+                        this.log(`   Dados enviados: ${postData}`, 'error');
+                        this.log(`   Resposta: ${data}`, 'error');
                         resolve(); // Não falhar o processamento por causa da classificação
                     }
                 });
             });
 
             req.on('error', (error) => {
-                this.log(`Erro na requisição de classificação: ${error.message}`, 'error');
+                this.log(`❌ Erro na requisição de classificação: ${error.message}`, 'error');
                 resolve(); // Não falhar o processamento
             });
 
@@ -1561,6 +1530,196 @@ Analise as imagens:`
         });
     }
 
+    async markImageAsError(imageId, errorMessage) {
+        return this.updateImageStatus(imageId, 'error', { error: errorMessage });
+    }
+
+    async getDeviceInfo(deviceId, eventId) {
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/event_devices?device_id=eq.${deviceId}&event_id=eq.${eventId}&select=checkpoint_order,checkpoint_name,checkpoint_type&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            resolve(result[0] || null);
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(null);
+            });
+
+            req.end();
+        });
+    }
+
+    async getEventStartTime(eventId) {
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/events?id=eq.${eventId}&select=event_started_at&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            resolve(result[0]?.event_started_at || null);
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(null);
+            });
+
+            req.end();
+        });
+    }
+
+    async isFinishCheckpoint(checkpointType) {
+        // Verificar se é checkpoint de chegada/meta
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/checkpoint_types?code=eq.${checkpointType}&select=is_finish&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            const isFinish = result[0]?.is_finish || false;
+                            // Fallback: verificar pelo nome do tipo
+                            resolve(isFinish || checkpointType === 'finish' || checkpointType === 'final');
+                        } catch (e) {
+                            // Default: se não encontrar, assumir finish
+                            resolve(checkpointType === 'finish');
+                        }
+                    } else {
+                        resolve(checkpointType === 'finish');
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(checkpointType === 'finish');
+            });
+
+            req.end();
+        });
+    }
+
+    async isLastCheckpoint(eventId, checkpointOrder) {
+        // Verificar se é o último checkpoint do evento
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/event_devices?event_id=eq.${eventId}&select=checkpoint_order&order=checkpoint_order.desc&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            const maxOrder = result[0]?.checkpoint_order || 1;
+                            resolve(checkpointOrder >= maxOrder);
+                        } catch (e) {
+                            resolve(true); // Default: assumir que é último
+                        }
+                    } else {
+                        resolve(true);
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(true);
+            });
+
+            req.end();
+        });
+    }
+
     stop() {
         if (this.processInterval) {
             clearInterval(this.processInterval);
@@ -1568,7 +1727,6 @@ Analise as imagens:`
         }
     }
 
-    // Additional processor methods
     async processImagesWithGoogleVision(images) {
         this.log('Processando com Google Vision API...', 'info');
         
@@ -1587,16 +1745,26 @@ Analise as imagens:`
             sessionMap[sessionKey].push(image);
         }
 
-        // Processar cada sessão
+        // Processar cada sessão e acumular erros
+        let hasErrors = false;
+        let lastError = null;
+        
         for (const [sessionKey, sessionImages] of Object.entries(sessionMap)) {
             try {
                 await this.processSessionWithGoogleVision(sessionImages);
             } catch (error) {
+                hasErrors = true;
+                lastError = error;
                 this.log(`Erro ao processar sessão ${sessionKey}: ${error.message}`, 'error');
                 for (const image of sessionImages) {
                     await this.markImageAsError(image.id, error.message);
                 }
             }
+        }
+        
+        // Se houve erros em todas as sessões, lançar erro
+        if (hasErrors) {
+            throw lastError || new Error('Google Vision falhou ao processar todas as imagens');
         }
     }
     
@@ -1618,11 +1786,15 @@ Analise as imagens:`
             if (detectionResult && detectionResult.number) {
                 this.log(`Google Vision detectou: ${detectionResult.number} (confiança: ${detectionResult.confidence})`, 'success');
                 
+                // Buscar checkpoint_order do dispositivo
+                const deviceInfo = await this.getDeviceInfo(latestImage.device_id, latestImage.event_id);
+                const checkpointOrder = deviceInfo?.checkpoint_order || 1;
+                
                 // Verificar se já existe classificação
                 const existingClassification = await this.checkExistingClassification(
                     detectionResult.number, 
                     latestImage.event_id, 
-                    latestImage.device_order
+                    checkpointOrder
                 );
                 
                 if (!existingClassification) {
@@ -1641,11 +1813,13 @@ Analise as imagens:`
             } else {
                 this.log('Google Vision não detectou número válido', 'info');
                 await this.markImageAsError(latestImage.id, 'Número não detectado');
+                throw new Error('Número não detectado pelo Google Vision');
             }
             
         } catch (error) {
             this.log(`Erro no processamento Google Vision: ${error.message}`, 'error');
             await this.markImageAsError(latestImage.id, error.message);
+            throw error; // Re-lançar para indicar falha
         }
     }
     
@@ -1731,16 +1905,26 @@ Analise as imagens:`
             sessionMap[sessionKey].push(image);
         }
 
-        // Processar cada sessão
+        // Processar cada sessão e acumular erros
+        let hasErrors = false;
+        let lastError = null;
+        
         for (const [sessionKey, sessionImages] of Object.entries(sessionMap)) {
             try {
                 await this.processSessionWithOCR(sessionImages);
             } catch (error) {
+                hasErrors = true;
+                lastError = error;
                 this.log(`Erro ao processar sessão ${sessionKey}: ${error.message}`, 'error');
                 for (const image of sessionImages) {
                     await this.markImageAsError(image.id, error.message);
                 }
             }
+        }
+        
+        // Se houve erros em todas as sessões, lançar erro
+        if (hasErrors) {
+            throw lastError || new Error('OCR falhou ao processar todas as imagens');
         }
     }
     
@@ -1762,11 +1946,15 @@ Analise as imagens:`
             if (detectionResult && detectionResult.number) {
                 this.log(`OCR detectou: ${detectionResult.number} (confiança: ${detectionResult.confidence})`, 'success');
                 
+                // Buscar checkpoint_order do dispositivo
+                const deviceInfo = await this.getDeviceInfo(latestImage.device_id, latestImage.event_id);
+                const checkpointOrder = deviceInfo?.checkpoint_order || 1;
+                
                 // Verificar se já existe classificação
                 const existingClassification = await this.checkExistingClassification(
                     detectionResult.number, 
                     latestImage.event_id, 
-                    latestImage.device_order
+                    checkpointOrder
                 );
                 
                 if (!existingClassification) {
@@ -1785,11 +1973,13 @@ Analise as imagens:`
             } else {
                 this.log('OCR não detectou número válido', 'info');
                 await this.markImageAsError(latestImage.id, 'Número não detectado');
+                throw new Error('Número não detectado pelo OCR');
             }
             
         } catch (error) {
             this.log(`Erro no processamento OCR: ${error.message}`, 'error');
             await this.markImageAsError(latestImage.id, error.message);
+            throw error; // Re-lançar para indicar falha
         }
     }
     
@@ -1866,16 +2056,26 @@ Analise as imagens:`
             sessionMap[sessionKey].push(image);
         }
 
-        // Processar cada sessão
+        // Processar cada sessão e acumular erros
+        let hasErrors = false;
+        let lastError = null;
+        
         for (const [sessionKey, sessionImages] of Object.entries(sessionMap)) {
             try {
                 await this.processSessionWithHybrid(sessionImages);
             } catch (error) {
+                hasErrors = true;
+                lastError = error;
                 this.log(`Erro ao processar sessão ${sessionKey}: ${error.message}`, 'error');
                 for (const image of sessionImages) {
                     await this.markImageAsError(image.id, error.message);
                 }
             }
+        }
+        
+        // Se houve erros em todas as sessões, lançar erro
+        if (hasErrors) {
+            throw lastError || new Error('Sistema híbrido falhou ao processar todas as imagens');
         }
     }
     
@@ -1920,11 +2120,15 @@ Analise as imagens:`
             if (bestResult && bestResult.number) {
                 this.log(`Sistema híbrido detectou: ${bestResult.number} (${bestResult.source}, confiança: ${bestResult.confidence})`, 'success');
                 
+                // Buscar checkpoint_order do dispositivo
+                const deviceInfo = await this.getDeviceInfo(latestImage.device_id, latestImage.event_id);
+                const checkpointOrder = deviceInfo?.checkpoint_order || 1;
+                
                 // Verificar se já existe classificação
                 const existingClassification = await this.checkExistingClassification(
                     bestResult.number, 
                     latestImage.event_id, 
-                    latestImage.device_order
+                    checkpointOrder
                 );
                 
                 if (!existingClassification) {
@@ -1943,11 +2147,13 @@ Analise as imagens:`
             } else {
                 this.log('Sistema híbrido não detectou número válido', 'info');
                 await this.markImageAsError(latestImage.id, 'Número não detectado por nenhum sistema');
+                throw new Error('Número não detectado pelo sistema híbrido');
             }
             
         } catch (error) {
             this.log(`Erro no processamento híbrido: ${error.message}`, 'error');
             await this.markImageAsError(latestImage.id, error.message);
+            throw error; // Re-lançar para indicar falha
         }
     }
     
@@ -2055,16 +2261,26 @@ Analise as imagens:`
             sessionMap[sessionKey].push(image);
         }
 
-        // Processar cada sessão
+        // Processar cada sessão e acumular erros
+        let hasErrors = false;
+        let lastError = null;
+        
         for (const [sessionKey, sessionImages] of Object.entries(sessionMap)) {
             try {
                 await this.processSessionWithManual(sessionImages);
             } catch (error) {
+                hasErrors = true;
+                lastError = error;
                 this.log(`Erro ao processar sessão ${sessionKey}: ${error.message}`, 'error');
                 for (const image of sessionImages) {
                     await this.markImageAsError(image.id, error.message);
                 }
             }
+        }
+        
+        // Se houve erros em todas as sessões, lançar erro
+        if (hasErrors) {
+            throw lastError || new Error('Processamento manual falhou para todas as imagens');
         }
     }
     

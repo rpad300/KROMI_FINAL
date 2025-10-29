@@ -971,7 +971,7 @@
         }
         
         async function clearQueue() {
-            if (!confirm('Tem certeza que deseja descartar TODAS as imagens pendentes?')) {
+            if (!confirm('Tem certeza que deseja APAGAR TODAS as imagens pendentes?\n\nEsta ação é IRREVERSÍVEL!')) {
                 return;
             }
             
@@ -981,19 +981,25 @@
                     return;
                 }
                 
+                console.log('🗑️ Apagando todas as imagens pendentes...');
+                
                 const { error } = await window.supabaseClient.supabase
                     .from('image_buffer')
-                    .update({ status: 'discarded' })
+                    .delete()
                     .eq('status', 'pending');
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('❌ Erro ao apagar:', error);
+                    throw error;
+                }
                 
-                addLogEntry('warning', 'Todas as imagens pendentes foram descartadas');
-                showSuccess('Fila limpa');
+                console.log('✅ Todas as imagens pendentes foram apagadas');
+                addLogEntry('success', 'Todas as imagens pendentes foram apagadas');
+                showSuccess('Fila limpa - imagens apagadas permanentemente');
                 await loadBufferStats();
                 
             } catch (error) {
-                console.error('Erro:', error);
+                console.error('❌ Erro:', error);
                 addLogEntry('error', 'Erro ao limpar fila');
             }
         }
@@ -1167,40 +1173,85 @@
         
         async function loadBufferQueue() {
             try {
-                const { data: pendingImages, error } = await window.supabaseClient.supabase
+                console.log('🔍 Carregando fila de buffer...');
+                
+                // Buscar imagens pendentes E com erro (para debugging)
+                const { data: pendingImages, error: pendingError } = await window.supabaseClient.supabase
                     .from('image_buffer')
                     .select('*')
                     .eq('status', 'pending')
                     .order('captured_at', { ascending: true })
                     .limit(20);
                 
-                if (error) throw error;
+                const { data: errorImages, error: errorError } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .select('*')
+                    .eq('status', 'error')
+                    .order('captured_at', { ascending: false })
+                    .limit(5);
+                
+                const combinedImages = [...(pendingImages || []), ...(errorImages || [])];
+                const error = pendingError || errorError;
+                
+                console.log('📊 Resultado da query:', { 
+                    error, 
+                    pendingCount: pendingImages?.length || 0,
+                    errorCount: errorImages?.length || 0,
+                    combinedCount: combinedImages?.length || 0
+                });
+                
+                if (error) {
+                    console.error('❌ Erro ao carregar fila:', error);
+                    addLog(`Erro ao carregar fila: ${error.message}`, 'error');
+                    throw error;
+                }
+                
+                if (combinedImages && combinedImages.length > 0) {
+                    console.log(`✅ Imagens encontradas: ${pendingImages?.length || 0} pendentes, ${errorImages?.length || 0} com erro`);
+                } else {
+                    console.warn('⚠️ Nenhuma imagem encontrada');
+                }
                 
                 const queueContainer = document.getElementById('queueItems');
                 const queueSection = document.getElementById('processingQueue');
                 
-                if (!pendingImages || pendingImages.length === 0) {
-                    queueSection.style.display = 'none';
+                if (!combinedImages || combinedImages.length === 0) {
+                    if (queueSection) queueSection.style.display = 'none';
                     return;
                 }
                 
-                queueSection.style.display = 'block';
+                if (queueSection) queueSection.style.display = 'block';
                 
-                queueContainer.innerHTML = pendingImages.map((img, index) => `
-                    <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
+                queueContainer.innerHTML = combinedImages.map((img, index) => `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: ${img.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-secondary)'}; border: 1px solid ${img.status === 'error' ? 'var(--danger)' : 'var(--border-color)'}; border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
                         <div style="font-weight: 600; color: var(--primary);">#${index + 1}</div>
                         <img src="${img.display_image || img.image_data}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-base);">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; color: var(--text-primary);">Capturada às ${new Date(img.captured_at).toLocaleTimeString('pt-PT')}</div>
+                            <div style="display: flex; align-items: center; gap: var(--spacing-2); flex-wrap: wrap;">
+                                <span style="font-weight: 600; color: var(--text-primary);">Capturada às ${new Date(img.captured_at).toLocaleTimeString('pt-PT')}</span>
+                                <span style="padding: 2px 8px; border-radius: var(--radius-base); font-size: var(--font-size-xs); font-weight: 600; background: ${img.status === 'error' ? 'var(--danger)' : img.status === 'pending' ? 'var(--warning)' : 'var(--success)'}; color: white;">${img.status.toUpperCase()}</span>
+                            </div>
                             <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
                                 Device: ${img.device_id?.substring(0, 12) || 'N/A'}... • 
                                 Session: ${img.session_id?.substring(0, 8) || 'N/A'}
                             </div>
+                            ${img.status === 'error' && img.processing_result?.error ? `
+                                <div style="font-size: var(--font-size-xs); color: var(--danger); margin-top: var(--spacing-1); padding: var(--spacing-1); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-base); max-width: 500px; word-wrap: break-word;">
+                                    ❌ ${img.processing_result.error || 'Erro desconhecido'}
+                                </div>
+                            ` : ''}
                         </div>
                         <div style="display: flex; gap: var(--spacing-2);">
+                            ${img.status === 'error' ? `
+                            <button class="btn btn-sm btn-secondary" onclick="retryProcessImage('${img.id}')">
+                                <i>🔄</i> Retentar
+                            </button>
+                            ` : ''}
+                            ${img.status === 'pending' ? `
                             <button class="btn btn-sm btn-primary" onclick="processImage('${img.id}')">
                                 <i>⚡</i> Processar
                             </button>
+                            ` : ''}
                             <button class="btn btn-sm btn-danger" onclick="discardImage('${img.id}')">
                                 <i>🗑️</i> Descartar
                             </button>
@@ -1214,37 +1265,78 @@
         }
         
         async function processImage(imageId) {
-            addLog(`Processando imagem ${imageId}...`, 'info');
+            addLogEntry('info', `Processando imagem ${imageId}...`);
             // O backend processor fará o trabalho automaticamente
             await loadBufferStats();
         }
         
-        async function discardImage(imageId) {
+        async function retryProcessImage(imageId) {
             try {
+                addLogEntry('info', `Retentando processar imagem ${imageId}...`);
+                
+                // Mudar status de error para pending
                 const { error } = await window.supabaseClient.supabase
                     .from('image_buffer')
-                    .update({ status: 'discarded' })
+                    .update({ 
+                        status: 'pending'
+                    })
                     .eq('id', imageId);
                 
                 if (error) throw error;
                 
-                addLog('Imagem descartada', 'success');
+                addLogEntry('success', 'Status alterado para pending - processamento será retentado');
                 await loadBufferStats();
                 
             } catch (error) {
-                console.error('Erro ao descartar:', error);
-                addLog('Erro ao descartar imagem', 'error');
+                console.error('Erro ao retentar:', error);
+                addLogEntry('error', 'Erro ao retentar processamento');
+            }
+        }
+        
+        async function discardImage(imageId) {
+            try {
+                console.log('🗑️ Apagando imagem:', imageId);
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('image_buffer')
+                    .delete()
+                    .eq('id', imageId);
+                
+                console.log('📥 Resultado:', { error });
+                
+                if (error) {
+                    console.error('❌ Erro ao apagar:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Imagem apagada com sucesso');
+                addLogEntry('success', `Imagem apagada: ${imageId.substring(0, 8)}`);
+                
+                await loadBufferStats();
+                
+            } catch (error) {
+                console.error('❌ Erro ao apagar:', error);
+                addLogEntry('error', `Erro ao apagar: ${error.message}`);
             }
         }
         
         function saveProcessorData() {
-            const data = {
-                processedCount,
-                processingRate,
-                avgProcessingTime,
-                timestamp: new Date().toISOString()
-            };
-            localStorage.setItem('visionkrono_processor_data', JSON.stringify(data));
+            try {
+                // Tentar ler do DOM se as variáveis não existirem
+                const processed = document.getElementById('totalProcessed')?.textContent || 0;
+                const rate = document.getElementById('processingRate')?.textContent || 0;
+                const avgTime = document.getElementById('avgProcessingTime')?.textContent || 0;
+                
+                const data = {
+                    processedCount: parseInt(processed) || 0,
+                    processingRate: parseFloat(rate) || 0,
+                    avgProcessingTime: parseFloat(avgTime) || 0,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('visionkrono_processor_data', JSON.stringify(data));
+            } catch (error) {
+                console.warn('Erro ao salvar dados do processador:', error);
+            }
         }
         
         function showSuccess(message) {

@@ -776,8 +776,8 @@
                 if (statsRes.ok) {
                     const { success, stats } = await statsRes.json();
                     if (success && stats) {
-                        totalAthletes = stats.totalParticipants || 0;
-                        totalDetections = stats.totalDetections || 0;
+                        totalAthletes = stats.totalParticipants || stats.total_participants || 0;
+                        totalDetections = stats.totalDetections || stats.total_detections || 0;
                     }
                 } else {
                     console.warn('⚠️ Erro ao carregar stats, usando valores padrão');
@@ -811,7 +811,13 @@
                 }
                 
                 const totalAthletesEl = document.getElementById('totalAthletes');
-                if (totalAthletesEl) totalAthletesEl.textContent = totalAthletes;
+                if (totalAthletesEl) {
+                    // Fallback: se stats não retornou, usar contagem de participantes carregados
+                    if (totalAthletes === 0 && window.participants && window.participants.length > 0) {
+                        totalAthletes = window.participants.length;
+                    }
+                    totalAthletesEl.textContent = totalAthletes;
+                }
                 
                 // Iniciar contador de duração em tempo real
                 startDurationCounter();
@@ -915,6 +921,15 @@
                 
                 console.log('👥 Participantes:', participants);
                 
+                // Guardar para uso global (contagem de atletas)
+                window.participants = participants || [];
+                
+                // Atualizar contador de atletas
+                const totalAthletesEl = document.getElementById('totalAthletes');
+                if (totalAthletesEl && window.participants.length > 0) {
+                    totalAthletesEl.textContent = window.participants.length;
+                }
+                
                 const participantMap = {};
                 (participants || []).forEach(p => {
                     participantMap[p.dorsal_number] = p.full_name;
@@ -953,16 +968,31 @@
                 console.log('📸 Mapa de imagens:', imageMap);
                 console.log('📸 Total imagens mapeadas:', Object.keys(imageMap).length);
                 
-                // Carregar classificações usando a view que inclui dados de voltas
-                const { data: classData, error: classError } = await window.supabaseClient.supabase
-                    .from('event_classifications')
-                    .select('*')
-                    .eq('event_id', currentEvent.id)
-                    .order('position', { ascending: true });
+                // Carregar classificações via API REST (contornar RLS)
+                console.log('🌐 Carregando classificações via API REST...');
+                const apiRes = await fetch(`/api/classifications/list?event=${currentEvent.id}`, {
+                    credentials: 'include'
+                });
+                
+                let classData = null;
+                let classError = null;
+                
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    console.log('📊 API resposta:', apiData);
+                    
+                    if (apiData.success) {
+                        classData = apiData.classifications;
+                    } else {
+                        classError = { message: apiData.error };
+                    }
+                } else {
+                    classError = { message: `API error: ${apiRes.status}` };
+                }
                 
                 console.log('📊 Classifications:', classData);
                 console.log('📊 Error:', classError);
-                
+
                 if (classError) {
                     console.error('❌ Erro ao carregar classifications:', classError);
                     showError('Erro ao carregar dados');
@@ -983,9 +1013,9 @@
                     position: c.position || index + 1,
                     dorsal: c.dorsal_number,
                     name: name,
-                    time: formatInterval(c.total_time),
-                    difference: index === 0 ? '--' : '+' + formatInterval(c.gap_to_leader || c.total_time),
-                    speed: c.avg_speed_kmh ? `${c.avg_speed_kmh.toFixed(1)} km/h` : '--',
+                    time: c.total_time_formatted || formatInterval(c.total_time),
+                    difference: index === 0 ? '--' : (c.gap_to_leader_formatted ? '+' + c.gap_to_leader_formatted : '+' + formatInterval(c.gap_to_leader || c.total_time)),
+                    speed: c.avg_speed_kmh ? (typeof c.avg_speed_kmh === 'string' ? `${c.avg_speed_kmh} km/h` : `${parseFloat(c.avg_speed_kmh).toFixed(1)} km/h`) : '--',
                     status: c.is_penalty ? 'PENALTY' : 'FINISHED',
                     proof_image: proofImage,
                     // Dados de voltas
@@ -1084,7 +1114,7 @@
                 let lapData = '';
                 if (hasLapCounter && athlete.total_laps !== undefined) {
                     const fastestLap = athlete.fastest_lap ? formatInterval(athlete.fastest_lap) : '--';
-                    const avgLapSpeed = athlete.avg_lap_speed ? `${athlete.avg_lap_speed.toFixed(1)} km/h` : '--';
+                    const avgLapSpeed = athlete.avg_lap_speed ? (typeof athlete.avg_lap_speed === 'string' ? `${athlete.avg_lap_speed} km/h` : `${parseFloat(athlete.avg_lap_speed).toFixed(1)} km/h`) : '--';
                     
                     lapData = `
                         <td>
@@ -1171,7 +1201,7 @@
             }
             
             const startTime = new Date(currentEvent.event_started_at);
-            const endTime = currentEvent.event_finished_at ? new Date(currentEvent.event_finished_at) : new Date();
+            const endTime = currentEvent.event_ended_at ? new Date(currentEvent.event_ended_at) : new Date();
             
             const diff = endTime - startTime;
             
@@ -1180,11 +1210,19 @@
                 return;
             }
             
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            // Calcular dias, horas, minutos, segundos
+            const totalSeconds = Math.floor(diff / 1000);
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
             
-            durationElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            // Formato: "X days HH:MM:SS" ou "HH:MM:SS"
+            if (days > 0) {
+                durationElement.textContent = `${days} days ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                durationElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
         }
         
         function startEvent() {
@@ -1232,17 +1270,17 @@
                 window.supabaseClient.supabase
                     .from('events')
                     .update({ 
-                        event_finished_at: now,
+                        event_ended_at: now,
                         is_active: false,
                         status: 'finished'
                     })
                     .eq('id', currentEvent.id)
                     .then(() => {
-                        currentEvent.event_finished_at = now;
+                        currentEvent.event_ended_at = now;
                         updateControls();
                         showSuccess('Evento finalizado!');
                         
-                        // Parar contador (usa event_finished_at)
+                        // Parar contador (usa event_ended_at)
                         if (durationInterval) {
                             clearInterval(durationInterval);
                             updateDuration(); // Atualizar uma última vez
@@ -1366,7 +1404,7 @@ Tem certeza que deseja resetar o evento "${currentEvent.name}"?`;
                     .update({ 
                         status: 'active',
                         event_started_at: null,
-                        event_finished_at: null,
+                        event_ended_at: null,
                         is_active: false
                     })
                     .eq('id', currentEvent.id);
@@ -1414,16 +1452,16 @@ Tem certeza que deseja resetar o evento "${currentEvent.name}"?`;
                 const msg = `✅ Evento Resetado com Sucesso!
 
 📊 Dados Apagados:
-• Classifications: ${classCount || 0} apagadas → ${verifyClass.data?.count || 0} restantes
-• Detections: ${detCount || 0} apagadas → ${verifyDet.data?.count || 0} restantes
-• Buffer Imagens: ${bufferCount || 0} apagadas → ${verifyBuffer.data?.count || 0} restantes
+• Classifications: ${classCount || 0} apagadas → ${verifyCounts.classifications} restantes
+• Detections: ${detCount || 0} apagadas → ${verifyCounts.detections} restantes
+• Buffer Imagens: ${bufferCount || 0} apagadas → ${verifyCounts.images} restantes
 • Sessões: ${sessionsCount || 0} encerradas
 • Contadores de sessões: resetados
 
 ✅ Participantes MANTIDOS (inscrições permanecem)
 
 ✅ O evento está pronto para novas detecções!
-${(verifyClass.data?.count || 0) > 0 || (verifyDet.data?.count || 0) > 0 ? '\n⚠️ AVISO: Ainda há dados! Possível problema de RLS.' : ''}
+${verifyCounts.classifications > 0 || verifyCounts.detections > 0 ? '\n⚠️ AVISO: Ainda há dados! Possível problema de RLS.' : ''}
 
 A página será recarregada em 3 segundos...`;
                 

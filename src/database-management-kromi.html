@@ -427,7 +427,7 @@
                         <div class="db-content">
                             <div class="table-stats">
                                 <div class="stat-item">
-                                    <div class="stat-value" id="totalTables">8</div>
+                                    <div class="stat-value" id="totalTables">57</div>
                                     <div class="stat-label">Tabelas</div>
                                 </div>
                                 <div class="stat-item">
@@ -880,6 +880,9 @@ UPDATE participants SET status = 'confirmed' WHERE dorsal = 123;"></textarea>
                     { name: 'active_device_sessions', description: 'Sessões ativas', icon: '🟢', category: 'Hardware' },
                     { name: 'livestream_devices', description: 'Dispositivos livestream', icon: '📹', category: 'Hardware' },
                     { name: 'livestream_devices_online', description: 'Devices online', icon: '🔴', category: 'Hardware' },
+                    { name: 'livestream_commands', description: 'Comandos livestream', icon: '📡', category: 'Hardware' },
+                    { name: 'livestream_offers', description: 'Ofertas WebRTC', icon: '🎥', category: 'Hardware' },
+                    { name: 'livestream_frames', description: 'Frames capturados', icon: '🖼️', category: 'Hardware' },
                     
                     // Configurações de Evento
                     { name: 'checkpoint_types', description: 'Tipos de checkpoints', icon: '📍', category: 'Config' },
@@ -918,6 +921,7 @@ UPDATE participants SET status = 'confirmed' WHERE dorsal = 123;"></textarea>
                     // Utilizadores e Segurança
                     { name: 'user_profiles', description: 'Perfis de utilizadores', icon: '👤', category: 'Segurança' },
                     { name: 'user_sessions', description: 'Sessões de utilizadores', icon: '🔐', category: 'Segurança' },
+                    { name: 'user_permissions', description: 'Permissões de utilizadores', icon: '🔒', category: 'Segurança' },
                     { name: 'organizers', description: 'Organizadores', icon: '👔', category: 'Segurança' },
                     { name: 'role_definitions', description: 'Definições de roles', icon: '🔑', category: 'Segurança' },
                     
@@ -925,6 +929,11 @@ UPDATE participants SET status = 'confirmed' WHERE dorsal = 123;"></textarea>
                     { name: 'configurations', description: 'Configurações globais', icon: '⚙️', category: 'Sistema' },
                     { name: 'platform_configurations', description: 'Configurações da plataforma', icon: '🌐', category: 'Sistema' },
                     { name: 'global_processor_settings', description: 'Settings globais processador', icon: '⚡', category: 'Sistema' },
+                    { name: 'email_templates', description: 'Templates de email', icon: '📧', category: 'Sistema' },
+                    { name: 'email_logs', description: 'Logs de emails', icon: '📬', category: 'Sistema' },
+                    { name: 'email_schedule', description: 'Agendamento de emails', icon: '📅', category: 'Sistema' },
+                    { name: 'ai_cost_stats', description: 'Estatísticas de custos IA', icon: '💰', category: 'Sistema' },
+                    { name: 'ai_cost_sync_log', description: 'Log de sincronização IA', icon: '🔄', category: 'Sistema' },
                     
                     // Dados de Apoio
                     { name: 'age_categories', description: 'Categorias de idade', icon: '👶', category: 'Dados' },

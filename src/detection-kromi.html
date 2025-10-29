@@ -427,9 +427,51 @@
                 const activeSessions = deviceData.active_sessions || 0;
                 const maxSessions = deviceData.max_sessions || 1;
                 
-                console.log(`📊 Sessões: ${activeSessions}/${maxSessions}`);
+                console.log(`📊 Sessões (do banco): ${activeSessions}/${maxSessions}`);
                 console.log(`📊 Verificando limite: ${activeSessions} >= ${maxSessions} ?`);
                 console.log(`📊 Resultado: ${activeSessions >= maxSessions}`);
+                
+                // Verificar sessões ativas reais na tabela device_sessions e limpar órfãs
+                try {
+                    const { data: realSessions, error: sessionsError } = await window.supabaseClient.supabase
+                        .from('device_sessions')
+                        .select('*')
+                        .eq('event_id', currentEvent.id)
+                        .eq('device_id', currentDevice)
+                        .eq('is_active', true);
+                    
+                    if (!sessionsError && realSessions) {
+                        console.log(`🔍 Sessões ativas reais na tabela device_sessions: ${realSessions.length}`);
+                        if (realSessions.length > 0 && activeSessions === 0) {
+                            console.warn('⚠️ Sessões órfãs detectadas! Limpando automaticamente...');
+                            console.warn('   Sessões órfãs:', realSessions.map(s => s.session_id));
+                            
+                            // Limpar sessões órfãs
+                            const { error: cleanupError } = await window.supabaseClient.supabase
+                                .from('device_sessions')
+                                .update({ 
+                                    is_active: false,
+                                    ended_at: new Date().toISOString()
+                                })
+                                .eq('event_id', currentEvent.id)
+                                .eq('device_id', currentDevice)
+                                .eq('is_active', true);
+                            
+                            if (!cleanupError) {
+                                console.log('✅ Sessões órfãs limpas com sucesso');
+                                
+                                // Atualizar contador
+                                await window.supabaseClient.supabase
+                                    .from('event_devices')
+                                    .update({ active_sessions: 0 })
+                                    .eq('event_id', currentEvent.id)
+                                    .eq('device_id', currentDevice);
+                            }
+                        }
+                    }
+                } catch (debugError) {
+                    console.warn('⚠️ Erro ao verificar sessões reais:', debugError);
+                }
                 
                 if (activeSessions >= maxSessions) {
                     console.error('❌❌❌ LIMITE DE SESSÕES ATINGIDO! ❌❌❌');
@@ -633,6 +675,24 @@
                 console.log('🔓 Libertando todas as sessões do dispositivo...');
                 
                 // Decrementar contador de sessões ativas
+                // 1. Marcar todas as sessões como inativas em device_sessions
+                const { error: sessionsError } = await window.supabaseClient.supabase
+                    .from('device_sessions')
+                    .update({ 
+                        is_active: false,
+                        ended_at: new Date().toISOString()
+                    })
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', currentDevice)
+                    .eq('is_active', true);
+                
+                if (sessionsError) {
+                    console.warn('⚠️ Erro ao marcar sessões como inativas:', sessionsError);
+                } else {
+                    console.log('✅ Sessões marcadas como inativas');
+                }
+                
+                // 2. Resetar contador em event_devices
                 const { error } = await window.supabaseClient.supabase
                     .from('event_devices')
                     .update({ active_sessions: 0 })
@@ -643,17 +703,6 @@
                     console.error('❌ Erro ao libertar sessões:', error);
                 } else {
                     console.log('✅ Sessões libertadas com sucesso');
-                }
-                
-                // Se existir função RPC para limpar sessões
-                try {
-                    await window.supabaseClient.supabase
-                        .rpc('end_all_device_sessions', {
-                            p_device_id: currentDevice,
-                            p_event_id: currentEvent.id
-                        });
-                } catch (rpcError) {
-                    console.log('ℹ️ RPC end_all_device_sessions não disponível (opcional)');
                 }
                 
             } catch (error) {
@@ -827,16 +876,8 @@
                     console.log('✅ Câmera desligada');
                 }
                 
-                // DECREMENTAR active_sessions MANUALMENTE (fallback se função não existir)
+                // DECREMENTAR active_sessions
                 console.log('📉 Decrementando active_sessions...');
-                const { error: decrementError } = await window.supabaseClient.supabase
-                    .rpc('decrement', {
-                        table_name: 'event_devices',
-                        column_name: 'active_sessions',
-                        row_id: null
-                    });
-                
-                // Alternativa: UPDATE direto
                 const { data: currentData } = await window.supabaseClient.supabase
                     .from('event_devices')
                     .select('active_sessions')
@@ -860,40 +901,30 @@
                     console.log('✅ Contador decrementado');
                 }
                 
-                // Encerrar sessão no Supabase (se função existir)
-                if (sessionId && pinValidated) {
+                // Marcar sessões como inativas na tabela device_sessions
+                if (sessionId) {
                     try {
-                        console.log('🔄 Chamando end_device_session com sessionId:', sessionId);
-                        const { data, error } = await window.supabaseClient.supabase
-                            .rpc('end_device_session', {
-                                p_session_id: sessionId
-                            });
+                        console.log('🔄 Marcando sessão como inativa...');
+                        const { error: endSessionError } = await window.supabaseClient.supabase
+                            .from('device_sessions')
+                            .update({ 
+                                is_active: false,
+                                ended_at: new Date().toISOString()
+                            })
+                            .eq('session_id', sessionId)
+                            .eq('event_id', currentEvent.id)
+                            .eq('device_id', currentDevice);
                         
-                        if (error) {
-                            console.error('❌ Erro ao encerrar sessão via RPC:', error);
+                        if (endSessionError) {
+                            console.warn('⚠️ Erro ao marcar sessão como inativa:', endSessionError);
                         } else {
-                            console.log('✅ Sessão encerrada via RPC:', data);
+                            console.log('✅ Sessão marcada como inativa');
                         }
-                    } catch (rpcError) {
-                        console.error('❌ Erro ao chamar RPC end_device_session:', rpcError);
+                    } catch (endSessionError) {
+                        console.warn('⚠️ Erro ao encerrar sessão:', endSessionError);
                     }
                 } else {
-                    console.warn('⚠️ sessionId ou pinValidated não disponível:', { sessionId, pinValidated });
-                }
-                
-                // Limpar sessões inativas
-                try {
-                    console.log('🧹 Limpando sessões inativas...');
-                    const { data: cleanupData, error: cleanupError } = await window.supabaseClient.supabase
-                        .rpc('cleanup_inactive_sessions');
-                    
-                    if (cleanupError) {
-                        console.error('❌ Erro ao limpar sessões inativas:', cleanupError);
-                    } else {
-                        console.log('✅ Sessões inativas limpas:', cleanupData);
-                    }
-                } catch (cleanupRpcError) {
-                    console.error('❌ Erro ao chamar cleanup_inactive_sessions:', cleanupRpcError);
+                    console.warn('⚠️ sessionId não disponível');
                 }
                 
                 // Mostrar mensagem
@@ -1151,15 +1182,43 @@
                     return;
                 }
                 
+                console.log('📤 Enviando imagem para buffer...');
+                console.log('   Event ID:', currentEvent.id);
+                console.log('   Device ID:', currentDevice);
+                console.log('   Session ID:', sessionId);
+                console.log('   Image size (AI):', Math.round(aiVersion.length / 1024), 'KB');
+                console.log('   Image size (Display):', Math.round(displayVersion.length / 1024), 'KB');
+                
                 const { data, error } = await window.supabaseClient.supabase
                     .from('image_buffer')
                     .insert([bufferEntry])
                     .select()
                     .single();
                 
+                console.log('📥 Resposta do Supabase:', { data, error });
+                
                 if (error) {
                     console.error('❌ Erro ao salvar no buffer:', error);
+                    console.error('   Code:', error.code);
+                    console.error('   Message:', error.message);
+                    console.error('   Details:', error.details);
+                    console.error('   Hint:', error.hint);
+                    
+                    // Mostrar erro ao usuário
+                    alert(`❌ Erro ao salvar imagem: ${error.message || 'Erro desconhecido'}\n\nVerifique os logs do console para mais detalhes.`);
                 } else {
+                    console.log('✅ Imagem salva com sucesso:', data);
+                    console.log('   ID:', data.id);
+                    console.log('   Status:', data.status);
+                    console.log('   Event:', data.event_id);
+                    
+                    if (data.status === 'error') {
+                        console.warn('⚠️ ATENÇÃO: Imagem salva mas com status ERROR!');
+                        console.warn('   Isso geralmente indica que há um TRIGGER no banco de dados');
+                        console.warn('   que está mudando o status automaticamente');
+                        console.warn('   Verifique os triggers na tabela image_buffer');
+                    }
+                    
                     detectionCount++;
                     document.getElementById('detectionCount').textContent = detectionCount;
                     
@@ -1175,6 +1234,7 @@
                 
             } catch (error) {
                 console.error('❌ Erro na captura:', error);
+                console.error('   Stack:', error.stack);
             }
         }
         
@@ -1335,3 +1395,4 @@
     <!-- All styles moved to external CSS files -->
 </body>
 </html>
+

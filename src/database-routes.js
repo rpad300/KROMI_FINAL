@@ -94,7 +94,7 @@ module.exports = function(app, sessionManager) {
                 'events', 'participants', 'detections', 'classifications', 'event_participants',
                 // Hardware
                 'devices', 'event_devices', 'device_sessions', 'active_device_sessions',
-                'livestream_devices', 'livestream_devices_online',
+                'livestream_devices', 'livestream_devices_online', 'livestream_commands', 'livestream_offers', 'livestream_frames',
                 // Config
                 'checkpoint_types', 'event_checkpoints', 'event_checkpoints_view',
                 'event_categories', 'event_modalities', 'event_lap_config', 'event_lap_config_backup',
@@ -108,9 +108,11 @@ module.exports = function(app, sessionManager) {
                 // Logs
                 'activity_logs', 'activity_times', 'audit_logs', 'calibration_history',
                 // Segurança
-                'user_profiles', 'user_sessions', 'organizers', 'role_definitions',
+                'user_profiles', 'user_sessions', 'user_permissions', 'organizers', 'role_definitions',
                 // Sistema
                 'configurations', 'platform_configurations', 'global_processor_settings',
+                'email_templates', 'email_logs', 'email_schedule',
+                'ai_cost_stats', 'ai_cost_sync_log',
                 // Dados
                 'age_categories', 'modality_activities', 'lap_data'
             ];
