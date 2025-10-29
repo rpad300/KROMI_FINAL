@@ -300,6 +300,9 @@
                 <button class="btn btn-sm btn-primary" id="addDeviceBtn">
                     <i>➕</i> Adicionar Dispositivo
                 </button>
+                <button class="btn btn-sm btn-primary" id="generatePDFBtn" title="Gerar PDF com dispositivos e QR Codes">
+                    <i>📄</i> Gerar PDF
+                </button>
                 <button class="btn btn-sm btn-secondary" id="refreshDevices" title="Clique para recarregar do Supabase">
                     <i>🔄</i> Atualizar
                 </button>
@@ -360,6 +363,35 @@
     </div>
     
     <!-- Scripts -->
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- QR Code Library -->
+    <script>
+        // Carregar biblioteca QRCode dinamicamente
+        (function() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+            script.onload = function() {
+                console.log('✅ QRCode library carregada');
+                // Disparar evento customizado
+                window.dispatchEvent(new Event('qrcodeLoaded'));
+            };
+            script.onerror = function() {
+                console.error('❌ Erro ao carregar QRCode library');
+                // Tentar alternativa
+                const altScript = document.createElement('script');
+                altScript.src = 'https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js';
+                altScript.onload = function() {
+                    console.log('✅ QRCode library alternativa carregada');
+                    window.dispatchEvent(new Event('qrcodeLoaded'));
+                };
+                document.head.appendChild(altScript);
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+    
     <!-- Scripts de Autenticação -->
     <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
     <script src="/supabase.js?v=2025102605" defer></script>
@@ -468,6 +500,7 @@
                 console.log('🔄 Refresh manual acionado');
                 loadDevices();
             });
+            document.getElementById('generatePDFBtn').addEventListener('click', generateDevicesPDF);
             
             // Link para checkpoint order
             document.getElementById('goToCheckpointOrder').addEventListener('click', (e) => {
@@ -556,10 +589,14 @@
                             device_type,
                             status,
                             last_seen
+                        ),
+                        events (
+                            id,
+                            name
                         )
                     `)
                     .eq('event_id', currentEvent.id)
-                    .order('assigned_at', { ascending: true });
+                    .order('checkpoint_order', { ascending: true, nullsLast: true });
                 
                 console.log('📊 Resultado da query:');
                 console.log('  - Error:', error);
@@ -598,6 +635,15 @@
                 
                 console.log('✅ Renderizando', devices?.length || 0, 'dispositivos');
                 renderDevices(devices || []);
+                
+                // Gerar QR Codes automaticamente para todos os dispositivos
+                setTimeout(() => {
+                    devices?.forEach((device) => {
+                        if (device.device_id && device.device_pin) {
+                            generateInlineQRCode(device.device_id, device.device_pin, device.devices?.device_name || 'Dispositivo');
+                        }
+                    });
+                }, 300);
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar dispositivos:', error);
@@ -648,24 +694,63 @@
                             <div class="info-value">${deviceInfo.device_type || 'mobile'}</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">Role</div>
-                            <div class="info-value">${device.role || 'detector'}</div>
-                        </div>
-                        <div class="info-item">
                             <div class="info-label">PIN</div>
                             <div class="info-value">${device.device_pin ? '🔐 ****' : '🔓 Sem PIN'}</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">Sessões</div>
+                            <div class="info-label">Checkpoint</div>
                             <div class="info-value">
-                                <span style="color: ${(device.active_sessions || 0) >= (device.max_sessions || 1) ? 'var(--danger)' : 'var(--success)'}">
-                                    ${device.active_sessions || 0}/${device.max_sessions || 1}
-                                </span>
-                                <button onclick="editMaxSessions('${device.device_id}', ${device.max_sessions || 1})" 
-                                    style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; margin-left: 4px;" 
-                                    title="Alterar limite de sessões">
-                                    ✏️
-                                </button>
+                                ${device.checkpoint_name || 'N/A'}
+                                ${device.checkpoint_order ? ` (#${device.checkpoint_order})` : ''}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Tipo Checkpoint</div>
+                            <div class="info-value">
+                                ${getCheckpointTypeLabel(device.checkpoint_type)}
+                                ${device.checkpoint_type === 'intermediate' || device.checkpoint_type === 'finish' ? ' (Conta voltas)' : ' (Não conta voltas)'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informações do Evento -->
+                    <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base); border: 1px solid var(--border-color);">
+                        <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--spacing-2);">
+                            <strong>Evento:</strong> ${device.events?.name || currentEvent.name || 'N/A'}
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code ao lado de Role e Sessões -->
+                    <div style="margin-top: var(--spacing-4); padding-top: var(--spacing-4); border-top: 1px solid var(--border-color); display: flex; align-items: flex-start; gap: var(--spacing-4);">
+                        <!-- QR Code -->
+                        <div style="flex-shrink: 0;">
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--spacing-2); text-align: center;">📱 QR Code</div>
+                            <div id="qrCodeInline-${device.device_id}" style="display: inline-block; padding: var(--spacing-2); background: white; border-radius: var(--radius-base);"></div>
+                        </div>
+                        <!-- Role e Sessões -->
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: var(--spacing-3);">
+                            <div class="info-item">
+                                <div class="info-label">Role</div>
+                                <div class="info-value">${device.role || 'detector'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Sessões</div>
+                                <div class="info-value">
+                                    <span style="color: ${(device.active_sessions || 0) >= (device.max_sessions || 1) ? 'var(--danger)' : 'var(--success)'}">
+                                        ${device.active_sessions || 0}/${device.max_sessions || 1}
+                                    </span>
+                                    <button onclick="editMaxSessions('${device.device_id}', ${device.max_sessions || 1})" 
+                                        style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; margin-left: 4px;" 
+                                        title="Alterar limite de sessões">
+                                        ✏️
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="info-item" style="margin-top: var(--spacing-2);">
+                                <div class="info-label">Código de Acesso</div>
+                                <div class="info-value" style="font-family: var(--font-family-mono); font-weight: 700; letter-spacing: 2px;">
+                                    ${device.access_code || 'Gerando...'}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -682,6 +767,9 @@
                             </button>
                             <button class="btn btn-sm btn-secondary" onclick="copyDeviceUrl('${device.device_id}')">
                                 <i>📋</i> Copiar URL
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="showDeviceQRCode('${device.device_id}', '${device.device_pin || ''}', '${displayName}')" style="margin-top: var(--spacing-2);">
+                                <i>📱</i> Ver QR Code
                             </button>
                         </div>
                     </div>
@@ -786,6 +874,8 @@
                 console.log('   device_id:', newDevice.id);
                 console.log('   role: detector');
                 
+                // O access_code será gerado automaticamente pelo trigger no banco
+                // Mas podemos tentar gerar manualmente se necessário
                 const { data: assocData, error: assocError } = await window.supabaseClient.supabase
                     .from('event_devices')
                     .insert([{
@@ -795,6 +885,7 @@
                         device_pin: devicePin,
                         max_sessions: maxSessions || 1,
                         active_sessions: 0
+                        // access_code será gerado automaticamente pelo trigger
                     }])
                     .select();
                 
@@ -842,10 +933,10 @@
                 
                 showSuccess(`Dispositivo "${deviceName}" adicionado ao evento com sucesso!`);
                 
-                // Recarregar lista
+                // Recarregar lista (QR Code será gerado automaticamente inline no card)
                 console.log('🔄 Recarregando lista de dispositivos...');
                 await loadDevices();
-                console.log('✅ Lista recarregada');
+                console.log('✅ Lista recarregada')
                 
             } catch (error) {
                 console.error('❌ Erro completo:', error);
@@ -1063,6 +1154,641 @@ Digite "LIMPAR" (em maiúsculas) para confirmar:`;
             } catch (error) {
                 console.error('❌ Erro ao remover dispositivo:', error);
                 showError('Erro ao remover dispositivo');
+            }
+        }
+        
+        // Função para gerar código único (método alternativo client-side)
+        async function generateUniqueAccessCode(deviceId) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Semelhantes removidos
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (attempts < maxAttempts) {
+                // Gerar código aleatório de 6 caracteres
+                let code = '';
+                for (let i = 0; i < 6; i++) {
+                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                
+                // Verificar se código já existe no banco
+                try {
+                    const { data, error } = await window.supabaseClient.supabase
+                        .from('event_devices')
+                        .select('access_code')
+                        .eq('access_code', code)
+                        .maybeSingle();
+                    
+                    if (error && error.code !== 'PGRST116') { // PGRST116 = not found (esperado)
+                        console.warn('⚠️ Erro ao verificar código:', error);
+                        attempts++;
+                        continue;
+                    }
+                    
+                    // Se não encontrou (código único), salvar no dispositivo
+                    if (!data) {
+                        const { error: updateError } = await window.supabaseClient.supabase
+                            .from('event_devices')
+                            .update({ access_code: code })
+                            .eq('event_id', currentEvent.id)
+                            .eq('device_id', deviceId);
+                        
+                        if (!updateError) {
+                            console.log('✅ Código único gerado:', code);
+                            return code;
+                        } else {
+                            console.warn('⚠️ Erro ao salvar código:', updateError);
+                        }
+                    }
+                } catch (checkError) {
+                    console.warn('⚠️ Erro ao verificar unicidade:', checkError);
+                }
+                
+                attempts++;
+            }
+            
+            console.error('❌ Não foi possível gerar código único após', maxAttempts, 'tentativas');
+            return null;
+        }
+        
+        async function showDeviceQRCode(deviceId, devicePin, deviceName) {
+            // Buscar ou gerar access_code do dispositivo (mesma lógica do generateInlineQRCode)
+            let accessCode = null;
+            try {
+                const { data: deviceData, error: fetchError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('access_code')
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId)
+                    .single();
+                
+                if (deviceData && !fetchError && deviceData.access_code) {
+                    accessCode = deviceData.access_code;
+                    console.log('✅ Código de acesso existente:', accessCode);
+                } else {
+                    // Gerar novo código
+                    console.log('🔄 Gerando novo código de acesso...');
+                    accessCode = await generateUniqueAccessCode(deviceId);
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar/gerar access_code:', error);
+                accessCode = await generateUniqueAccessCode(deviceId);
+            }
+            
+            // Criar URL de detecção para o QR Code (mais fácil de usar no scanner)
+            const detectionURL = `${window.location.origin}/detection-kromi.html?event=${currentEvent.id}&device=${deviceId}&eventName=${encodeURIComponent(currentEvent.name || '')}`;
+            
+            // Criar string para o QR Code (URL em vez de JSON)
+            const qrDataString = detectionURL;
+            
+            console.log('📱 Gerando QR Code com URL:', qrDataString);
+            
+            // Criar modal com QR Code
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: var(--spacing-5); max-width: 500px; width: 90%; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                        <h2 style="margin: 0; color: var(--text-primary);">📱 QR Code do Dispositivo</h2>
+                        <button onclick="this.closest('.modal').remove()" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">×</button>
+                    </div>
+                    
+                    <div style="text-align: center; margin-bottom: var(--spacing-4);">
+                        <p style="color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                            Escaneie este QR Code na página de detections para autenticar automaticamente:
+                        </p>
+                        <div id="qrCodeContainer-${deviceId}" style="display: inline-block; padding: var(--spacing-4); background: white; border-radius: var(--radius-base); margin: var(--spacing-3) 0;"></div>
+                        
+                        <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base); border: 1px solid var(--border-color);">
+                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-2);">Dispositivo:</div>
+                            <div style="font-weight: 600; color: var(--text-primary);">${deviceName}</div>
+                            <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: var(--spacing-2); font-family: var(--font-family-mono);">
+                                PIN: ${devicePin}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border-color); padding-top: var(--spacing-4);">
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                            <strong>Como usar:</strong>
+                        </p>
+                        <ol style="font-size: var(--font-size-sm); color: var(--text-secondary); padding-left: var(--spacing-5); margin: 0;">
+                            <li style="margin-bottom: var(--spacing-2);">Acesse a página de detections</li>
+                            <li style="margin-bottom: var(--spacing-2);">Ative o scanner de QR Code</li>
+                            <li style="margin-bottom: var(--spacing-2);">Escaneie este código</li>
+                            <li>Você será redirecionado automaticamente para a detecção</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="margin-top: var(--spacing-4); display: flex; gap: var(--spacing-2);">
+                        <button class="btn btn-primary" onclick="copyQRData('${deviceId}')" style="flex: 1;">
+                            <i>📋</i> Copiar Dados
+                        </button>
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="flex: 1;">
+                            <i>✕</i> Fechar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Gerar QR Code usando QRCode.js
+            function generateQR() {
+                const container = document.getElementById(`qrCodeContainer-${deviceId}`);
+                if (!container) {
+                    setTimeout(generateQR, 100);
+                    return;
+                }
+                
+                // Limpar container
+                container.innerHTML = '';
+                
+                // Verificar se a biblioteca está disponível
+                if (typeof QRCode !== 'undefined') {
+                    try {
+                        console.log('📱 Gerando QR Code com qrcodejs...');
+                        // Criar QR Code usando qrcodejs
+                                new QRCode(container, {
+                                    text: qrDataString,
+                                    width: 256,
+                                    height: 256,
+                                    colorDark: '#000000',
+                                    colorLight: '#ffffff',
+                                    correctLevel: QRCode.CorrectLevel.L // L = Mais rápido de detectar
+                                });
+                        
+                        console.log('✅ QR Code gerado com sucesso');
+                        
+                        // Armazenar dados para cópia
+                        container.dataset.qrData = qrDataString;
+                    } catch (error) {
+                        console.error('❌ Erro ao gerar QR Code:', error);
+                        container.innerHTML = '<p style="color: var(--danger); padding: 20px;">Erro: ' + (error.message || 'Desconhecido') + '</p>';
+                    }
+                } else {
+                    console.warn('⚠️ QRCode library não disponível ainda...');
+                    // Aguardar evento de carregamento ou tentar novamente
+                    let attempts = 0;
+                    const checkQRCode = () => {
+                        attempts++;
+                        if (typeof QRCode !== 'undefined') {
+                            generateQR();
+                        } else if (attempts < 30) {
+                            setTimeout(checkQRCode, 200);
+                        } else {
+                            container.innerHTML = '<p style="color: var(--danger); padding: 20px;">Biblioteca QR Code não carregou. Recarregue a página.</p>';
+                        }
+                    };
+                    
+                    // Aguardar evento de carregamento
+                    window.addEventListener('qrcodeLoaded', generateQR, { once: true });
+                    // Também tentar verificar periodicamente
+                    setTimeout(checkQRCode, 200);
+                }
+            }
+            
+            // Aguardar um pouco para garantir que a biblioteca carregou
+            setTimeout(generateQR, 500);
+        }
+        
+        async function generateInlineQRCode(deviceId, devicePin, deviceName) {
+            // Buscar ou gerar access_code do dispositivo
+            let accessCode = null;
+            try {
+                // Primeiro, verificar se já existe um código
+                const { data: deviceData, error: fetchError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('access_code')
+                    .eq('event_id', currentEvent.id)
+                    .eq('device_id', deviceId)
+                    .single();
+                
+                if (deviceData && !fetchError && deviceData.access_code) {
+                    accessCode = deviceData.access_code;
+                    console.log('✅ Código de acesso existente encontrado:', accessCode);
+                } else {
+                    // Gerar novo código usando função RPC do banco
+                    console.log('🔄 Gerando novo código de acesso...');
+                    try {
+                        const { data: generatedCode, error: generateError } = await window.supabaseClient.supabase
+                            .rpc('generate_access_code');
+                        
+                        if (generateError || !generatedCode) {
+                            console.warn('⚠️ Erro ao gerar código via RPC, tentando método alternativo...');
+                            // Método alternativo: gerar código client-side e validar no banco
+                            accessCode = await generateUniqueAccessCode(deviceId);
+                        } else {
+                            accessCode = generatedCode;
+                            // Salvar no banco
+                            const { error: updateError } = await window.supabaseClient.supabase
+                                .from('event_devices')
+                                .update({ access_code: accessCode })
+                                .eq('event_id', currentEvent.id)
+                                .eq('device_id', deviceId);
+                            
+                            if (updateError) {
+                                console.error('❌ Erro ao salvar código:', updateError);
+                            } else {
+                                console.log('✅ Código gerado e salvo:', accessCode);
+                            }
+                        }
+                    } catch (rpcError) {
+                        console.warn('⚠️ RPC não disponível, usando método alternativo...');
+                        accessCode = await generateUniqueAccessCode(deviceId);
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar/gerar access_code:', error);
+                // Tentar gerar código alternativo
+                accessCode = await generateUniqueAccessCode(deviceId);
+            }
+            
+            // Criar URL de detecção para o QR Code (mais fácil de usar no scanner)
+            const detectionURL = `${window.location.origin}/detection-kromi.html?event=${currentEvent.id}&device=${deviceId}&eventName=${encodeURIComponent(currentEvent.name || '')}`;
+            
+            // Criar string para o QR Code (URL em vez de JSON)
+            const qrDataString = detectionURL;
+            
+            console.log('📱 Gerando QR Code inline com URL:', qrDataString);
+            
+            // Obter container inline
+            const container = document.getElementById(`qrCodeInline-${deviceId}`);
+            if (!container) {
+                console.warn('Container de QR Code inline não encontrado para:', deviceId);
+                return;
+            }
+            
+            // Limpar container
+            container.innerHTML = '';
+            
+            // Verificar se a biblioteca está disponível
+            if (typeof QRCode !== 'undefined') {
+                try {
+                            // Criar QR Code usando qrcodejs (nível L para detecção mais rápida)
+                            new QRCode(container, {
+                                text: qrDataString,
+                                width: 120,
+                                height: 120,
+                                colorDark: '#000000',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.L // L = Mais rápido de detectar (menos redundância)
+                            });
+                    
+                    // Armazenar dados para possível cópia
+                    container.dataset.qrData = qrDataString;
+                    
+                    console.log(`✅ QR Code inline gerado para dispositivo ${deviceId.substring(0, 8)}...`);
+                } catch (error) {
+                    console.error('❌ Erro ao gerar QR Code inline:', error);
+                    container.innerHTML = '<span style="color: var(--danger); font-size: 10px;">Erro</span>';
+                }
+            } else {
+                // Aguardar biblioteca carregar
+                const checkQRCode = () => {
+                    if (typeof QRCode !== 'undefined') {
+                        try {
+                            new QRCode(container, {
+                                text: qrDataString,
+                                width: 120,
+                                height: 120,
+                                colorDark: '#000000',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.H
+                            });
+                            container.dataset.qrData = qrDataString;
+                        } catch (error) {
+                            container.innerHTML = '<span style="color: var(--danger); font-size: 10px;">Erro</span>';
+                        }
+                    } else {
+                        setTimeout(checkQRCode, 100);
+                    }
+                };
+                
+                // Aguardar evento de carregamento ou tentar periodicamente
+                window.addEventListener('qrcodeLoaded', () => {
+                    if (typeof QRCode !== 'undefined') {
+                        try {
+                            new QRCode(container, {
+                                text: qrDataString,
+                                width: 120,
+                                height: 120,
+                                colorDark: '#000000',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.H
+                            });
+                            container.dataset.qrData = qrDataString;
+                        } catch (error) {
+                            container.innerHTML = '<span style="color: var(--danger); font-size: 10px;">Erro</span>';
+                        }
+                    }
+                }, { once: true });
+                
+                setTimeout(checkQRCode, 200);
+            }
+        }
+        
+        function getCheckpointTypeLabel(type) {
+            const types = {
+                'start': '🏁 Início',
+                'finish': '🏁 Meta',
+                'intermediate': '📍 Intermédio',
+                'timing': '⏱️ Cronometragem',
+                'control': '✓ Controlo',
+                'aid_station': '💧 Abastecimento'
+            };
+            return types[type] || type || 'N/A';
+        }
+        
+        function copyQRData(deviceId) {
+            const container = document.getElementById(`qrCodeContainer-${deviceId}`);
+            if (container && container.dataset.qrData) {
+                navigator.clipboard.writeText(container.dataset.qrData).then(() => {
+                    showSuccess('Dados do QR Code copiados!');
+                }).catch(() => {
+                    showError('Erro ao copiar dados');
+                });
+            }
+        }
+        
+        // Função para limpar texto (remover emojis e caracteres especiais problemáticos)
+        function cleanTextForPDF(text) {
+            if (!text) return '';
+            
+            // Converter para string
+            let cleaned = String(text);
+            
+            // Remover emojis e símbolos especiais
+            cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}]/gu, ''); // Emojis gerais
+            cleaned = cleaned.replace(/[\u{2600}-\u{26FF}]/gu, ''); // Símbolos diversos
+            cleaned = cleaned.replace(/[\u{2700}-\u{27BF}]/gu, ''); // Símbolos diversos
+            cleaned = cleaned.replace(/[📱🏁📍⏱️✓💧🔐🔓]/g, ''); // Emojis específicos
+            
+            // Remover tags HTML se houver
+            cleaned = cleaned.replace(/<[^>]*>/g, '');
+            
+            // Limpar espaços extras
+            cleaned = cleaned.trim().replace(/\s+/g, ' ');
+            
+            return cleaned;
+        }
+        
+        // Função para obter label do tipo de checkpoint sem emoji
+        function getCheckpointTypeLabelForPDF(type) {
+            const types = {
+                'start': 'Inicio',
+                'finish': 'Meta',
+                'intermediate': 'Intermedio',
+                'timing': 'Cronometragem',
+                'control': 'Controlo',
+                'aid_station': 'Abastecimento'
+            };
+            return types[type] || type || 'N/A';
+        }
+        
+        async function generateDevicesPDF() {
+            try {
+                console.log('📄 Iniciando geração de PDF...');
+                
+                // Obter todos os dispositivos renderizados
+                const deviceCards = document.querySelectorAll('.device-card');
+                if (deviceCards.length === 0) {
+                    showError('Nenhum dispositivo para gerar PDF');
+                    return;
+                }
+                
+                // Mostrar loading
+                const loadingMsg = 'Gerando PDF... Aguarde.';
+                showSuccess(loadingMsg);
+                
+                // Usar jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+                
+                // Habilitar UTF-8 (importante para caracteres especiais)
+                doc.setLanguage('pt');
+                
+                // Configurações
+                const pageWidth = 210; // A4 width em mm
+                const pageHeight = 297; // A4 height em mm
+                const margin = 10;
+                const contentWidth = pageWidth - (margin * 2);
+                let yPos = margin;
+                
+                // Título (limpar texto)
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'bold');
+                doc.text(cleanTextForPDF('Dispositivos - VisionKrono'), margin, yPos);
+                yPos += 10;
+                
+                // Informações do evento (limpar texto)
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'normal');
+                const eventNameClean = cleanTextForPDF(currentEvent.name || currentEvent.id.substring(0, 20) + '...');
+                doc.text(`Evento: ${eventNameClean}`, margin, yPos);
+                yPos += 8;
+                doc.text(`Data: ${new Date().toLocaleDateString('pt-PT')}`, margin, yPos);
+                yPos += 12;
+                
+                // Linha separadora
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 8;
+                
+                // Buscar dados completos dos dispositivos do banco para ter informações atualizadas
+                const { data: devicesData, error: devicesError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select(`
+                        *,
+                        devices (
+                            device_name
+                        ),
+                        events (
+                            name
+                        )
+                    `)
+                    .eq('event_id', currentEvent.id)
+                    .order('checkpoint_order', { ascending: true, nullsLast: true });
+                
+                if (devicesError) {
+                    console.error('Erro ao buscar dados dos dispositivos:', devicesError);
+                }
+                
+                // Criar mapa de dispositivos por ID para acesso rápido
+                const devicesMap = new Map();
+                if (devicesData) {
+                    devicesData.forEach(d => {
+                        devicesMap.set(d.device_id, d);
+                    });
+                }
+                
+                // Iterar pelos dispositivos
+                for (let i = 0; i < deviceCards.length; i++) {
+                    const card = deviceCards[i];
+                    const deviceId = card.querySelector('[id^="qrCodeInline-"]')?.id.replace('qrCodeInline-', '');
+                    
+                    if (!deviceId) continue;
+                    
+                    // Buscar dados do dispositivo
+                    const deviceData = devicesMap.get(deviceId);
+                    
+                    // Obter informações do dispositivo (limpar todos os textos)
+                    const deviceTitleRaw = card.querySelector('.device-title')?.textContent?.replace('📱', '').trim() || deviceData?.devices?.device_name || 'Dispositivo';
+                    const deviceTitle = cleanTextForPDF(deviceTitleRaw);
+                    
+                    const roleText = cleanTextForPDF(deviceData?.role || 'detector');
+                    const sessionsText = `${deviceData?.active_sessions || 0}/${deviceData?.max_sessions || 1}`;
+                    const pinText = deviceData?.device_pin ? '****' : 'Sem PIN';
+                    
+                    // Informações do checkpoint (do banco de dados, limpar texto)
+                    const checkpointName = cleanTextForPDF(deviceData?.checkpoint_name || 'N/A');
+                    const checkpointOrder = deviceData?.checkpoint_order || null;
+                    const checkpointType = deviceData?.checkpoint_type || null;
+                    const checkpointText = `${checkpointName}${checkpointOrder ? ` (#${checkpointOrder})` : ''}`;
+                    
+                    // Verificar se conta voltas (intermediate e finish contam voltas)
+                    const contaVoltas = checkpointType === 'intermediate' || checkpointType === 'finish';
+                    const checkpointTypeLabel = getCheckpointTypeLabelForPDF(checkpointType);
+                    const checkpointTypeText = `${checkpointTypeLabel} (${contaVoltas ? 'Conta voltas' : 'Nao conta voltas'})`;
+                    
+                    // Obter nome do evento (do banco, limpar texto)
+                    const eventNameText = cleanTextForPDF(deviceData?.events?.name || currentEvent.name || 'N/A');
+                    
+                    // Verificar se precisa de nova página (deixar espaço para próximo dispositivo)
+                    if (yPos > pageHeight - 60) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                    
+                    // Layout linha a linha: QR Code à esquerda, informações à direita
+                    const qrSize = 40; // Tamanho do QR Code (mm)
+                    const infoStartX = margin + qrSize + 8; // Início das informações (após QR Code)
+                    const infoWidth = pageWidth - infoStartX - margin; // Largura disponível para informações
+                    
+                    // Verificar se precisa de nova página (deixar espaço para dispositivo completo)
+                    if (yPos + qrSize + 10 > pageHeight - margin - 10) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                    
+                    // Tentar obter QR Code como imagem
+                    const qrContainer = document.getElementById(`qrCodeInline-${deviceId}`);
+                    let qrAdded = false;
+                    
+                    if (qrContainer && qrContainer.querySelector('canvas')) {
+                        try {
+                            const canvas = qrContainer.querySelector('canvas');
+                            if (canvas) {
+                                // Converter canvas para imagem
+                                const imgData = canvas.toDataURL('image/png');
+                                
+                                // Adicionar QR Code à esquerda
+                                doc.addImage(imgData, 'PNG', margin, yPos, qrSize, qrSize);
+                                qrAdded = true;
+                            }
+                        } catch (error) {
+                            console.error('Erro ao adicionar QR Code ao PDF:', error);
+                        }
+                    }
+                    
+                    if (!qrAdded) {
+                        // Desenhar placeholder se QR Code não disponível
+                        doc.setFillColor(240, 240, 240);
+                        doc.rect(margin, yPos, qrSize, qrSize, 'F');
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text('QR', margin + qrSize/2 - 3, yPos + qrSize/2);
+                        doc.text('Code', margin + qrSize/2 - 5, yPos + qrSize/2 + 4);
+                    }
+                    
+                    // Informações do dispositivo ao lado do QR Code
+                    let infoY = yPos;
+                    
+                    // Nome do dispositivo (negrito, maior) - texto já limpo
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`${i + 1}. ${deviceTitle}`, infoStartX, infoY);
+                    infoY += 6;
+                    
+                    // Nome do evento (em destaque) - texto já limpo
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`Evento: ${eventNameText}`, infoStartX, infoY);
+                    infoY += 6;
+                    
+                    // Informações em duas colunas
+                    const col1X = infoStartX;
+                    const col2X = infoStartX + 60;
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Role: ${roleText}`, col1X, infoY);
+                    doc.text(`Sessoes: ${sessionsText}`, col2X, infoY);
+                    infoY += 6;
+                    
+                    doc.text(`PIN: ${pinText}`, col1X, infoY);
+                    doc.text(`Checkpoint: ${checkpointText}`, col2X, infoY);
+                    infoY += 6;
+                    
+                    doc.text(`Tipo: ${checkpointTypeText}`, col1X, infoY);
+                    doc.text(`UUID: ${deviceId.substring(0, 10)}...`, col2X, infoY);
+                    infoY += 6;
+                    
+                    // Linha informativa sobre QR Code
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'italic');
+                    doc.text('Escaneie o QR Code para autenticacao automatica', col1X, infoY);
+                    
+                    // Avançar Y para próximo dispositivo (usar maior entre QR Code e informações)
+                    yPos += Math.max(qrSize, infoY - yPos) + 10;
+                    
+                    // Linha separadora entre dispositivos
+                    doc.setDrawColor(220, 220, 220);
+                    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+                    yPos += 5;
+                }
+                
+                // Rodapé
+                const totalPages = doc.internal.getNumberOfPages();
+                for (let p = 1; p <= totalPages; p++) {
+                    doc.setPage(p);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'italic');
+                    doc.text(
+                        `Página ${p} de ${totalPages} - VisionKrono`,
+                        pageWidth / 2,
+                        pageHeight - 5,
+                        { align: 'center' }
+                    );
+                }
+                
+                // Salvar PDF
+                const fileName = `dispositivos_${currentEvent.name?.replace(/[^a-z0-9]/gi, '_') || currentEvent.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                
+                console.log('✅ PDF gerado com sucesso:', fileName);
+                showSuccess('PDF gerado com sucesso!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao gerar PDF:', error);
+                showError(`Erro ao gerar PDF: ${error.message}`);
             }
         }
         

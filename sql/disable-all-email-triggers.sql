@@ -46,3 +46,4 @@ AND NOT tgisinternal;
 -- ALTER TABLE classifications ENABLE TRIGGER trigger_classification_notification_email;
 -- ALTER TABLE classifications ENABLE TRIGGER USER;
 
+

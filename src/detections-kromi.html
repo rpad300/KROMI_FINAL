@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>VisionKrono - Scanner de Dispositivo</title>
+    <script>
+        console.log('🚀🚀🚀 [DETECTIONS-KROMI.HTML] Página de SCANNER carregando...');
+        console.log('🚀🚀🚀 [DETECTIONS-KROMI.HTML] Esta é a página de entrada/scanner');
+    </script>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .scanner-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .qr-scanner-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .qr-framing-box {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        #qrVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        
+        .qr-scanner-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: var(--text-secondary, #aaa);
+            font-size: 16px;
+            background: #000;
+        }
+        
+        .qr-scanner-placeholder .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .input-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            padding: 0 20px;
+            z-index: 100;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 70%, transparent 100%);
+            padding-top: 40px;
+            padding-bottom: 20px;
+        }
+        
+        .input-section {
+            margin-bottom: 15px;
+        }
+        
+        .input-section label {
+            display: block;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .input-section input {
+            width: 100%;
+            padding: 18px;
+            font-size: 24px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(252, 107, 3, 0.8);
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            backdrop-filter: blur(10px);
+        }
+        
+        .input-section input:focus {
+            outline: none;
+            border-color: #fc6b03;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(252, 107, 3, 0.5);
+        }
+        
+        .error-message {
+            color: #ef4444;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+            min-height: 20px;
+            display: none;
+            font-weight: 600;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .success-message {
+            color: #10b981;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+            min-height: 20px;
+            display: none;
+            font-weight: 600;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .btn-primary {
+            background: #fc6b03;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(252, 107, 3, 0.4);
+        }
+        
+        .btn-primary:hover {
+            background: #e55a00;
+            box-shadow: 0 6px 20px rgba(252, 107, 3, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .scanning-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #10b981;
+            font-size: 16px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            z-index: 50;
+            display: none;
+        }
+        
+        .scanning-indicator.active {
+            display: block;
+        }
+        
+        .scanning-indicator::before {
+            content: '🔍 ';
+            margin-right: 5px;
+        }
+        
+        .scanner-header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .scanner-header h1 {
+            font-size: 20px;
+            color: #fc6b03;
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        .scanner-header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        #qrCanvas {
+            display: none;
+        }
+        
+        #startScanner {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <!-- Header Minimalista -->
+        <div class="scanner-header">
+            <h1>🔐 Acesso ao Dispositivo</h1>
+            <p>Escaneie o QR Code ou digite o código</p>
+        </div>
+        
+        <!-- Indicador de Escaneamento -->
+        <div class="scanning-indicator" id="scanningIndicator">
+            Escaneando QR Code...
+        </div>
+        
+        <!-- QR Code Scanner (Tela Cheia) -->
+        <div class="qr-scanner-container">
+            <div class="qr-framing-box" id="qrFramingBox">
+                <video id="qrVideo" autoplay playsinline></video>
+                <canvas id="qrCanvas" style="display: none;"></canvas>
+                <div class="qr-scanner-placeholder" id="qrPlaceholder">
+                    <div class="icon">📷</div>
+                    <div>Iniciando câmera...</div>
+                </div>
+            </div>
+            
+            <!-- Overlay de Input (Sobreposto na parte inferior) -->
+            <div class="input-overlay">
+                <!-- Código Manual -->
+                <div class="input-section">
+                    <label for="codeInput">🔑 Código de Acesso (6 caracteres)</label>
+                    <input type="text" 
+                           id="codeInput" 
+                           inputmode="text" 
+                           pattern="[A-Z0-9]*" 
+                           maxlength="6" 
+                           placeholder="Digite o código"
+                           autocomplete="off">
+                </div>
+                
+                <!-- Mensagens -->
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
+                
+                <!-- Botão Validar -->
+                <button class="btn btn-primary" id="validateBtn">
+                    <span>🔓</span> Validar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Botão Tentar Novamente (oculto por padrão) -->
+        <button class="btn btn-primary" id="startScanner" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; padding: 12px 24px;">
+            <span>📷</span> Tentar Novamente
+        </button>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/supabase.js?v=2025102605"></script>
+    <script src="/auth-client.js?v=2025102616"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    
+    <script>
+        // Variáveis globais
+        let qrStream = null;
+        let scanningInterval = null;
+        let currentEvent = null;
+        let currentDevice = null;
+        
+        // Inicializar Supabase
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 [DETECTIONS-KROMI] Inicializando página de scanner...');
+            
+            if (window.supabaseClient) {
+                await window.supabaseClient.init();
+            }
+            
+            // Event listeners
+            document.getElementById('validateBtn')?.addEventListener('click', validateAccess);
+            document.getElementById('codeInput')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') validateAccess();
+            });
+            
+            // Auto-focus no input de código
+            setTimeout(() => {
+                document.getElementById('codeInput')?.focus();
+            }, 500);
+            
+            // Iniciar scanner QR Code automaticamente ao carregar
+            console.log('📷 Iniciando scanner QR Code automaticamente...');
+            await startQRScanner();
+        });
+        
+        // Iniciar scanner QR Code automaticamente
+        async function startQRScanner() {
+            const video = document.getElementById('qrVideo');
+            const placeholder = document.getElementById('qrPlaceholder');
+            const indicator = document.getElementById('scanningIndicator');
+            const canvas = document.getElementById('qrCanvas');
+            const startBtn = document.getElementById('startScanner');
+            
+            try {
+                // Esconder botão de iniciar scanner
+                if (startBtn) {
+                    startBtn.style.display = 'none';
+                }
+                
+                // Parar scanner anterior se existir
+                if (qrStream) {
+                    qrStream.getTracks().forEach(track => track.stop());
+                    qrStream = null;
+                }
+                
+                // Acessar câmera
+                qrStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                video.srcObject = qrStream;
+                video.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+                if (indicator) indicator.classList.add('active');
+                
+                // Aguardar video estar pronto
+                await new Promise((resolve) => {
+                    video.addEventListener('loadedmetadata', () => {
+                        resolve();
+                    }, { once: true });
+                });
+                
+                // Iniciar loop de escaneamento
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                
+                scanningInterval = setInterval(() => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        
+                        if (code) {
+                            console.log('✅ QR Code detectado:', code.data);
+                            handleQRCodeScanned(code.data);
+                        }
+                    }
+                }, 300);
+                
+                console.log('✅ Scanner QR Code iniciado automaticamente');
+                
+            } catch (error) {
+                console.error('❌ Erro ao iniciar scanner:', error);
+                showError('Erro ao acessar câmera. Verifique as permissões.');
+                
+                // Mostrar botão manual se câmera falhar
+                if (startBtn) {
+                    startBtn.style.display = 'block';
+                    startBtn.innerHTML = '<span>📷</span> Tentar Novamente';
+                    startBtn.onclick = startQRScanner;
+                }
+                
+                if (placeholder) placeholder.style.display = 'flex';
+                if (indicator) indicator.classList.remove('active');
+            }
+        }
+        
+        // Parar scanner QR Code
+        function stopQRScanner() {
+            if (scanningInterval) {
+                clearInterval(scanningInterval);
+                scanningInterval = null;
+            }
+            
+            if (qrStream) {
+                qrStream.getTracks().forEach(track => track.stop());
+                qrStream = null;
+            }
+            
+            const video = document.getElementById('qrVideo');
+            const placeholder = document.getElementById('qrPlaceholder');
+            const indicator = document.getElementById('scanningIndicator');
+            
+            if (video) video.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'flex';
+            if (indicator) indicator.classList.remove('active');
+        }
+        
+        // Processar QR Code escaneado
+        async function handleQRCodeScanned(qrData) {
+            try {
+                // Parar scanner
+                stopQRScanner();
+                
+                console.log('📱 QR Code escaneado:', qrData);
+                
+                // Verificar se é uma URL (detection-kromi.html)
+                if (qrData.includes('detection-kromi.html') || qrData.includes('detection?event=')) {
+                    console.log('✅ QR Code é uma URL, redirecionando diretamente...');
+                    // É uma URL, redirecionar diretamente
+                    window.location.href = qrData;
+                    return;
+                }
+                
+                // Verificar se é uma URL HTTP/HTTPS simples
+                if (qrData.startsWith('http://') || qrData.startsWith('https://')) {
+                    console.log('✅ QR Code é uma URL HTTP, redirecionando...');
+                    window.location.href = qrData;
+                    return;
+                }
+                
+                // Tentar parsear JSON do QR Code
+                let qrObject = null;
+                try {
+                    qrObject = JSON.parse(qrData);
+                } catch (e) {
+                    // Se não for JSON, pode ser apenas código de acesso
+                    console.log('QR Code não é JSON nem URL, tentando como código de acesso...');
+                    document.getElementById('codeInput').value = qrData.toUpperCase();
+                    await validateAccess();
+                    return;
+                }
+                
+                if (qrObject.event_id && qrObject.device_id) {
+                    currentEvent = { id: qrObject.event_id, name: qrObject.event_name || null };
+                    currentDevice = qrObject.device_id;
+                    
+                    // Se tem código de acesso no QR, usar também
+                    if (qrObject.access_code) {
+                        document.getElementById('codeInput').value = qrObject.access_code;
+                    }
+                    
+                    // Buscar nome do evento da base de dados se não veio no QR Code
+                    if (!currentEvent.name) {
+                        try {
+                            const { data: eventData } = await window.supabaseClient.supabase
+                                .from('events')
+                                .select('name')
+                                .eq('id', qrObject.event_id)
+                                .maybeSingle();
+                            
+                            if (eventData && eventData.name) {
+                                currentEvent.name = eventData.name;
+                                console.log('✅ Nome do evento carregado:', currentEvent.name);
+                            } else {
+                                console.log('⚠️ Evento não encontrado na base de dados');
+                            }
+                        } catch (err) {
+                            console.log('⚠️ Erro ao buscar nome do evento:', err);
+                        }
+                    }
+                    
+                    // Redirecionar direto para página de detecção (SEM pedir PIN)
+                    console.log('✅ QR Code válido! Redirecionando para detecção...');
+                    redirectToDetection();
+                } else {
+                    showError('QR Code inválido. Verifique e tente novamente.');
+                    // Reiniciar scanner após erro
+                    setTimeout(() => {
+                        startQRScanner();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao processar QR Code:', error);
+                showError('Erro ao processar QR Code.');
+                // Reiniciar scanner após erro
+                setTimeout(() => {
+                    startQRScanner();
+                }, 2000);
+            }
+        }
+        
+        // Buscar dispositivo por código
+        async function findDeviceByCode(accessCode) {
+            try {
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('device_id, event_id, device_pin, checkpoint_name, max_sessions, active_sessions')
+                    .eq('access_code', accessCode.toUpperCase())
+                    .maybeSingle();
+                
+                if (error) {
+                    console.error('❌ Erro ao buscar dispositivo:', error);
+                    return null;
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('❌ Erro ao buscar dispositivo:', error);
+                return null;
+            }
+        }
+        
+        // Validar acesso (apenas código, SEM PIN)
+        async function validateAccess() {
+            const codeInput = document.getElementById('codeInput');
+            const errorMsg = document.getElementById('errorMessage');
+            const successMsg = document.getElementById('successMessage');
+            
+            const codeValue = codeInput?.value?.trim().toUpperCase() || '';
+            
+            // Limpar mensagens
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+            
+            // Validar código
+            if (!codeValue || codeValue.length !== 6) {
+                showError('Digite um código de acesso válido (6 caracteres)');
+                return;
+            }
+            
+            showSuccess('🔍 Buscando dispositivo...');
+            
+            const deviceData = await findDeviceByCode(codeValue);
+            
+            if (deviceData && deviceData.device_id && deviceData.event_id) {
+                currentDevice = deviceData.device_id;
+                currentEvent = { id: deviceData.event_id, name: null };
+                
+                // Buscar nome do evento da base de dados (usar nome genérico se não encontrar)
+                currentEvent.name = 'teste1'; // Nome fixo para teste
+                
+                try {
+                    const { data: eventData } = await window.supabaseClient.supabase
+                        .from('events')
+                        .select('name')
+                        .eq('id', deviceData.event_id)
+                        .maybeSingle();
+                    
+                    if (eventData && eventData.name) {
+                        currentEvent.name = eventData.name;
+                        console.log('✅ Nome do evento carregado da DB:', currentEvent.name);
+                    } else {
+                        console.log('⚠️ Evento não encontrado na base de dados, usando nome padrão');
+                    }
+                } catch (err) {
+                    console.log('⚠️ Erro ao buscar nome do evento:', err);
+                }
+                
+                // Redirecionar direto para página de detecção (SEM pedir PIN)
+                console.log('✅ Código válido! Redirecionando para detecção...');
+                redirectToDetection();
+            } else {
+                showError('❌ Código inválido. Verifique e tente novamente.');
+                codeInput.value = '';
+                codeInput.focus();
+            }
+        }
+        
+        // Redirecionar para página de detecção
+        function redirectToDetection() {
+            if (!currentEvent?.id || !currentDevice) {
+                showError('Erro: Device ou Event não encontrado');
+                return;
+            }
+            
+            const params = new URLSearchParams({
+                event: currentEvent.id,
+                device: currentDevice
+            });
+            
+            if (currentEvent.name) {
+                params.set('eventName', currentEvent.name);
+            }
+            
+            console.log('✅ Redirecionando para /detection-kromi.html com:', params.toString());
+            window.location.href = `/detection-kromi.html?${params.toString()}`;
+        }
+        
+        // Mostrar erro
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            const successMsg = document.getElementById('successMessage');
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            successMsg.classList.remove('show');
+        }
+        
+        // Mostrar sucesso
+        function showSuccess(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = message;
+            successMsg.classList.add('show');
+            errorMsg.classList.remove('show');
+        }
+        
+        // Limpar ao sair
+        window.addEventListener('beforeunload', () => {
+            stopQRScanner();
+        });
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
@@ -20,115 +20,64 @@
     <link rel="stylesheet" href="/kromi-mobile-android.css">
     <link rel="stylesheet" href="/kromi-camera.css">
     
-    <!-- Sistema de Navegação Unificado -->
-    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
-    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
-    
     <!-- Capability Detection -->
     <script src="/kromi-capability-detection.js"></script>
     
     <!-- Additional inline styles kept minimal for runtime overrides -->
 </head>
 <body data-theme="dark">
-    <!-- App Container -->
-    <div class="layout-with-sidebar">
-        <!-- Sidebar (renderizada automaticamente pelo NavigationComponent) -->
-        <div class="sidebar" id="sidebar"></div>
+    <!-- Camera Container (Fullscreen) -->
+    <div class="camera-container" id="cameraContainer">
+        <!-- Camera Video -->
+        <video id="cameraVideo" class="camera-video" autoplay muted playsinline></video>
         
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <h1 class="header-title">📱 Detecção de Dorsais</h1>
-            </div>
-            <div class="header-right">
-                <button class="btn btn-sm btn-secondary" id="toggleFullscreen">
-                    <i>⛶</i> Fullscreen
-                </button>
-                <button class="btn btn-sm btn-secondary" id="toggleFlash">
-                    <i>💡</i> Flash
-                </button>
-            </div>
-        </header>
+        <!-- Camera Overlay -->
+        <div class="camera-overlay" id="cameraOverlay">
+            <!-- Detection areas will be added here -->
+        </div>
         
-        <!-- Main Content -->
-        <main class="main">
-            <div class="camera-container" id="cameraContainer">
-                <!-- Back Button (Mobile Only) -->
-                <button class="back-button-mobile" id="backButton" title="Voltar ao Evento">
-                    ←
-                </button>
-                
-                <!-- Camera Video -->
-                <video id="cameraVideo" class="camera-video" autoplay muted playsinline></video>
-                
-                <!-- Camera Overlay -->
-                <div class="camera-overlay" id="cameraOverlay">
-                    <!-- Detection areas will be added here -->
-                </div>
-                
-                <!-- Camera Info -->
-                <div class="camera-info">
-                    <div class="detection-stats" id="detectionStats">
-                        <div style="font-weight: 600; margin-bottom: var(--spacing-1);">📊 Detecções</div>
-                        <div id="detectionCount">0</div>
-                    </div>
-                    
-                    <div class="event-info" id="eventInfo">
-                        <div style="font-weight: 600; margin-bottom: var(--spacing-1);">🏃 Evento</div>
-                        <div id="eventName">Nenhum evento selecionado</div>
-                    </div>
-                    
-                    <!-- Botão Terminar Sessão -->
-                    <button id="endSessionBtn" onclick="endSession()" 
-                        style="position: absolute; top: var(--spacing-4); right: var(--spacing-4); background: rgba(239, 68, 68, 0.9); color: white; border: 2px solid var(--danger); padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-full); font-size: var(--font-size-sm); font-weight: 600; cursor: pointer; backdrop-filter: blur(10px); z-index: 25; display: none;">
-                        🚪 Terminar Sessão
-                    </button>
-                </div>
-                
-                <!-- Side Controls (Left Side) -->
-                <div class="side-controls">
-                    <button class="btn btn-sm btn-warning" id="toggleFlash">
-                        <i>⚡</i> Flash
-                    </button>
-                    <button class="btn btn-sm btn-danger" id="switchCamera">
-                        <i>🔄</i> Trocar
-                    </button>
-                    <button class="btn btn-sm btn-danger" id="endSessionBtn2" onclick="endSession()" style="display: none;">
-                        <i>🚪</i> Terminar
-                    </button>
-                </div>
-                
-                <!-- Main Camera Controls (Center Bottom) -->
-                <div class="main-camera-controls">
-                    <button class="btn btn-lg btn-primary" id="startDetection">
-                        <i>▶️</i> Iniciar Detecção
-                    </button>
-                    <button class="btn btn-lg btn-secondary" id="stopDetection" style="display: none;">
-                        <i>⏹️</i> Parar Detecção
-                    </button>
-                </div>
+        <!-- Camera Info -->
+        <div class="camera-info">
+            <div class="detection-stats" id="detectionStats">
+                <div style="font-weight: 600; margin-bottom: var(--spacing-1);">📊 Detecções</div>
+                <div id="detectionCount">0</div>
             </div>
-        </main>
+            
+            <div class="event-info" id="eventInfo">
+                <div style="font-weight: 600; margin-bottom: var(--spacing-1);">🏃 Evento</div>
+                <div id="eventName">Nenhum evento selecionado</div>
+                <div id="eventDate" style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">-</div>
+                <div id="checkpointType" style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">-</div>
+                <div id="deviceOrder" style="font-size: 0.85em; opacity: 0.6;">#-</div>
+            </div>
+            
+        </div>
         
-        <!-- Bottom Navigation (Mobile) -->
-        <nav class="app-bottom-nav">
-            <button class="nav-btn" onclick="window.location.href='/'">
-                <i>🏠</i>
-                <span>Home</span>
+        <!-- Bottom Controls (todos na parte inferior) -->
+        <div class="bottom-controls">
+            <button class="btn btn-sm btn-warning" id="toggleFlash" title="Alternar Flash">
+                <i>⚡</i> <span class="btn-text">Flash</span>
             </button>
-            <button class="nav-btn" onclick="window.location.href='/events'">
-                <i>🏃</i>
-                <span>Eventos</span>
+            <button class="btn btn-sm btn-danger" id="switchCamera" title="Trocar Câmera">
+                <i>🔄</i> <span class="btn-text">Trocar</span>
             </button>
-            <button class="nav-btn active">
-                <i>📱</i>
-                <span>Detecção</span>
+            <button class="btn btn-sm" id="toggleSoundBtn" title="Alternar Som" style="display: inline-flex;">
+                <i>🔊</i> <span class="btn-text">Som</span>
             </button>
-            <button class="nav-btn" onclick="window.location.href='/classifications'">
-                <i>🏆</i>
-                <span>Rankings</span>
+            <button class="btn btn-sm btn-danger" id="endSessionBtn" onclick="endSession()" style="display: none;" title="Terminar Sessão">
+                <i>🚪</i> <span class="btn-text">Sair</span>
             </button>
-        </nav>
+        </div>
+        
+        <!-- Main Camera Controls (Center Bottom) -->
+        <div class="main-camera-controls">
+            <button class="btn btn-lg btn-primary" id="startDetection">
+                <i>▶️</i> Iniciar Detecção
+            </button>
+            <button class="btn btn-lg btn-secondary" id="stopDetection" style="display: none;">
+                <i>⏹️</i> Parar Detecção
+            </button>
+        </div>
     </div>
     
     <!-- Permission Panel -->
@@ -147,9 +96,6 @@
                 <button class="btn btn-primary" id="validatePin">
                     <i>🔓</i> Validar PIN
                 </button>
-                <button class="btn btn-secondary" onclick="window.history.back()">
-                    <i>↩️</i> Voltar
-                </button>
             </div>
         </div>
     </div>
@@ -163,9 +109,6 @@
                 <button class="btn btn-primary" id="requestCamera">
                     <i>📷</i> Permitir Câmera
                 </button>
-                <button class="btn btn-secondary" onclick="window.location.href='/'">
-                    <i>↩️</i> Voltar
-                </button>
             </div>
         </div>
     </div>
@@ -175,14 +118,6 @@
     <script src="/supabase.js?v=2025102605" defer></script>
     <script src="/auth-client.js?v=2025102616" defer></script>
     <script src="/auth-helper.js?v=2025102620" defer></script>
-    
-    <!-- Sistema de Navegação Unificado -->
-    <script src="/navigation-config.js?v=2025102601" defer></script>
-    <script src="/navigation-service.js?v=2025102601" defer></script>
-    <script src="/navigation-component.js?v=2025102601" defer></script>
-    <script src="/navigation-init.js?v=2025102601" defer></script>
-    
-    <!-- NOTA: Detection NÃO tem proteção de rotas - acesso via PIN do dispositivo -->
     
     <!-- Detection Logic -->
     <script>
@@ -194,9 +129,19 @@
         let currentDevice = null;
         let sessionId = null;
         let captureInterval = null;
+        let motionCheckInterval = null;
         let currentPosition = null;
         let devicePin = null;
         let pinValidated = false;
+        let soundEnabled = true; // Som habilitado por padrão
+        let detectionSound = null; // Audio object para som de detecção
+        let facingMode = 'environment'; // 'environment' (traseira) ou 'user' (frontal)
+        let lastFrame = null; // Para detecção de movimento
+        let motionDetected = false; // Flag para indicar se há movimento
+        let motionThreshold = 50; // Sensibilidade do movimento (0-255)
+        let consecutiveMotionFrames = 0; // Contador de frames com movimento
+        let minMotionFrames = 5; // Número mínimo de frames com movimento para considerar detecção
+        let wakeLock = null; // Para prevenir suspensão do dispositivo
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', async () => {
@@ -205,67 +150,61 @@
                 await window.supabaseClient.init();
             }
             
-            // Initialize navigation
-            if (window.Navigation) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const eventId = urlParams.get('event');
-                let deviceId = urlParams.get('device');
-                const eventName = urlParams.get('eventName');
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            let deviceId = urlParams.get('device');
+            const eventName = urlParams.get('eventName');
+            
+            console.log('🔗 Parâmetros URL:');
+            console.log('  Event:', eventId);
+            console.log('  Device:', deviceId);
+            console.log('  EventName:', eventName);
+            
+            // Se não tem deviceId, buscar primeiro dispositivo do evento
+            if (eventId && !deviceId) {
+                console.log('⚠️ Device ID não especificado, buscando dispositivos do evento...');
                 
-                console.log('🔗 Parâmetros URL:');
-                console.log('  Event:', eventId);
-                console.log('  Device:', deviceId);
-                console.log('  EventName:', eventName);
+                const { data: devices, error } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('device_id, checkpoint_name, checkpoint_type, checkpoint_order')
+                    .eq('event_id', eventId)
+                    .order('checkpoint_order', { ascending: true })
+                    .limit(1);
                 
-                // Se não tem deviceId, buscar primeiro dispositivo do evento
-                if (eventId && !deviceId) {
-                    console.log('⚠️ Device ID não especificado, buscando dispositivos do evento...');
+                if (devices && devices.length > 0) {
+                    deviceId = devices[0].device_id;
+                    console.log('✅ Usando primeiro dispositivo:', deviceId, devices[0].checkpoint_name);
                     
-                    const { data: devices, error } = await window.supabaseClient.supabase
-                        .from('event_devices')
-                        .select('device_id, checkpoint_name')
-                        .eq('event_id', eventId)
-                        .order('checkpoint_order', { ascending: true })
-                        .limit(1);
-                    
-                    if (devices && devices.length > 0) {
-                        deviceId = devices[0].device_id;
-                        console.log('✅ Usando primeiro dispositivo:', deviceId, devices[0].checkpoint_name);
-                        
-                        // Atualizar URL
-                        const newUrl = new URL(window.location);
-                        newUrl.searchParams.set('device', deviceId);
-                        window.history.replaceState({}, '', newUrl);
-                    } else {
-                        console.error('❌ Nenhum dispositivo encontrado para este evento');
-                        showError('Nenhum dispositivo configurado para este evento. Configure em /devices');
-                        setTimeout(() => window.location.href = `/devices?event=${eventId}&eventName=${eventName}`, 3000);
-                        return;
-                    }
+                    // Atualizar URL
+                    const newUrl = new URL(window.location);
+                    newUrl.searchParams.set('device', deviceId);
+                    window.history.replaceState({}, '', newUrl);
+                } else {
+                    console.error('❌ Nenhum dispositivo encontrado para este evento');
+                    showError('Nenhum dispositivo configurado para este evento. Configure em /devices');
+                    setTimeout(() => window.location.href = `/devices?event=${eventId}&eventName=${eventName}`, 3000);
+                    return;
                 }
-                
-                currentEvent = { id: eventId, name: eventName };
-                currentDevice = deviceId;
-                sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                
-                console.log('🔗 Parâmetros finais:');
-                console.log('  Event:', eventId);
-                console.log('  Device:', deviceId);
-                console.log('  Session:', sessionId);
-                
-                // Atualizar contexto de evento
-                if (window.navigationService) {
-                    window.navigationService.setEventContext(eventId, eventName);
-                }
-                
-                if (eventId) {
-                    loadEventInfo(eventId, eventName);
-                }
-                
-                // Register device
-                if (eventId && deviceId) {
-                    await registerDevice(eventId, deviceId);
-                }
+            }
+            
+            currentEvent = { id: eventId, name: eventName || null };
+            currentDevice = deviceId;
+            sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            console.log('🔗 Parâmetros finais:');
+            console.log('  Event:', eventId);
+            console.log('  Device:', deviceId);
+            console.log('  Session:', sessionId);
+            console.log('  EventName da URL:', eventName);
+            
+            if (eventId) {
+                await loadEventInfo(eventId, eventName);
+            }
+            
+            // Register device
+            if (eventId && deviceId) {
+                await registerDevice(eventId, deviceId);
             }
             
             // Get current location
@@ -308,14 +247,16 @@
                 const stopDetectionBtn = document.getElementById('stopDetection');
                 const switchCameraBtn = document.getElementById('switchCamera');
                 const toggleFlashBtn = document.getElementById('toggleFlash');
-                const endSessionBtn2 = document.getElementById('endSessionBtn2');
+                const toggleSoundBtn = document.getElementById('toggleSoundBtn');
+                const endSessionBtn = document.getElementById('endSessionBtn');
                 
                 console.log('🔍 Procurando botões...');
                 console.log('startDetectionBtn:', startDetectionBtn);
                 console.log('stopDetectionBtn:', stopDetectionBtn);
                 console.log('switchCameraBtn:', switchCameraBtn);
                 console.log('toggleFlashBtn:', toggleFlashBtn);
-                console.log('endSessionBtn2:', endSessionBtn2);
+                console.log('toggleSoundBtn:', toggleSoundBtn);
+                console.log('endSessionBtn:', endSessionBtn);
                 
                 if (startDetectionBtn) {
                     startDetectionBtn.addEventListener('click', startDetection);
@@ -345,46 +286,48 @@
                     console.error('❌ Botão toggleFlash não encontrado');
                 }
                 
-                if (endSessionBtn2) {
-                    // Remove onclick inline e adiciona event listener
-                    endSessionBtn2.removeAttribute('onclick');
-                    endSessionBtn2.addEventListener('click', endSession);
-                    console.log('✅ Event listener adicionado: endSessionBtn2');
+                if (toggleSoundBtn) {
+                    toggleSoundBtn.addEventListener('click', toggleSound);
+                    console.log('✅ Event listener adicionado: toggleSound');
                 } else {
-                    console.error('❌ Botão endSessionBtn2 não encontrado');
+                    console.error('❌ Botão toggleSound não encontrado');
+                }
+                
+                if (endSessionBtn) {
+                    // Remove onclick inline e adiciona event listener
+                    endSessionBtn.removeAttribute('onclick');
+                    endSessionBtn.addEventListener('click', endSession);
+                    console.log('✅ Event listener adicionado: endSessionBtn');
+                } else {
+                    console.error('❌ Botão endSessionBtn não encontrado');
                 }
             }, 100);
             
-            // Fullscreen toggle
-            document.getElementById('toggleFullscreen').addEventListener('click', toggleFullscreen);
+            // Criar som de detecção
+            initDetectionSound();
             
-            // Back button (mobile)
-            const backButton = document.getElementById('backButton');
-            if (backButton) {
-                backButton.addEventListener('click', () => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const eventId = urlParams.get('event');
-                    const eventName = urlParams.get('eventName');
-                    
-                    if (eventId) {
-                        // Voltar para a página do evento (classifications)
-                        window.location.href = `/classifications?event=${eventId}${eventName ? '&eventName=' + encodeURIComponent(eventName) : ''}`;
-                    } else {
-                        // Voltar para eventos
-                        window.location.href = '/events';
-                    }
-                });
+            // Inicializar estado do botão de som
+            const soundBtn = document.getElementById('toggleSoundBtn');
+            if (soundBtn && soundEnabled) {
+                soundBtn.innerHTML = '<i>🔊</i> <span class="btn-text">Som</span>';
+                soundBtn.classList.add('btn-success');
             }
             
-            // Menu toggle mobile
-            const menuToggle = document.getElementById('menuToggle');
-            const sidebar = document.getElementById('sidebar');
+            // Prevenir suspensão do dispositivo (Wake Lock)
+            requestWakeLock();
             
-            if (menuToggle && sidebar) {
-                menuToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-open');
-                });
-            }
+            // Detectar quando a página volta ao foco
+            document.addEventListener('visibilitychange', async () => {
+                if (document.hidden) {
+                    console.log('📱 Página em background - suspendendo Wake Lock');
+                    releaseWakeLock();
+                } else {
+                    console.log('📱 Página visível - reativando Wake Lock');
+                    requestWakeLock();
+                }
+            });
+            
+            // Fullscreen toggle (removed - no header button)
         }
         
         async function requestDevicePin() {
@@ -404,7 +347,7 @@
                 // Carregar dados do dispositivo (PIN e limites de sessão)
                 const { data: deviceData, error } = await window.supabaseClient.supabase
                     .from('event_devices')
-                    .select('device_pin, checkpoint_name, max_sessions, active_sessions')
+                    .select('device_pin, checkpoint_name, checkpoint_type, checkpoint_order, max_sessions, active_sessions')
                     .eq('event_id', currentEvent.id)
                     .eq('device_id', currentDevice)
                     .single();
@@ -427,52 +370,13 @@
                 const activeSessions = deviceData.active_sessions || 0;
                 const maxSessions = deviceData.max_sessions || 1;
                 
-                console.log(`📊 Sessões (do banco): ${activeSessions}/${maxSessions}`);
+                console.log(`📊 Sessões: ${activeSessions}/${maxSessions}`);
                 console.log(`📊 Verificando limite: ${activeSessions} >= ${maxSessions} ?`);
                 console.log(`📊 Resultado: ${activeSessions >= maxSessions}`);
                 
-                // Verificar sessões ativas reais na tabela device_sessions e limpar órfãs
-                try {
-                    const { data: realSessions, error: sessionsError } = await window.supabaseClient.supabase
-                        .from('device_sessions')
-                        .select('*')
-                        .eq('event_id', currentEvent.id)
-                        .eq('device_id', currentDevice)
-                        .eq('is_active', true);
-                    
-                    if (!sessionsError && realSessions) {
-                        console.log(`🔍 Sessões ativas reais na tabela device_sessions: ${realSessions.length}`);
-                        if (realSessions.length > 0 && activeSessions === 0) {
-                            console.warn('⚠️ Sessões órfãs detectadas! Limpando automaticamente...');
-                            console.warn('   Sessões órfãs:', realSessions.map(s => s.session_id));
-                            
-                            // Limpar sessões órfãs
-                            const { error: cleanupError } = await window.supabaseClient.supabase
-                                .from('device_sessions')
-                                .update({ 
-                                    is_active: false,
-                                    ended_at: new Date().toISOString()
-                                })
-                                .eq('event_id', currentEvent.id)
-                                .eq('device_id', currentDevice)
-                                .eq('is_active', true);
-                            
-                            if (!cleanupError) {
-                                console.log('✅ Sessões órfãs limpas com sucesso');
-                                
-                                // Atualizar contador
-                                await window.supabaseClient.supabase
-                                    .from('event_devices')
-                                    .update({ active_sessions: 0 })
-                                    .eq('event_id', currentEvent.id)
-                                    .eq('device_id', currentDevice);
-                            }
-                        }
-                    }
-                } catch (debugError) {
-                    console.warn('⚠️ Erro ao verificar sessões reais:', debugError);
-                }
+                devicePin = deviceData.device_pin;
                 
+                // Se limite atingido, mostrar modal de conflito
                 if (activeSessions >= maxSessions) {
                     console.error('❌❌❌ LIMITE DE SESSÕES ATINGIDO! ❌❌❌');
                     console.error(`  Ativas: ${activeSessions}`);
@@ -482,8 +386,6 @@
                     await showSessionConflictModal(deviceData);
                     return;
                 }
-                
-                devicePin = deviceData.device_pin;
                 
                 console.log('🔐 PIN requerido para este dispositivo');
                 console.log('  PIN existe:', !!devicePin);
@@ -644,7 +546,7 @@
                         return;
                     }
                     
-                    // PIN correto! Libertar sessões antigas e criar nova
+                    // PIN correto! Libertar sessões antigas
                     confirmBtn.disabled = true;
                     confirmBtn.innerHTML = '⏳ Libertando sessão...';
                     
@@ -653,12 +555,37 @@
                     
                     // Remover modal
                     modal.remove();
-                    resolve(true);
                     
-                    // Continuar com fluxo normal (mostrar tela de PIN padrão)
-                    devicePin = deviceData.device_pin;
-                    document.getElementById('pinPanel').style.display = 'flex';
-                    document.getElementById('pinInput').focus();
+                    // Continuar com fluxo normal - criar sessão e iniciar câmera
+                    console.log('🔄 Após liberação no modal, continuando com fluxo...');
+                    
+                    // Marcar PIN como validado
+                    pinValidated = true;
+                    
+                    // Criar sessão
+                    const sessionCreated = await createDeviceSession();
+                    
+                    if (sessionCreated) {
+                        console.log('✅ Sessão criada após liberação no modal');
+                        
+                        // Esconder tela de PIN (se estiver visível)
+                        document.getElementById('pinPanel').style.display = 'none';
+                        
+                        // Mostrar botão de terminar sessão
+                        const endBtn = document.getElementById('endSessionBtn');
+                        if (endBtn) endBtn.style.display = 'inline-flex';
+                        
+                        // Mostrar tela de permissão de câmera
+                        requestCameraPermission();
+                        
+                        // Iniciar heartbeat
+                        startSessionHeartbeat();
+                    } else {
+                        console.error('❌ Falha ao criar sessão após liberação');
+                        showError('Erro ao criar sessão. Tente novamente.');
+                    }
+                    
+                    resolve(true);
                 });
                 
                 // Cancelar
@@ -674,25 +601,7 @@
             try {
                 console.log('🔓 Libertando todas as sessões do dispositivo...');
                 
-                // Decrementar contador de sessões ativas
-                // 1. Marcar todas as sessões como inativas em device_sessions
-                const { error: sessionsError } = await window.supabaseClient.supabase
-                    .from('device_sessions')
-                    .update({ 
-                        is_active: false,
-                        ended_at: new Date().toISOString()
-                    })
-                    .eq('event_id', currentEvent.id)
-                    .eq('device_id', currentDevice)
-                    .eq('is_active', true);
-                
-                if (sessionsError) {
-                    console.warn('⚠️ Erro ao marcar sessões como inativas:', sessionsError);
-                } else {
-                    console.log('✅ Sessões marcadas como inativas');
-                }
-                
-                // 2. Resetar contador em event_devices
+                // Zerar contador de sessões ativas
                 const { error } = await window.supabaseClient.supabase
                     .from('event_devices')
                     .update({ active_sessions: 0 })
@@ -702,7 +611,38 @@
                 if (error) {
                     console.error('❌ Erro ao libertar sessões:', error);
                 } else {
-                    console.log('✅ Sessões libertadas com sucesso');
+                    console.log('✅ Contador de sessões resetado');
+                }
+                
+                // IMPORTANTE: Limpar tabela device_sessions (sessões órfãs)
+                try {
+                    console.log('🧹 Limpando sessões órfãs na tabela device_sessions...');
+                    const { error: deleteError } = await window.supabaseClient.supabase
+                        .from('device_sessions')
+                        .delete()
+                        .eq('device_id', currentDevice)
+                        .eq('event_id', currentEvent.id);
+                    
+                    if (deleteError) {
+                        console.error('❌ Erro ao limpar device_sessions:', deleteError);
+                    } else {
+                        console.log('✅ Sessões órfãs removidas de device_sessions');
+                    }
+                } catch (deleteErr) {
+                    console.error('❌ Erro ao limpar device_sessions:', deleteErr);
+                }
+                
+                // Se existir função RPC para limpar sessões (opcional)
+                try {
+                    await window.supabaseClient.supabase
+                        .rpc('end_all_device_sessions', {
+                            p_device_id: currentDevice,
+                            p_event_id: currentEvent.id
+                        });
+                    console.log('✅ RPC end_all_device_sessions executada');
+                } catch (rpcError) {
+                    // Ignorar silenciosamente - função não existe
+                    console.log('ℹ️ RPC end_all_device_sessions não disponível (opcional, pode ignorar)');
                 }
                 
             } catch (error) {
@@ -737,11 +677,9 @@
                 // Esconder tela de PIN
                 document.getElementById('pinPanel').style.display = 'none';
                 
-                // Mostrar botão terminar sessão (mobile e desktop)
+                // Mostrar botão terminar sessão
                 const endBtn = document.getElementById('endSessionBtn');
-                const endBtn2 = document.getElementById('endSessionBtn2');
-                if (endBtn) endBtn.style.display = 'block';
-                if (endBtn2) endBtn2.style.display = 'inline-flex';
+                if (endBtn) endBtn.style.display = 'inline-flex';
                 
                 // Mostrar tela de permissão de câmera
                 requestCameraPermission();
@@ -794,7 +732,7 @@
         
         async function createDeviceSession() {
             try {
-                console.log('📝 Criando sessão...');
+                console.log('🔄 Criando sessão...');
                 
                 const { data, error } = await window.supabaseClient.supabase
                     .rpc('start_device_session', {
@@ -821,7 +759,48 @@
                 if (!data?.success) {
                     console.error('❌ Sessão não criada:', data);
                     if (data?.error === 'Max sessions exceeded') {
-                        showError(`Limite de ${data.max_allowed} sessões atingido!`);
+                        // Mostrar modal de conflito para libertar sessões
+                        console.log('⚠️ Limite atingido - mostrando modal de conflito...');
+                        
+                        // Buscar dados completos do dispositivo para o modal
+                        const { data: deviceData } = await window.supabaseClient.supabase
+                            .from('event_devices')
+                            .select('device_pin, checkpoint_name, checkpoint_type, checkpoint_order, max_sessions, active_sessions')
+                            .eq('event_id', currentEvent.id)
+                            .eq('device_id', currentDevice)
+                            .single();
+                        
+                        if (deviceData) {
+                            // Mostrar modal e aguardar confirmação
+                            const confirmed = await showSessionConflictModal(deviceData);
+                            
+                            if (confirmed) {
+                                // Usuário confirmou com PIN, tentar criar sessão novamente
+                                console.log('🔄 Tentando criar sessão após liberação no modal...');
+                                const retryResult = await window.supabaseClient.supabase.rpc('start_device_session', {
+                                    p_event_id: currentEvent.id,
+                                    p_device_id: currentDevice,
+                                    p_session_id: sessionId,
+                                    p_user_agent: navigator.userAgent
+                                });
+                                
+                                if (retryResult.data?.success) {
+                                    console.log('✅ Sessão criada após liberação!');
+                                    return true;
+                                } else {
+                                    console.error('❌ Ainda falhou:', retryResult.data);
+                                    showError(`Limite de ${data.max_allowed} sessões atingido!`);
+                                    return false;
+                                }
+                            } else {
+                                // Usuário cancelou
+                                console.log('❌ Liberação cancelada pelo usuário');
+                                return false;
+                            }
+                        } else {
+                            showError(`Limite de ${data.max_allowed} sessões atingido!`);
+                            return false;
+                        }
                     }
                     return false;
                 }
@@ -853,10 +832,45 @@
             }, 30000);
         }
         
+        // Função para prevenir suspensão do dispositivo (Wake Lock API)
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('🔒 Wake Lock ativado - dispositivo não entrará em suspensão');
+                    
+                    // Detectar quando o Wake Lock é liberado (ex: tela bloqueada)
+                    wakeLock.addEventListener('release', () => {
+                        console.log('🔓 Wake Lock liberado - dispositivo pode suspender');
+                    });
+                } else {
+                    console.warn('⚠️ Wake Lock API não suportada neste navegador');
+                }
+            } catch (error) {
+                console.warn('⚠️ Não foi possível ativar Wake Lock:', error.message);
+            }
+        }
+        
+        // Função para liberar Wake Lock
+        async function releaseWakeLock() {
+            try {
+                if (wakeLock && 'wakeLock' in navigator) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log('🔓 Wake Lock liberado manualmente');
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao liberar Wake Lock:', error.message);
+            }
+        }
+        
         async function endSession() {
             if (!confirm('Tem certeza que deseja terminar a sessão? Isto irá libertar o dispositivo para outro operador.')) {
                 return;
             }
+            
+            // Liberar Wake Lock ao terminar sessão
+            await releaseWakeLock();
             
             try {
                 console.log('🚪 Encerrando sessão...');
@@ -876,8 +890,16 @@
                     console.log('✅ Câmera desligada');
                 }
                 
-                // DECREMENTAR active_sessions
+                // DECREMENTAR active_sessions MANUALMENTE (fallback se função não existir)
                 console.log('📉 Decrementando active_sessions...');
+                const { error: decrementError } = await window.supabaseClient.supabase
+                    .rpc('decrement', {
+                        table_name: 'event_devices',
+                        column_name: 'active_sessions',
+                        row_id: null
+                    });
+                
+                // Alternativa: UPDATE direto
                 const { data: currentData } = await window.supabaseClient.supabase
                     .from('event_devices')
                     .select('active_sessions')
@@ -901,37 +923,47 @@
                     console.log('✅ Contador decrementado');
                 }
                 
-                // Marcar sessões como inativas na tabela device_sessions
-                if (sessionId) {
+                // Encerrar sessão no Supabase (se função existir)
+                if (sessionId && pinValidated) {
                     try {
-                        console.log('🔄 Marcando sessão como inativa...');
-                        const { error: endSessionError } = await window.supabaseClient.supabase
-                            .from('device_sessions')
-                            .update({ 
-                                is_active: false,
-                                ended_at: new Date().toISOString()
-                            })
-                            .eq('session_id', sessionId)
-                            .eq('event_id', currentEvent.id)
-                            .eq('device_id', currentDevice);
+                        console.log('🔄 Chamando end_device_session com sessionId:', sessionId);
+                        const { data, error } = await window.supabaseClient.supabase
+                            .rpc('end_device_session', {
+                                p_session_id: sessionId
+                            });
                         
-                        if (endSessionError) {
-                            console.warn('⚠️ Erro ao marcar sessão como inativa:', endSessionError);
+                        if (error) {
+                            console.error('❌ Erro ao encerrar sessão via RPC:', error);
                         } else {
-                            console.log('✅ Sessão marcada como inativa');
+                            console.log('✅ Sessão encerrada via RPC:', data);
                         }
-                    } catch (endSessionError) {
-                        console.warn('⚠️ Erro ao encerrar sessão:', endSessionError);
+                    } catch (rpcError) {
+                        console.error('❌ Erro ao chamar RPC end_device_session:', rpcError);
                     }
                 } else {
-                    console.warn('⚠️ sessionId não disponível');
+                    console.warn('⚠️ sessionId ou pinValidated não disponível:', { sessionId, pinValidated });
+                }
+                
+                // Limpar sessões inativas
+                try {
+                    console.log('🧹 Limpando sessões inativas...');
+                    const { data: cleanupData, error: cleanupError } = await window.supabaseClient.supabase
+                        .rpc('cleanup_inactive_sessions');
+                    
+                    if (cleanupError) {
+                        console.error('❌ Erro ao limpar sessões inativas:', cleanupError);
+                    } else {
+                        console.log('✅ Sessões inativas limpas:', cleanupData);
+                    }
+                } catch (cleanupRpcError) {
+                    console.error('❌ Erro ao chamar cleanup_inactive_sessions:', cleanupRpcError);
                 }
                 
                 // Mostrar mensagem
                 alert('✅ Sessão encerrada com sucesso! O dispositivo foi libertado.');
                 
-                // Redirecionar para a home page
-                window.location.href = '/';
+                // Redirecionar para a página de scanner
+                window.location.href = '/detections-kromi.html';
                 
             } catch (error) {
                 console.error('❌ Erro ao encerrar sessão:', error);
@@ -940,57 +972,10 @@
         }
         
         // Encerrar sessão ao sair (automático)
-        // Libertação automática ao navegar para outra página
         window.addEventListener('beforeunload', async (e) => {
             if (sessionId && pinValidated) {
                 // Libertar dispositivo automaticamente
                 await releaseDeviceOnExit();
-            }
-        });
-        
-        // Interceptar navegação via sidebar/links
-        document.addEventListener('click', async (e) => {
-            const link = e.target.closest('a.nav-link, .nav-btn');
-            
-            if (link) {
-                const href = link.getAttribute('href');
-                
-                // Se está a navegar para outra página (não é hash ou mesma página)
-                if (href && !href.startsWith('#') && !href.includes('detection')) {
-                    e.preventDefault();
-                    
-                    console.log('🔄 Navegação detectada para página protegida...');
-                    
-                    // 1. Libertar dispositivo se tiver sessão ativa
-                    if (sessionId && pinValidated) {
-                        console.log('🚪 Libertando dispositivo...');
-                        await releaseDeviceOnExit();
-                    }
-                    
-                    // 2. Verificar se página de destino requer autenticação
-                    const requiresAuth = !href.includes('login') && !href.includes('register');
-                    
-                    if (requiresAuth) {
-                        // Verificar se está autenticado
-                        const isAuthenticated = window.authSystem?.currentUser;
-                        
-                        if (!isAuthenticated) {
-                            console.log('🔐 Página protegida - redirecionando para login...');
-                            
-                            // Salvar URL de destino para voltar após login
-                            sessionStorage.setItem('returnUrl', href);
-                            
-                            // Redirecionar para login
-                            window.location.href = '/login.html?returnUrl=' + encodeURIComponent(href);
-                            return;
-                        }
-                    }
-                    
-                    // 3. Continuar navegação
-                    setTimeout(() => {
-                        window.location.href = href;
-                    }, 300);
-                }
             }
         });
         
@@ -1051,10 +1036,12 @@
                 // Hide permission panel
                 document.getElementById('permissionPanel').style.display = 'none';
                 
+                console.log('📷 Iniciando câmera com facingMode:', facingMode);
+                
                 // Request camera access
                 cameraStream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: 'environment', // Back camera
+                        facingMode: facingMode, // Usar variável global
                         width: { ideal: 1920 },
                         height: { ideal: 1080 }
                     }
@@ -1064,7 +1051,7 @@
                 const video = document.getElementById('cameraVideo');
                 video.srcObject = cameraStream;
                 
-                console.log('✅ Câmera iniciada');
+                console.log('✅ Câmera iniciada:', facingMode === 'environment' ? 'Traseira' : 'Frontal');
                 
                 // Show detection area
                 setupDetectionArea();
@@ -1081,15 +1068,9 @@
             detectionArea.className = 'detection-area';
             detectionArea.id = 'detectionArea';
             
-            // Position detection area (center 60% of screen)
-            const rect = {
-                left: '20%',
-                top: '20%',
-                width: '60%',
-                height: '60%'
-            };
+            // Não precisa definir posição - CSS já centraliza automaticamente
+            // usando left: 50%, top: 50%, transform: translate(-50%, -50%)
             
-            Object.assign(detectionArea.style, rect);
             overlay.appendChild(detectionArea);
         }
         
@@ -1104,30 +1085,51 @@
             
             isDetecting = true;
             detectionCount = 0;
+            motionDetected = false;
+            lastFrame = null;
             
             // Update UI
             document.getElementById('startDetection').style.display = 'none';
             document.getElementById('stopDetection').style.display = 'inline-flex';
             
-            // Start continuous capture to buffer (every 2 seconds)
-            captureInterval = setInterval(() => {
-                captureToBuffer();
-            }, 2000);
+            // Iniciar verificação de movimento (a cada 500ms)
+            motionCheckInterval = setInterval(() => {
+                detectMotion();
+            }, 500);
             
-            console.log('🎯 Detecção iniciada - Capturando para buffer a cada 2s');
-            console.log('📋 As imagens serão processadas automaticamente pelo servidor');
+            // Start continuous capture to buffer (every 1 second) - mas só se houver movimento
+            captureInterval = setInterval(() => {
+                if (motionDetected) {
+                    captureToBuffer();
+                }
+            }, 1000);
+            
+            console.log('🎯 Detecção iniciada - Monitorando movimento');
+            console.log('📊 Apenas capturará quando detectar movimento significativo');
+            console.log('⏱️ Intervalo de captura: 1 segundo (quando movimento detectado)');
+            console.log('🔒 Wake Lock ativo - dispositivo não entrará em suspensão');
         }
         
         function stopDetection() {
             console.log('⏹️ stopDetection() chamada');
             
             isDetecting = false;
+            motionDetected = false;
             
             // Stop capture interval
             if (captureInterval) {
                 clearInterval(captureInterval);
                 captureInterval = null;
             }
+            
+            // Stop motion detection interval
+            if (motionCheckInterval) {
+                clearInterval(motionCheckInterval);
+                motionCheckInterval = null;
+            }
+            
+            lastFrame = null;
+            consecutiveMotionFrames = 0;
             
             // Update UI
             document.getElementById('startDetection').style.display = 'inline-flex';
@@ -1136,10 +1138,82 @@
             console.log('⏹️ Detecção parada');
         }
         
+        function detectMotion() {
+            if (!isDetecting || !cameraStream) return;
+            
+            try {
+                const video = document.getElementById('cameraVideo');
+                if (!video.videoWidth || !video.videoHeight) return;
+                
+                // Capturar frame atual
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                if (!lastFrame) {
+                    // Primeiro frame, guardar e sair
+                    lastFrame = currentFrameData;
+                    return;
+                }
+                
+                // Comparar frames - calcular diferença total
+                let totalDifference = 0;
+                let pixels = currentFrameData.data;
+                let lastPixels = lastFrame.data;
+                
+                // Comparar apenas 1 em cada 4 pixels para performance (1/4 da resolução)
+                for (let i = 0; i < pixels.length; i += 16) {
+                    // Calcular diferença de brilho
+                    const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+                    const lastBrightness = (lastPixels[i] + lastPixels[i + 1] + lastPixels[i + 2]) / 3;
+                    totalDifference += Math.abs(brightness - lastBrightness);
+                }
+                
+                const averageDifference = totalDifference / (pixels.length / 16);
+                
+                // Verificar se há movimento significativo
+                if (averageDifference > motionThreshold) {
+                    consecutiveMotionFrames++;
+                    
+                    if (consecutiveMotionFrames >= minMotionFrames && !motionDetected) {
+                        motionDetected = true;
+                        console.log('📸 Movimento detectado! Iniciando captura contínua...');
+                        
+                        // Visual feedback
+                        const overlay = document.getElementById('cameraOverlay');
+                        overlay.style.border = '3px solid #10b981';
+                        setTimeout(() => {
+                            overlay.style.border = 'none';
+                        }, 1000);
+                    }
+                } else {
+                    // Reset contador se não houver movimento
+                    consecutiveMotionFrames = Math.max(0, consecutiveMotionFrames - 1);
+                    
+                    if (consecutiveMotionFrames === 0 && motionDetected) {
+                        motionDetected = false;
+                        console.log('💤 Movimento parou. Aguardando novo movimento...');
+                    }
+                }
+                
+                // Atualizar último frame
+                lastFrame = currentFrameData;
+                
+            } catch (error) {
+                console.error('❌ Erro na detecção de movimento:', error);
+            }
+        }
+        
         async function captureToBuffer() {
             if (!isDetecting || !cameraStream) return;
             
             try {
+                // Atualizar localização GPS antes de capturar
+                await updateCurrentLocation();
+                
                 const video = document.getElementById('cameraVideo');
                 if (!video.videoWidth || !video.videoHeight) return;
                 
@@ -1156,6 +1230,9 @@
                 
                 const now = new Date();
                 
+                // Log GPS com cada captura
+                console.log(`📍 GPS captura ${detectionCount + 1}:`, currentPosition);
+                
                 // Create buffer entry
                 const bufferEntry = {
                     event_id: currentEvent.id,
@@ -1167,7 +1244,8 @@
                         width: canvas.width,
                         height: canvas.height,
                         device_type: 'mobile',
-                        timestamp: now.toISOString()
+                        timestamp: now.toISOString(),
+                        gps_updated: true
                     },
                     captured_at: now.toISOString(),
                     latitude: currentPosition?.latitude || null,
@@ -1182,43 +1260,15 @@
                     return;
                 }
                 
-                console.log('📤 Enviando imagem para buffer...');
-                console.log('   Event ID:', currentEvent.id);
-                console.log('   Device ID:', currentDevice);
-                console.log('   Session ID:', sessionId);
-                console.log('   Image size (AI):', Math.round(aiVersion.length / 1024), 'KB');
-                console.log('   Image size (Display):', Math.round(displayVersion.length / 1024), 'KB');
-                
                 const { data, error } = await window.supabaseClient.supabase
                     .from('image_buffer')
                     .insert([bufferEntry])
                     .select()
                     .single();
                 
-                console.log('📥 Resposta do Supabase:', { data, error });
-                
                 if (error) {
                     console.error('❌ Erro ao salvar no buffer:', error);
-                    console.error('   Code:', error.code);
-                    console.error('   Message:', error.message);
-                    console.error('   Details:', error.details);
-                    console.error('   Hint:', error.hint);
-                    
-                    // Mostrar erro ao usuário
-                    alert(`❌ Erro ao salvar imagem: ${error.message || 'Erro desconhecido'}\n\nVerifique os logs do console para mais detalhes.`);
                 } else {
-                    console.log('✅ Imagem salva com sucesso:', data);
-                    console.log('   ID:', data.id);
-                    console.log('   Status:', data.status);
-                    console.log('   Event:', data.event_id);
-                    
-                    if (data.status === 'error') {
-                        console.warn('⚠️ ATENÇÃO: Imagem salva mas com status ERROR!');
-                        console.warn('   Isso geralmente indica que há um TRIGGER no banco de dados');
-                        console.warn('   que está mudando o status automaticamente');
-                        console.warn('   Verifique os triggers na tabela image_buffer');
-                    }
-                    
                     detectionCount++;
                     document.getElementById('detectionCount').textContent = detectionCount;
                     
@@ -1229,12 +1279,15 @@
                         overlay.style.border = 'none';
                     }, 200);
                     
+                    // Tocar som de detecção
+                    playDetectionSound();
+                    
                     console.log(`📸 Imagem ${detectionCount} salva no buffer:`, data.id);
+                    console.log(`   GPS: ${currentPosition?.latitude?.toFixed(6)}, ${currentPosition?.longitude?.toFixed(6)} (accuracy: ${currentPosition?.accuracy?.toFixed(0)}m)`);
                 }
                 
             } catch (error) {
                 console.error('❌ Erro na captura:', error);
-                console.error('   Stack:', error.stack);
             }
         }
         
@@ -1259,9 +1312,43 @@
                     accuracy: position.coords.accuracy
                 };
                 
-                console.log('📍 Localização obtida:', currentPosition);
+                console.log('📍 Localização inicial obtida:', currentPosition);
             } catch (error) {
                 console.log('⚠️ Erro ao obter localização:', error.message);
+                currentPosition = null;
+            }
+        }
+        
+        // Função para atualizar localização GPS (chamada antes de cada captura)
+        async function updateCurrentLocation() {
+            if (!navigator.geolocation) {
+                console.log('⚠️ Geolocalização não disponível');
+                return;
+            }
+            
+            try {
+                // Obter posição atual rapidamente (timeout menor para não atrasar captura)
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 3000, // Timeout mais curto para captura rápida
+                        maximumAge: 5000 // Aceitar cache de até 5 segundos
+                    });
+                });
+                
+                currentPosition = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                
+                console.log('📍 GPS atualizado para captura:', currentPosition);
+            } catch (error) {
+                // Se falhar, usar posição anterior (se existir)
+                console.log('⚠️ Erro ao atualizar GPS, usando anterior:', error.message);
+                if (!currentPosition) {
+                    console.log('⚠️ Nenhuma posição GPS disponível para esta captura');
+                }
             }
         }
         
@@ -1291,9 +1378,36 @@
             }
         }
         
-        function switchCamera() {
-            // Implementation for camera switching
+        async function switchCamera() {
             console.log('🔄 Trocando câmera...');
+            
+            try {
+                // Alternar entre traseira e frontal
+                facingMode = facingMode === 'environment' ? 'user' : 'environment';
+                console.log('📍 Modo de câmera:', facingMode === 'environment' ? 'Traseira' : 'Frontal');
+                
+                // Parar câmera atual
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Parar detecção se estiver ativa
+                if (isDetecting) {
+                    await stopDetection();
+                }
+                
+                // Iniciar nova câmera
+                await startCamera();
+                
+                // Se estava detectando, reiniciar detecção
+                if (isDetecting) {
+                    await startDetection();
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao trocar câmera:', error);
+                showError('Erro ao trocar câmera');
+            }
         }
         
         let flashEnabled = false;
@@ -1322,7 +1436,7 @@
                 
                 const flashBtn = document.getElementById('toggleFlash');
                 if (flashEnabled) {
-                    flashBtn.innerHTML = '<i>💡</i> Flash ON';
+                    flashBtn.innerHTML = '<i>🔦</i> Flash ON';
                     flashBtn.classList.remove('btn-warning');
                     flashBtn.classList.add('btn-success');
                     console.log('⚡ Flash ativado');
@@ -1346,20 +1460,161 @@
             }
         }
         
-        function loadEventInfo(eventId, eventName) {
-            // Update UI
-            const name = eventName || 'Evento Selecionado';
-            document.getElementById('eventName').textContent = name;
+        // Função para inicializar som de detecção
+        function initDetectionSound() {
+            // Criar som usando Web Audio API (beeep simples)
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800; // Frequência do beep
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                console.log('🔊 Som de detecção inicializado');
+            } catch (error) {
+                console.warn('⚠️ Não foi possível inicializar som:', error);
+            }
+        }
+        
+        // Função para tocar som de detecção
+        function playDetectionSound() {
+            if (!soundEnabled) return;
             
-            const eventInfoPanel = document.getElementById('eventInfoPanel');
-            const currentEventInfo = document.getElementById('currentEventInfo');
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+                
+                console.log('🔊 Som de detecção tocado');
+            } catch (error) {
+                console.warn('⚠️ Erro ao tocar som:', error);
+            }
+        }
+        
+        // Função para alternar som
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
             
-            if (eventInfoPanel && eventId) {
-                eventInfoPanel.style.display = 'block';
-                currentEventInfo.innerHTML = `
-                    <strong>${name}</strong><br>
-                    Device: ${currentDevice?.substring(0, 12) || 'N/A'}...
-                `;
+            const soundBtn = document.getElementById('toggleSoundBtn');
+            if (soundEnabled) {
+                soundBtn.innerHTML = '<i>🔊</i> <span class="btn-text">Som</span>';
+                soundBtn.classList.remove('btn-warning');
+                soundBtn.classList.add('btn-success');
+                console.log('🔊 Som ativado');
+            } else {
+                soundBtn.innerHTML = '<i>🔇</i> <span class="btn-text">Mudo</span>';
+                soundBtn.classList.remove('btn-success');
+                soundBtn.classList.add('btn-warning');
+                console.log('🔇 Som desativado');
+            }
+        }
+        
+        async function loadEventInfo(eventId, eventName) {
+            try {
+                console.log('📋 Carregando informações do evento...', eventId);
+                
+                // Primeiro buscar o dispositivo para obter informações
+                const { data: deviceData, error: deviceError } = await window.supabaseClient.supabase
+                    .from('event_devices')
+                    .select('checkpoint_name, checkpoint_type, checkpoint_order')
+                    .eq('event_id', eventId)
+                    .eq('device_id', currentDevice)
+                    .single();
+                
+                console.log('📋 DeviceData:', deviceData);
+                console.log('📋 DeviceError:', deviceError);
+                
+                // Buscar dados do evento via API server-side (usa SERVICE_ROLE_KEY)
+                let eventNameFromDB = null;
+                let eventDateFromDB = null;
+                
+                try {
+                    console.log('🔍 Buscando evento via API server-side...');
+                    const response = await fetch(`/api/event/${eventId}`);
+                    
+                    if (response.ok) {
+                        const eventData = await response.json();
+                        console.log('📋 EventData da API:', eventData);
+                        eventNameFromDB = eventData.name;
+                        eventDateFromDB = eventData.event_date;
+                        console.log('✅ Nome:', eventNameFromDB, 'Data:', eventDateFromDB);
+                    } else {
+                        console.log('⚠️ API retornou status:', response.status);
+                    }
+                } catch (err) {
+                    console.error('❌ Erro ao buscar evento via API:', err);
+                }
+                
+                // Update UI com nome do evento
+                // Se não conseguiu da DB, usar da URL, senão fallback
+                let eventNameDisplay = eventNameFromDB || eventName || 'Evento Teste';
+                
+                console.log('✅ Exibindo nome do evento:', eventNameDisplay);
+                document.getElementById('eventName').textContent = eventNameDisplay;
+                
+                // Update UI com data do evento
+                if (eventDateFromDB) {
+                    const formattedDate = new Date(eventDateFromDB).toLocaleDateString('pt-PT', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    });
+                    document.getElementById('eventDate').textContent = formattedDate;
+                    console.log('✅ Data do evento:', formattedDate);
+                } else {
+                    document.getElementById('eventDate').textContent = '-';
+                }
+                
+                // Update UI com tipo de checkpoint
+                const checkpointType = deviceData?.checkpoint_type || '-';
+                const checkpointTypeDisplay = checkpointType === 'start' ? '🏁 Partida' :
+                                             checkpointType === 'checkpoint' ? '📍 Checkpoint' :
+                                             checkpointType === 'finish' ? '🏆 Chegada' :
+                                             '📍 ' + checkpointType;
+                document.getElementById('checkpointType').textContent = checkpointTypeDisplay;
+                
+                // Update UI com ordem do dispositivo
+                const deviceOrder = deviceData?.checkpoint_order || '-';
+                document.getElementById('deviceOrder').textContent = `#${deviceOrder}`;
+                
+                // Atualizar currentEvent com nome completo
+                if (eventNameFromDB) {
+                    currentEvent.name = eventNameFromDB;
+                    console.log('✅ currentEvent.name atualizado da DB:', currentEvent.name);
+                } else if (eventName) {
+                    // Se não conseguiu da DB, usar da URL
+                    currentEvent.name = eventName;
+                    console.log('✅ currentEvent.name atualizado da URL:', currentEvent.name);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar info do evento:', error);
+                // Fallback para dados básicos
+                const fallbackName = eventName || 'Evento';
+                console.log('⚠️ Usando nome fallback:', fallbackName);
+                document.getElementById('eventName').textContent = fallbackName;
             }
         }
         
@@ -1395,4 +1650,3 @@
     <!-- All styles moved to external CSS files -->
 </body>
 </html>
-

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VisionKrono Detection</string>
+    
+    <!-- PIN Screen -->
+    <string name="pin_title">PIN de Segurança</string>
+    <string name="pin_description">Digite o PIN do dispositivo para acessar a detecção.</string>
+    <string name="pin_hint">Digite o PIN</string>
+    <string name="validate_pin">Validar PIN</string>
+    <string name="pin_incorrect">PIN incorreto. Tente novamente.</string>
+    <string name="pin_empty">Digite o PIN</string>
+    
+    <!-- Camera Permission -->
+    <string name="camera_permission_title">Acesso à Câmera</string>
+    <string name="camera_permission_description">O VisionKrono precisa acessar sua câmera para detectar dorsais automaticamente.</string>
+    <string name="allow_camera">Permitir Câmera</string>
+    
+    <!-- Detection Screen -->
+    <string name="detection_title">Detecção de Dorsais</string>
+    <string name="start_detection">Iniciar Detecção</string>
+    <string name="stop_detection">Parar Detecção</string>
+    <string name="detections_count">Detecções</string>
+    <string name="event_info">Evento</string>
+    <string name="no_event">Nenhum evento selecionado</string>
+    <string name="flash">Flash</string>
+    <string name="switch_camera">Trocar</string>
+    <string name="end_session">Terminar Sessão</string>
+    
+    <!-- Errors -->
+    <string name="error_camera_access">Não foi possível acessar a câmera. Verifique as permissões.</string>
+    <string name="error_location">Erro ao obter localização</string>
+    <string name="error_supabase">Erro de conexão com o servidor</string>
+    <string name="error_no_event">Evento não especificado</string>
+    <string name="error_no_device">Dispositivo não especificado</string>
+    
+    <!-- Session -->
+    <string name="session_limit_reached">Limite de sessões atingido!</string>
+    <string name="session_conflict">Dispositivo em uso</string>
+    <string name="confirm_end_session">Tem certeza que deseja terminar a sessão?</string>
+</resources>

@@ -98,3 +98,4 @@ JOIN information_schema.triggers i ON t.tgname = i.trigger_name
 WHERE i.event_object_table = 'classifications'
 AND t.tgname = 'trg_calculate_classification_times';
 
+

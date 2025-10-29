@@ -79,3 +79,4 @@ npm start
 
 Após desabilitar os triggers, **TODA** a lógica crítica roda no servidor Node.js.
 
+

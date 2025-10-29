@@ -25,3 +25,4 @@ FROM image_buffer;
 -- Se quiser apagar apenas com status específico:
 -- DELETE FROM image_buffer WHERE status IN ('error', 'discarded');
 
+

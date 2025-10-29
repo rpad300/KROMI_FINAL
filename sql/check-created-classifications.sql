@@ -50,3 +50,4 @@ SELECT
     (SELECT COUNT(*) FROM classifications WHERE event_id = 'a6301479-56c8-4269-a42d-aa8a7650a575') as total_classifications,
     (SELECT COUNT(*) FROM event_classifications WHERE event_id = 'a6301479-56c8-4269-a42d-aa8a7650a575') as total_view;
 
+

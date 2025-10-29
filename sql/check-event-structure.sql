@@ -47,3 +47,4 @@ FROM event_devices
 WHERE event_id = 'a6301479-56c8-4269-a42d-aa8a7650a575'
 ORDER BY checkpoint_order;
 
+

@@ -96,3 +96,4 @@ SELECT * FROM insert_classification_with_times(
     NULL
 );
 
+

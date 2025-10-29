@@ -62,18 +62,74 @@ video.camera-video {
    DETECTION AREA
    ========================================== */
 
+/* Área de detecção - sempre centralizada */
 .detection-area {
     position: absolute;
-    border: 2px solid var(--primary);
+    border: 3px dashed rgba(252, 107, 3, 0.6);
+    border-radius: 12px;
     background: rgba(252, 107, 3, 0.1);
-    border-radius: var(--radius-md);
     pointer-events: none;
     transition: all var(--transition-base);
+    /* Centralização absoluta */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    /* Tamanho padrão - 60% da tela */
+    width: 60vw;
+    height: 60vh;
+    max-width: 800px;
+    max-height: 600px;
+    min-width: 200px;
+    min-height: 200px;
 }
 
 .detection-area.active {
     border-color: var(--success);
     background: rgba(16, 185, 129, 0.15);
+}
+
+/* Zona de detecção responsiva */
+
+/* Mobile padrão */
+@media (max-width: 768px) {
+    .detection-area {
+        width: 70vw;
+        height: 50vh;
+        border-width: 2px;
+    }
+}
+
+/* Mobile muito pequeno */
+@media (max-width: 375px) {
+    .detection-area {
+        width: 75vw;
+        height: 45vh;
+    }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .detection-area {
+        width: 55vw;
+        height: 55vh;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+    .detection-area {
+        width: 50vw;
+        height: 60vh;
+        border-width: 4px;
+    }
+}
+
+/* Telas 4K */
+@media (min-width: 1920px) {
+    .detection-area {
+        width: 800px;
+        height: 600px;
+    }
 }
 
 /* Reduced motion support */
@@ -87,32 +143,73 @@ video.camera-video {
     }
 }
 
+/* Mobile muito pequeno (≤375px) - apenas ícones */
+@media (max-width: 375px) {
+    .bottom-controls .btn .btn-text {
+        display: none; /* Oculta texto */
+    }
+    
+    .bottom-controls {
+        bottom: calc(var(--spacing-4) + 70px);
+        gap: var(--spacing-1);
+    }
+    
+    .bottom-controls .btn {
+        min-width: clamp(44px, 12vw, 56px);
+        width: clamp(44px, 12vw, 56px);
+        font-size: 18px;
+        padding: var(--spacing-2);
+    }
+}
+
+/* Estilo do botão de som quando ativado */
+.btn-success {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: var(--text-primary);
+    border-color: var(--warning);
+}
+
 /* ==========================================
    CAMERA CONTROLS
    ========================================== */
 
-/* Side Controls (Left Side) */
+/* Side Controls (Left Side) - REMOVIDO */
 .side-controls {
+    display: none;
+}
+
+/* Bottom Controls (todos na parte inferior) */
+.bottom-controls {
     position: absolute;
-    left: var(--spacing-4);
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: calc(var(--spacing-5) + 80px); /* Acima dos botões principais */
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    flex-direction: column;
     gap: var(--spacing-2);
     z-index: 20;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap; /* Sempre na mesma linha */
+    max-width: 95%;
     pointer-events: auto;
 }
 
-.side-controls .btn {
-    min-width: clamp(44px, 12vw, 60px);
-    height: clamp(44px, 12vw, 60px);
-    padding: var(--spacing-2);
-    display: flex;
-    flex-direction: column;
+.bottom-controls .btn {
+    min-width: clamp(55px, 12vw, 75px);
+    height: clamp(40px, 10vw, 48px);
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: clamp(10px, 2.2vw, 12px);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(2px, 1vw, 4px);
+    gap: clamp(4px, 0.8vw, 6px);
+    flex-shrink: 1;
 }
 
 /* Main Camera Controls (Bottom Center) */
@@ -207,8 +304,17 @@ video.camera-video {
     padding: var(--spacing-3) var(--spacing-4);
     border-radius: var(--radius-lg);
     backdrop-filter: blur(10px);
-    text-align: right;
+    text-align: left;
     pointer-events: auto;
+    min-width: 180px;
+    max-width: 220px;
+    border: 1px solid rgba(252, 107, 3, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.event-info div {
+    word-break: break-word;
+    line-height: 1.4;
 }
 
 .event-info .event-name {
@@ -220,6 +326,34 @@ video.camera-video {
 .event-info .event-meta {
     font-size: clamp(10px, 3vw, 12px);
     opacity: 0.8;
+}
+
+#eventName {
+    font-weight: 600;
+    font-size: clamp(0.9em, 2.5vw, 1em) !important;
+    margin-bottom: var(--spacing-1) !important;
+}
+
+#eventDate {
+    font-size: clamp(0.75em, 2vw, 0.85em) !important;
+    opacity: 0.85 !important;
+    margin-top: 4px !important;
+    font-weight: 400;
+    font-style: italic;
+}
+
+#checkpointType {
+    font-size: clamp(0.75em, 2vw, 0.85em) !important;
+    opacity: 0.9 !important;
+    margin-top: 4px !important;
+    font-weight: 500;
+}
+
+#deviceOrder {
+    font-size: clamp(0.7em, 1.8vw, 0.8em) !important;
+    opacity: 0.7 !important;
+    margin-top: 2px !important;
+    font-weight: 400;
 }
 
 /* ==========================================

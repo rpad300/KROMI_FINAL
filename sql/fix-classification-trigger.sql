@@ -52,3 +52,4 @@ SELECT
 FROM information_schema.triggers 
 WHERE trigger_name = 'trigger_classification_notification_email';
 
+

@@ -105,3 +105,4 @@ Edite apenas `src/classification-logic.js` na função `calculateClassificationT
 
 O código já está preparado, falta apenas substituir as chamadas antigas no `background-processor.js`.
 
+

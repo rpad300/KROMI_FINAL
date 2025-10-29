@@ -28,3 +28,4 @@ SELECT
     COUNT(*) FILTER (WHERE total_time IS NULL) as sem_tempo
 FROM classifications;
 
+

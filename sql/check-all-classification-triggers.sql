@@ -28,3 +28,4 @@ JOIN pg_proc p ON t.tgfoid = p.oid
 WHERE tgrelid = 'classifications'::regclass
 AND NOT tgisinternal;
 
+

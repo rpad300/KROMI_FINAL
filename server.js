@@ -111,6 +111,40 @@ app.post('/api/debug', express.json(), (req, res) => {
     res.json({ success: true });
 });
 
+// Rota para buscar dados do evento usando SERVICE_ROLE_KEY
+app.get('/api/event/:eventId', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        
+        if (!eventId) {
+            return res.status(400).json({ error: 'Event ID é obrigatório' });
+        }
+        
+        // Usar supabaseAdmin se disponível (tem SERVICE_ROLE_KEY)
+        const client = supabaseAdmin || supabase;
+        
+        const { data, error } = await client
+            .from('events')
+            .select('id, name, event_date, status')
+            .eq('id', eventId)
+            .maybeSingle();
+        
+        if (error) {
+            console.error('❌ Erro ao buscar evento:', error);
+            return res.status(500).json({ error: error.message });
+        }
+        
+        if (!data) {
+            return res.status(404).json({ error: 'Evento não encontrado' });
+        }
+        
+        res.json(data);
+    } catch (error) {
+        console.error('❌ Erro na rota /api/event:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Rota para fornecer configurações do ambiente
 app.get('/api/config', (req, res) => {
     console.log('Solicitação de configuração recebida');
@@ -1138,6 +1172,21 @@ app.get('/platform-config', (req, res) => {
 
 app.get('/detection', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'detection-kromi.html'));
+});
+
+// Arquivo detection-kromi.html da raiz removido - agora tudo está em src/detection-kromi.html
+app.get('/detection-kromi.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'detection-kromi.html'));
+});
+
+// Rota /detections-kromi.html - página de scanner/entrada (QR code + código manual)
+app.get('/detections-kromi.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'detections-kromi.html'));
+});
+
+// Rota /detections - redirecionar para página de scanner
+app.get('/detections', (req, res) => {
+    res.redirect('/detections-kromi.html');
 });
 
 app.get('/debug', (req, res) => {

@@ -9,14 +9,14 @@ class UniversalRouteProtection {
             'register.html', 
             'forgot-password.html',
             'reset-password.html',
-            'auth/callback.html'
+            'auth/callback.html',
+            'detection-kromi.html'  // Scanner público de QR Code (sem autenticação necessária)
             // index-kromi.html agora é protegida (requer autenticação)
         ];
 
         // Páginas que podem ser acessadas com parâmetros específicos (sem autenticação)
         this.publicWithParams = [
-            'detection.html',  // Para dispositivos de detecção
-            'detection-kromi.html'  // Para dispositivos de detecção KROMI
+            'detection.html'  // Para dispositivos de detecção
         ];
 
         // Lista de páginas que precisam de autenticação
@@ -80,13 +80,20 @@ class UniversalRouteProtection {
         try {
             console.log('🔒 Universal Route Protection iniciando...');
             
-            // Aguardar inicialização do sistema de autenticação
-            await this.waitForAuthSystem();
-            console.log('✅ Sistema de autenticação aguardado');
-            
-            // Verificar se a página atual precisa de proteção
+            // Verificar se a página atual precisa de proteção ANTES de aguardar authSystem
             const currentPage = this.getCurrentPageName();
             console.log('📄 Página atual:', currentPage);
+            
+            // Se for detection-kromi.html, permitir acesso imediatamente sem aguardar authSystem
+            if (currentPage === 'detection-kromi.html') {
+                console.log('📱 Página detection-kromi.html detectada - permitindo acesso público imediato');
+                this.showPageContent();
+                return; // Não precisa aguardar authSystem ou fazer qualquer verificação
+            }
+            
+            // Para outras páginas, aguardar sistema de autenticação
+            await this.waitForAuthSystem();
+            console.log('✅ Sistema de autenticação aguardado');
             
             if (this.isPublicPage(currentPage)) {
                 console.log('🌐 Página pública detectada');
@@ -104,7 +111,14 @@ class UniversalRouteProtection {
             
         } catch (error) {
             console.error('❌ Erro na proteção universal:', error);
-            this.redirectToLogin();
+            const currentPage = this.getCurrentPageName();
+            // Se for detection-kromi.html, permitir acesso mesmo com erro
+            if (currentPage === 'detection-kromi.html') {
+                console.log('📱 Erro mas permitindo acesso (página pública)');
+                this.showPageContent();
+            } else {
+                this.redirectToLogin();
+            }
         }
     }
 
@@ -178,6 +192,15 @@ class UniversalRouteProtection {
     }
 
     async handlePublicPage() {
+        const currentPage = this.getCurrentPageName();
+        
+        // detection-kromi.html é sempre pública (scanner de QR Code)
+        if (currentPage === 'detection-kromi.html') {
+            console.log('📱 Página detection-kromi.html é sempre pública (scanner QR Code)');
+            this.showPageContent();
+            return;
+        }
+        
         console.log('🔍 Verificando estado de autenticação...');
         console.log('🔍 window.authSystem:', window.authSystem);
         console.log('🔍 window.authSystem.currentUser:', window.authSystem?.currentUser);

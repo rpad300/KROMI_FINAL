@@ -54,3 +54,4 @@ WHERE tgrelid = 'detections'::regclass
 AND NOT tgisinternal
 ORDER BY tgname;
 
+

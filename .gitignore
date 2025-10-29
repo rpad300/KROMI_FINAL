@@ -58,3 +58,24 @@ auth/
 client_secret*.json
 *.json
 credentials/
+
+# Android APP
+Android APP/.gradle/
+Android APP/build/
+Android APP/app/build/
+Android APP/.idea/
+Android APP/local.properties
+Android APP/*.iml
+Android APP/app/*.apk
+Android APP/app/*.ap_
+Android APP/app/*.aab
+Android APP/app/*.dex
+Android APP/.cxx/
+Android APP/.externalNativeBuild/
+Android APP/.DS_Store
+Android APP/captures/
+Android APP/app/proguard/
+Android APP/app/release/
+Android APP/out/
+Android APP/.navigation/
+Android APP/*.hprof

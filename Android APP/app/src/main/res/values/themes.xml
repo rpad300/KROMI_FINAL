@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for VisionKrono Detection -->
+    <!-- Using Material3 theme for compatibility with Jetpack Compose -->
+    <style name="Theme.VisionKronoDetection" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color - VisionKrono Orange -->
+        <item name="colorPrimary">#FC6B03</item>
+        <item name="colorPrimaryVariant">#E55A00</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        
+        <!-- Secondary color -->
+        <item name="colorSecondary">#E55A00</item>
+        <item name="colorSecondaryVariant">#CC4A00</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        
+        <!-- Background colors -->
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        
+        <!-- Status bar -->
+        <item name="android:statusBarColor">#FC6B03</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">#000000</item>
+        
+        <!-- Window background -->
+        <item name="android:windowBackground">@android:color/black</item>
+        
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#B0B0B0</item>
+    </style>
+</resources>
+
+
