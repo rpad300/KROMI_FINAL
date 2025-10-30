@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * AUTH ROUTES - VisionKrono
+ * AUTH ROUTES - Kromi.online
  * ==========================================
  * 
  * Rotas de autenticação server-side

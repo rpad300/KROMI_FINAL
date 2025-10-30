@@ -34,6 +34,23 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Criar cliente Supabase com Service Role Key (bypassa RLS) para operações privilegiadas
 const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
+// ==========================================
+// Postgres (Service Role) - execução de SQL
+// ==========================================
+let pgPool = null;
+try {
+    const { Pool } = require('pg');
+    const dbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_POSTGRES_URL;
+    if (dbUrl) {
+        pgPool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+        console.log('✅ Conexão Postgres (service role) configurada.');
+    } else {
+        console.warn('⚠️ Nenhuma connection string de Postgres configurada (SUPABASE_DB_URL/DATABASE_URL/POSTGRES_URL).');
+    }
+} catch (e) {
+    console.warn('⚠️ Módulo pg não disponível ou falha ao inicializar:', e.message);
+}
+
 // Função helper para carregar API keys da base de dados com fallback para .env
 async function getApiKeyFromDatabase(keyName, defaultValue = null) {
     try {
@@ -80,6 +97,14 @@ app.use(express.urlencoded({ extended: true })); // Parser de form data
 
 // Middleware de sessão em todas as rotas
 app.use(createSessionMiddleware(sessionManager));
+
+// Middleware para injetar metadados SEO automaticamente em todas as páginas HTML
+// IMPORTANTE: Deve estar antes do express.static para interceptar todas as respostas HTML
+if (supabaseAdmin) {
+    const { createHtmlMetadataMiddleware } = require('./src/branding-metadata-injector');
+    app.use(createHtmlMetadataMiddleware(supabaseAdmin));
+    console.log('✅ Middleware de injeção de metadados SEO ativo');
+}
 
 // Servir arquivos estáticos
 app.use(express.static('.'));  // Raiz (para arquivos como icons, manifest, etc.)
@@ -1083,7 +1108,62 @@ app.get('/api/deepseek/models', async (req, res) => {
 // ROTAS DE BASE DE DADOS (REST API)
 // ==========================================
 const setupDatabaseRoutes = require('./src/database-routes');
+const setupBrandingRoutes = require('./src/branding-routes');
+
 setupDatabaseRoutes(app, sessionManager);
+setupBrandingRoutes(app, sessionManager);
+
+// ==========================================
+// Admin: Executar SQL (Service Role)
+// ==========================================
+app.post('/api/admin/execute-sql', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        if (!pgPool) {
+            return res.status(500).json({ success: false, error: 'Postgres não configurado no servidor (missing SUPABASE_DB_URL/DATABASE_URL)' });
+        }
+
+        const { script } = req.body;
+        if (!script) {
+            return res.status(400).json({ success: false, error: 'Parâmetro "script" é obrigatório' });
+        }
+
+        // Whitelist de scripts permitidos (apenas ficheiros em sql/)
+        const allowed = {
+            'create-site-global-metadata-table': path.join(__dirname, 'sql', 'create-site-global-metadata-table.sql'),
+            'add-social-platforms-thumbnails': path.join(__dirname, 'sql', 'add-social-platforms-thumbnails.sql'),
+            'add-social-platforms-metadata': path.join(__dirname, 'sql', 'add-social-platforms-metadata.sql'),
+            'add-platform-context': path.join(__dirname, 'sql', 'add-platform-context.sql')
+        };
+
+        const filePath = allowed[script];
+        if (!filePath || !fs.existsSync(filePath)) {
+            return res.status(404).json({ success: false, error: 'Script SQL não permitido ou não encontrado' });
+        }
+
+        const sql = fs.readFileSync(filePath, 'utf8');
+        if (!sql || !sql.trim()) {
+            return res.status(400).json({ success: false, error: 'Script SQL vazio' });
+        }
+
+        console.log(`🗄️ Executando SQL: ${script}`);
+        const client = await pgPool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(sql);
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+
+        res.json({ success: true, message: `Script ${script} executado com sucesso` });
+    } catch (error) {
+        console.error('❌ Erro ao executar SQL:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // ==========================================
 // ROTAS DE AI COST STATS (REST API)
@@ -1246,6 +1326,11 @@ app.get('/devices', (req, res) => {
 
 app.get('/checkpoint-order', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'checkpoint-order-kromi.html'));
+});
+
+// Página de Branding e SEO (apenas Admin)
+app.get('/branding-seo', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'branding-seo.html'));
 });
 
 app.get('/calibration', (req, res) => {

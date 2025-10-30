@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Configuração Central de Navegação
+ * Kromi.online - Configuração Central de Navegação
  * Fonte única de verdade para menus, rotas, permissões e labels
  * 
  * @version 2025.10.26
@@ -88,6 +88,15 @@ const NavigationConfig = {
             type: 'global',
             roles: ['admin'],
             description: 'Estatísticas de custos de IA'
+        },
+        {
+            id: 'branding-seo',
+            label: 'Branding e SEO',
+            icon: '🎨',
+            route: 'branding-seo',
+            type: 'global',
+            roles: ['admin'],
+            description: 'Gestão de logos, metadados e SEO'
         },
         {
             id: 'database',

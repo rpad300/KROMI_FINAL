@@ -1,4 +1,4 @@
-# VisionKrono - Detector de Dorsais
+# Kromi.online - Detector de Dorsais
 
 Uma webapp que utiliza o Vertex AI Vision do Google para detectar números de dorsais em tempo real através da câmera, registrando automaticamente o número, hora de passagem e coordenadas GPS.
 

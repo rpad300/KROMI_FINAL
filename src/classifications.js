@@ -1,4 +1,4 @@
-class VisionKronoClassifications {
+class Kromi.onlineClassifications {
     constructor() {
         this.supabaseClient = new SupabaseClient();
         this.selectedEvent = null;
@@ -884,5 +884,5 @@ class VisionKronoClassifications {
 
 // Inicializar quando página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    window.classificationsApp = new VisionKronoClassifications();
+    window.classificationsApp = new Kromi.onlineClassifications();
 });

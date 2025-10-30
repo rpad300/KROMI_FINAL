@@ -1,5 +1,5 @@
 // =====================================================
-// VisionKrono - Teste da Interface JavaScript
+// Kromi.online - Teste da Interface JavaScript
 // Execute no console do navegador na página de configuração
 // =====================================================
 
@@ -253,7 +253,7 @@ runAllTests().then(results => {
 });
 
 // Exportar funções para uso manual
-window.testVisionKrono = {
+window.testKromi.online = {
     testLoadModalities,
     testLoadActivities,
     testValidation,

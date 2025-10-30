@@ -1,0 +1,103 @@
+-- ==========================================
+-- Criar Buckets de Storage para Branding & SEO
+-- ==========================================
+-- 
+-- NOTA: Estas queries devem ser executadas no Supabase SQL Editor
+-- ou via API. Os buckets são criados no Storage, não na base de dados.
+--
+-- Para criar via SQL Editor do Supabase:
+-- 1. Vá a Storage > Create a new bucket
+-- 2. Ou use a API REST do Supabase Storage
+--
+-- Buckets necessários:
+-- 1. media-originals - Ficheiros originais de logos e thumbnails
+-- 2. media-processed - Variantes processadas (WEBP, redimensionadas)
+-- 3. favicons-and-manifest - Favicons e ficheiros manifest
+--
+-- ==========================================
+-- Configurações de RLS para os buckets
+-- ==========================================
+--
+-- Políticas recomendadas (configurar no Supabase Dashboard > Storage > Policies):
+--
+-- Bucket: media-originals
+-- - SELECT: Autenticados podem ler ficheiros publicados
+-- - INSERT: Apenas admins
+-- - UPDATE: Apenas admins
+-- - DELETE: Apenas admins
+--
+-- Bucket: media-processed
+-- - SELECT: Público (ficheiros processados podem ser servidos publicamente)
+-- - INSERT: Apenas sistema (via service role)
+-- - UPDATE: Apenas sistema
+-- - DELETE: Apenas admins
+--
+-- Bucket: favicons-and-manifest
+-- - SELECT: Público (favicons devem ser públicos)
+-- - INSERT: Apenas admins
+-- - UPDATE: Apenas admins
+-- - DELETE: Apenas admins
+--
+-- ==========================================
+-- Exemplo de criação via Supabase Management API
+-- ==========================================
+--
+-- POST https://<project-ref>.supabase.co/storage/v1/bucket
+-- Headers:
+--   Authorization: Bearer <service-role-key>
+--   apikey: <service-role-key>
+-- Body:
+-- {
+--   "name": "media-originals",
+--   "public": false,
+--   "file_size_limit": 5242880,
+--   "allowed_mime_types": ["image/jpeg", "image/png", "image/svg+xml", "image/webp", "image/x-icon"]
+-- }
+--
+-- ==========================================
+-- Ou criar manualmente no Dashboard:
+-- ==========================================
+-- 1. Ir a Storage no Supabase Dashboard
+-- 2. Clicar em "New bucket"
+-- 3. Preencher:
+--    - Name: media-originals
+--    - Public: No (ou Yes para favicons-and-manifest)
+--    - File size limit: 5 MB
+--    - Allowed MIME types: image/jpeg, image/png, image/svg+xml, image/webp, image/x-icon
+-- 4. Repetir para media-processed e favicons-and-manifest
+--
+-- ==========================================
+-- Script PowerShell para criar buckets (opcional)
+-- ==========================================
+-- 
+-- $supabaseUrl = "https://your-project.supabase.co"
+-- $serviceKey = "your-service-role-key"
+-- 
+-- $buckets = @(
+--     @{ name = "media-originals"; public = $false },
+--     @{ name = "media-processed"; public = $true },
+--     @{ name = "favicons-and-manifest"; public = $true }
+-- )
+-- 
+-- foreach ($bucket in $buckets) {
+--     $body = @{
+--         name = $bucket.name
+--         public = $bucket.public
+--         file_size_limit = 5242880
+--         allowed_mime_types = @("image/jpeg", "image/png", "image/svg+xml", "image/webp", "image/x-icon")
+--     } | ConvertTo-Json
+--     
+--     Invoke-RestMethod -Uri "$supabaseUrl/storage/v1/bucket" `
+--         -Method Post `
+--         -Headers @{
+--             "Authorization" = "Bearer $serviceKey"
+--             "apikey" = $serviceKey
+--             "Content-Type" = "application/json"
+--         } `
+--         -Body $body
+--     
+--     Write-Host "Bucket $($bucket.name) criado!"
+-- }
+--
+-- ==========================================
+

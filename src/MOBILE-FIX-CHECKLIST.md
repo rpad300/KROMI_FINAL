@@ -1,4 +1,4 @@
-# 📱 Mobile Fix Checklist - VisionKrono
+# 📱 Mobile Fix Checklist - Kromi.online
 
 ## ✅ O QUE FOI CORRIGIDO
 

@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Lógica de Classificações
+ * Kromi.online - Lógica de Classificações
  * Centraliza TODA a lógica de cálculo de tempos para classificações
  */
 

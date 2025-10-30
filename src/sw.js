@@ -1,5 +1,5 @@
 /**
- * VisionKrono Service Worker
+ * Kromi.online Service Worker
  * PWA offline support e cache management
  */
 

@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * AUDIT LOGGER - VisionKrono
+ * AUDIT LOGGER - Kromi.online
  * ==========================================
  * 
  * Sistema de auditoria e logs de segurança

@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branding e SEO - Kromi.online</title>
+    
+    <link rel="stylesheet" href="/kromi-ultimate_final/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/dashboard-styles.css?v=2025102609">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <style>
+        .section {
+            margin-bottom: var(--spacing-8);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .helper-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-1);
+        }
+        
+        .requirement-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            padding: var(--spacing-3);
+            margin-top: var(--spacing-2);
+            font-size: var(--font-size-sm);
+        }
+        
+        .requirement-box h4 {
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-2);
+            color: var(--primary);
+        }
+        
+        .requirement-box ul {
+            margin: 0;
+            padding-left: var(--spacing-4);
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .upload-area.drag-over {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.1);
+        }
+        
+        .preview-container {
+            margin-top: var(--spacing-4);
+            padding: var(--spacing-4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-base);
+            border: 1px solid var(--border-color);
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--radius-base);
+        }
+        
+        .preview-meta {
+            margin-top: var(--spacing-3);
+            padding: var(--spacing-3);
+            background: var(--bg-primary);
+            border-radius: var(--radius-base);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .status-draft {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .status-published {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .ai-suggestions {
+            display: grid;
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-4);
+        }
+        
+        .ai-suggestion-item {
+            padding: var(--spacing-3);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .ai-suggestion-item:hover {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .ai-suggestion-item.selected {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.1);
+        }
+        
+        .tab-nav {
+            display: flex;
+            gap: var(--spacing-2);
+            margin-bottom: var(--spacing-5);
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+        
+        .tab-nav button {
+            padding: var(--spacing-3) var(--spacing-4);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            transition: all var(--transition-base);
+            white-space: nowrap;
+        }
+        
+        .tab-nav button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .media-library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-4);
+        }
+        
+        .media-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            overflow: hidden;
+            transition: all var(--transition-base);
+        }
+        
+        .media-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .media-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .media-item-info {
+            padding: var(--spacing-3);
+        }
+        
+        .audit-timeline {
+            border-left: 2px solid var(--border-color);
+            padding-left: var(--spacing-4);
+        }
+        
+        .audit-entry {
+            position: relative;
+            padding-bottom: var(--spacing-4);
+        }
+        
+        .audit-entry::before {
+            content: '';
+            position: absolute;
+            left: calc(var(--spacing-4) * -1 - 6px);
+            top: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid var(--bg-primary);
+        }
+        
+        .validation-error {
+            color: var(--danger);
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-1);
+        }
+        
+        .validation-success {
+            color: var(--success);
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-1);
+        }
+        
+        .char-count {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            text-align: right;
+            margin-top: var(--spacing-1);
+        }
+        
+        .char-count.warning {
+            color: var(--warning);
+        }
+        
+        .char-count.error {
+            color: var(--danger);
+        }
+        
+        .preview-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            max-width: 600px;
+            margin: var(--spacing-4) 0;
+        }
+        
+        .preview-card-header {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .preview-card-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--spacing-2);
+            color: var(--info);
+        }
+        
+        .preview-card-url {
+            font-size: var(--font-size-xs);
+            color: var(--success);
+        }
+        
+        .preview-card-description {
+            padding: var(--spacing-4);
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Status Grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-3);
+            margin-bottom: var(--spacing-4);
+            padding: var(--spacing-4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-base);
+            border: 1px solid var(--border);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-2);
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+        }
+        
+        .status-label {
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+        
+        .status-value {
+            font-weight: var(--font-weight-semibold);
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+        
+        .status-value.loaded {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .status-value.not-loaded {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
+        /* Variants Grid */
+        .variants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-4);
+            margin-top: var(--spacing-4);
+        }
+        
+        /* Variant Categories */
+        .variant-category {
+            margin-bottom: var(--spacing-5);
+            padding: var(--spacing-4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-base);
+            border: 1px solid var(--border-color);
+        }
+        
+        .variant-category h4 {
+            margin: 0 0 var(--spacing-3) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        .variant-category h4 i {
+            color: var(--primary);
+        }
+        
+        .variant-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-base);
+            padding: var(--spacing-4);
+            transition: all 0.2s ease;
+        }
+        
+        .variant-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .variant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-3);
+        }
+        
+        .variant-title {
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+        
+        .variant-size {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: var(--radius-sm);
+        }
+        
+        .variant-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 120px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-3);
+            border: 1px solid var(--border);
+        }
+        
+        .variant-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .variant-info {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .variant-info p {
+            margin: var(--spacing-1) 0;
+        }
+        
+        .variant-actions {
+            display: flex;
+            gap: var(--spacing-2);
+            margin-top: var(--spacing-3);
+        }
+        
+        .variant-actions .btn {
+            flex: 1;
+            font-size: var(--font-size-sm);
+        }
+    </style>
+</head>
+<body data-theme="dark" class="layout-with-sidebar">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">🎨 Branding e SEO</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" onclick="BrandingSEO.saveAll()">
+                <i class="fas fa-save"></i> Guardar Tudo
+            </button>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <div id="mainContent" style="padding: var(--spacing-6);">
+            
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="active" onclick="BrandingSEO.switchTab('logos')">🎨 Logos</button>
+                <button onclick="BrandingSEO.switchTab('platform-context')">🎯 Contexto da Plataforma</button>
+                <button onclick="BrandingSEO.switchTab('metadata-global')">🌐 Metadados Globais</button>
+                <button onclick="BrandingSEO.switchTab('metadata-pages')">📄 Metadados por Página</button>
+                <button onclick="BrandingSEO.switchTab('thumbnails')">🖼️ Thumbnails</button>
+                <button onclick="BrandingSEO.switchTab('ai-generation')">🤖 Geração com IA</button>
+                <button onclick="BrandingSEO.switchTab('media-library')">📚 Media Library</button>
+                <button onclick="BrandingSEO.switchTab('audit')">📋 Auditoria</button>
+            </div>
+            
+            <!-- Tab: Logos -->
+            <div id="tab-logos" class="tab-content active">
+                <div class="section">
+                    <h2>Logos do Site</h2>
+                    <p class="helper-text">Carregue os logos da plataforma em múltiplos formatos. O sistema gerará automaticamente todas as variantes necessárias para desktop, tablet e mobile.</p>
+                    
+                    <!-- Status dos Logos -->
+                    <div id="logosStatus" class="status-grid" style="display: none;">
+                        <div class="status-item">
+                            <span class="status-label">Logo Primário:</span>
+                            <span id="logoPrimaryStatus" class="status-value">Não carregado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Logo Secundário:</span>
+                            <span id="logoSecondaryStatus" class="status-value">Não carregado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Favicon:</span>
+                            <span id="faviconStatus" class="status-value">Não carregado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">App Icon:</span>
+                            <span id="appIconStatus" class="status-value">Não carregado</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <!-- Logo Primário -->
+                        <div class="form-group full-width">
+                            <label>Logo Primário (Principal)</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li>Formato: SVG (preferido) ou PNG</li>
+                                    <li>Dimensões: 2048px largura (PNG)</li>
+                                    <li>Fundo: Transparente</li>
+                                    <li>Tamanho máximo: 2 MB</li>
+                                    <li>Usado em: Header, footer, impressões, documentos</li>
+                                </ul>
+                            </div>
+                            <div class="upload-area" onclick="document.getElementById('logoPrimaryInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Primário</p>
+                                <input type="file" id="logoPrimaryInput" accept=".svg,.png,.webp" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_primary', this)">
+                            </div>
+                            <div id="logoPrimaryPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Logo Secundário -->
+                        <div class="form-group full-width">
+                            <label>Logo Secundário (Monocromático)</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li>Formato: SVG (preferido) ou PNG</li>
+                                    <li>Versão monocromática para fundo escuro</li>
+                                    <li>Dimensões: 2048px largura (PNG)</li>
+                                    <li>Tamanho máximo: 2 MB</li>
+                                    <li>Usado em: Fundos escuros, impressões em preto e branco</li>
+                                </ul>
+                            </div>
+                            <div class="upload-area" onclick="document.getElementById('logoSecondaryInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Secundário</p>
+                                <input type="file" id="logoSecondaryInput" accept=".svg,.png,.webp" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_secondary', this)">
+                            </div>
+                            <div id="logoSecondaryPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Favicon -->
+                        <div class="form-group">
+                            <label>Favicon</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li>Formato: ICO, PNG</li>
+                                    <li>Dimensões: 16x16, 32x32, 48x48</li>
+                                    <li>Usado em: Aba do browser, bookmarks</li>
+                                </ul>
+                            </div>
+                            <div class="upload-area" onclick="document.getElementById('faviconInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Carregar Favicon</p>
+                                <input type="file" id="faviconInput" accept=".ico,.png" style="display: none;" onchange="BrandingSEO.handleLogoUpload('favicon', this)">
+                            </div>
+                            <div id="faviconPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- App Icon -->
+                        <div class="form-group">
+                            <label>App Icon (PWA)</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li>Formato: PNG</li>
+                                    <li>Dimensões: 512x512px</li>
+                                    <li>Android maskable icon</li>
+                                    <li>Usado em: PWA, instalação mobile</li>
+                                </ul>
+                            </div>
+                            <div class="upload-area" onclick="document.getElementById('appIconInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Carregar App Icon</p>
+                                <input type="file" id="appIconInput" accept=".png" style="display: none;" onchange="BrandingSEO.handleLogoUpload('app_icon', this)">
+                            </div>
+                            <div id="appIconPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Variantes Geradas -->
+                    <div id="logoVariantsSection" class="section">
+                        <h3>Variantes Geradas Automaticamente</h3>
+                        <p class="helper-text">O sistema gera automaticamente todas as dimensões necessárias para diferentes dispositivos e contextos.</p>
+                        
+                        <!-- Desktop Variants -->
+                        <div class="variant-category">
+                            <h4><i class="fas fa-desktop"></i> Desktop</h4>
+                            <div id="desktopVariants" class="variants-grid">
+                                <!-- PNG: 512x512, 256x256 | WebP: 512x512, 256x256 -->
+                            </div>
+                        </div>
+                        
+                        <!-- Tablet Variants -->
+                        <div class="variant-category">
+                            <h4><i class="fas fa-tablet-alt"></i> Tablet</h4>
+                            <div id="tabletVariants" class="variants-grid">
+                                <!-- PNG: 384x384, 192x192 | WebP: 384x384 -->
+                            </div>
+                        </div>
+                        
+                        <!-- Mobile Variants -->
+                        <div class="variant-category">
+                            <h4><i class="fas fa-mobile-alt"></i> Mobile</h4>
+                            <div id="mobileVariants" class="variants-grid">
+                                <!-- PNG: 256x256, 128x128 | WebP: 256x256 -->
+                            </div>
+                        </div>
+                        
+                        <!-- Favicon Variants -->
+                        <div class="variant-category">
+                            <h4><i class="fas fa-globe"></i> Favicon</h4>
+                            <div id="faviconVariants" class="variants-grid">
+                                <!-- PNG: 32x32, 16x16, 48x48 -->
+                            </div>
+                        </div>
+                        
+                        <!-- App Icon Variants -->
+                        <div class="variant-category">
+                            <h4><i class="fas fa-mobile"></i> App Icons</h4>
+                            <div id="appIconVariants" class="variants-grid">
+                                <!-- PNG: 180x180, 152x152, 144x144, 120x120, 76x76, 60x60, 40x40, 29x29, 20x20 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ações -->
+                    <div style="margin-top: var(--spacing-5); display: flex; gap: var(--spacing-3);">
+                        <button class="btn btn-primary" onclick="BrandingSEO.loadLogos()">
+                            <i class="fas fa-sync"></i> Carregar Logos Existentes
+                        </button>
+                        <button class="btn btn-secondary" onclick="BrandingSEO.generateAllVariants()">
+                            <i class="fas fa-magic"></i> Gerar Todas as Variantes
+                        </button>
+                        <button class="btn btn-success" onclick="BrandingSEO.publishLogos()">
+                            <i class="fas fa-paper-plane"></i> Publicar Logos
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Contexto da Plataforma -->
+            <div id="tab-platform-context" class="tab-content">
+                <div class="section">
+                    <h2>Contexto da Plataforma</h2>
+                    <p class="helper-text">Define o objetivo, propósito e características da plataforma. Este contexto será usado pela IA para gerar metadados mais precisos e adaptados.</p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Objetivo da Plataforma</label>
+                            <textarea id="platformObjective" class="form-textarea" rows="3" placeholder="Ex: Plataforma de gestão e análise de eventos desportivos com tecnologia de visão computacional..."></textarea>
+                            <div class="helper-text">Descreva o objetivo principal da plataforma</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Descrição Detalhada</label>
+                            <textarea id="platformDescription" class="form-textarea" rows="4" placeholder="Ex: Kromi.online é uma plataforma completa para gestão de eventos desportivos que utiliza IA para detecção automática de participantes, análise de tempos e classificação de resultados..."></textarea>
+                            <div class="helper-text">Descrição detalhada do que a plataforma faz e como funciona</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Público-Alvo</label>
+                            <textarea id="targetAudience" class="form-textarea" rows="2" placeholder="Ex: Organizadores de eventos desportivos, federações, clubes, e entidades que precisam de gestão automatizada de resultados..."></textarea>
+                            <div class="helper-text">Quem são os utilizadores principais da plataforma</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Características Principais</label>
+                            <textarea id="keyFeatures" class="form-textarea" rows="3" placeholder="Uma por linha, ex:&#10;Detecção automática de dorsais&#10;Análise de tempos em tempo real&#10;Classificação automática de resultados"></textarea>
+                            <div class="helper-text">Liste as principais funcionalidades (uma por linha)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Tom/Voz da Marca</label>
+                            <input type="text" id="brandVoice" class="form-input" placeholder="Ex: Profissional, confiável, inovador">
+                            <div class="helper-text">Adjetivos que descrevem o tom da marca</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Personalidade da Marca</label>
+                            <input type="text" id="brandPersonality" class="form-input" placeholder="Ex: Tecnológica, precisa, eficiente">
+                            <div class="helper-text">Como a marca se apresenta</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Setor/Indústria</label>
+                            <input type="text" id="industrySector" class="form-input" placeholder="Ex: Gestão de Eventos Desportivos, Tecnologia Desportiva">
+                            <div class="helper-text">Setor onde a plataforma atua</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Casos de Uso Principais</label>
+                            <textarea id="useCases" class="form-textarea" rows="3" placeholder="Uma por linha, ex:&#10;Maratonas e corridas de rua&#10;Triatlos&#10;Provas de ciclismo"></textarea>
+                            <div class="helper-text">Principais cenários de utilização (uma por linha)</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: var(--spacing-5); display: flex; gap: var(--spacing-3);">
+                        <button class="btn btn-primary" onclick="BrandingSEO.savePlatformContext()">
+                            <i class="fas fa-save"></i> Guardar Contexto
+                        </button>
+                        <button class="btn btn-secondary" onclick="BrandingSEO.publishPlatformContext()">
+                            <i class="fas fa-paper-plane"></i> Publicar
+                        </button>
+                        <div id="platformContextStatus" style="margin-left: auto; padding: var(--spacing-2) var(--spacing-4); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                            <span style="color: var(--text-secondary);">Status: </span>
+                            <span id="platformContextStatusText" style="font-weight: var(--font-weight-semibold);">Não definido</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Metadados Globais -->
+            <div id="tab-metadata-global" class="tab-content">
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                        <h2>Metadados Globais do Site</h2>
+                        <button class="btn btn-primary" onclick="BrandingSEO.generateGlobalMetadata()">
+                            <i class="fas fa-magic"></i> Gerar com IA
+                        </button>
+                    </div>
+                    <p class="helper-text">Configurações gerais de SEO aplicadas a todo o site. Use IA para gerar metadados baseados no contexto da plataforma.</p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Título Padrão do Site</label>
+                            <input type="text" id="globalSiteTitle" class="form-input" placeholder="Kromi.online - Sistema de Cronometragem">
+                            <div class="char-count" id="globalTitleCount">0 / 60</div>
+                            <span class="helper-text">Aparece nos resultados de busca e abas do navegador</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Descrição Padrão do Site</label>
+                            <textarea id="globalSiteDescription" class="form-textarea" rows="3" placeholder="Descrição que aparece nos resultados de busca"></textarea>
+                            <div class="char-count" id="globalDescCount">0 / 160</div>
+                            <span class="helper-text">140-160 caracteres recomendado</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Palavras-chave Globais</label>
+                            <input type="text" id="globalKeywords" class="form-input" placeholder="cronometragem, eventos, desporto">
+                            <span class="helper-text">Separadas por vírgulas</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Nome do Site (OG)</label>
+                            <input type="text" id="ogSiteName" class="form-input" placeholder="Kromi.online">
+                            <span class="helper-text">Nome que aparece nas partilhas sociais</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>URL Canónica Global</label>
+                            <input type="url" id="globalCanonical" class="form-input" placeholder="https://kromi.online">
+                            <span class="helper-text">URL base do site</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Robots Directives</label>
+                            <input type="text" id="globalRobots" class="form-input" value="index,follow">
+                            <span class="helper-text">Ex: index,follow ou noindex,nofollow</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Ações -->
+                    <div style="margin-top: var(--spacing-5); display: flex; gap: var(--spacing-3);">
+                        <button class="btn btn-success" onclick="BrandingSEO.saveGlobalMetadata()">
+                            <i class="fas fa-save"></i> Guardar Metadados Globais
+                        </button>
+                        <button class="btn btn-secondary" onclick="BrandingSEO.publishGlobalMetadata()">
+                            <i class="fas fa-paper-plane"></i> Publicar
+                        </button>
+                        <div id="globalMetadataStatus" style="margin-left: auto; padding: var(--spacing-2) var(--spacing-4); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                            <span style="color: var(--text-secondary);">Status: </span>
+                            <span id="globalMetadataStatusText" style="font-weight: var(--font-weight-semibold);">Não definido</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Metadados por Página -->
+            <div id="tab-metadata-pages" class="tab-content">
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                        <h2>Metadados por Página</h2>
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <button class="btn btn-secondary" onclick="BrandingSEO.syncPages()" title="Sincronizar todas as páginas do projeto">
+                                <i class="fas fa-sync"></i> Sincronizar
+                            </button>
+                            <button class="btn btn-primary" onclick="BrandingSEO.addPage()">
+                                <i class="fas fa-plus"></i> Nova Página
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: var(--spacing-4);">
+                        <label>Selecionar Página</label>
+                        <div style="display: flex; gap: var(--spacing-2); align-items: center;">
+                            <select id="pageSelector" class="form-select" onchange="BrandingSEO.onPageChange()" style="flex: 1;">
+                                <option value="">Selecione uma página...</option>
+                            </select>
+                            <button id="generateMetadataBtn" class="btn btn-primary" onclick="BrandingSEO.generateFullMetadata()" style="white-space: nowrap;" disabled>
+                                <i class="fas fa-magic"></i> Gerar com IA
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="pageMetaForm" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Título da Página</label>
+                                <input type="text" id="pageTitle" class="form-input">
+                                <div class="char-count" id="pageTitleCount">0 / 60</div>
+                                <div class="validation-error" id="pageTitleError" style="display: none;"></div>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label>Descrição Meta</label>
+                                <textarea id="pageDescription" class="form-textarea" rows="3"></textarea>
+                                <div class="char-count" id="pageDescCount">0 / 160</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Palavras-chave</label>
+                                <input type="text" id="pageKeywords" class="form-input" placeholder="palavra1, palavra2">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>URL Canónica</label>
+                                <input type="url" id="pageCanonical" class="form-input">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Robots Directives</label>
+                                <input type="text" id="pageRobots" class="form-input" value="index,follow">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Deep Link (Opcional)</label>
+                                <input type="text" id="pageDeepLink" class="form-input" placeholder="myapp://screen/product?id=123">
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h3>Open Graph</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>OG Title</label>
+                                    <input type="text" id="ogTitle" class="form-input">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>OG Description</label>
+                                    <textarea id="ogDescription" class="form-textarea" rows="2"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>OG Type</label>
+                                    <select id="ogType" class="form-select">
+                                        <option value="website">Website</option>
+                                        <option value="article">Article</option>
+                                        <option value="product">Product</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Redes Sociais -->
+                        <div class="section">
+                            <h3>Redes Sociais</h3>
+                            
+                            <!-- Facebook -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">Facebook</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Facebook Title</label>
+                                    <input type="text" id="facebookTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                    <div class="helper-text">Usa OG Title se vazio</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Facebook Description</label>
+                                    <textarea id="facebookDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Instagram -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">Instagram</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Instagram Title</label>
+                                    <input type="text" id="instagramTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>Instagram Description</label>
+                                    <textarea id="instagramDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- LinkedIn -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">LinkedIn</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>LinkedIn Title</label>
+                                    <input type="text" id="linkedinTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>LinkedIn Description</label>
+                                    <textarea id="linkedinDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Twitter -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">Twitter</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Twitter Title</label>
+                                    <input type="text" id="twitterTitle" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Twitter Description</label>
+                                    <textarea id="twitterDescription" class="form-textarea" rows="2"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Twitter Card Type</label>
+                                    <select id="twitterCard" class="form-select">
+                                        <option value="summary_large_image">Summary Large Image</option>
+                                        <option value="summary">Summary</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Google -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">Google</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Google Title</label>
+                                    <input type="text" id="googleTitle" class="form-input" placeholder="Usa Title principal se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>Google Description</label>
+                                    <textarea id="googleDescription" class="form-textarea" rows="2" placeholder="Usa Description principal se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- TikTok -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">TikTok</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>TikTok Title</label>
+                                    <input type="text" id="tiktokTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>TikTok Description</label>
+                                    <textarea id="tiktokDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- WhatsApp -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">WhatsApp</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>WhatsApp Title</label>
+                                    <input type="text" id="whatsappTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>WhatsApp Description</label>
+                                    <textarea id="whatsappDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Telegram -->
+                            <h4 style="margin-top: var(--spacing-3); margin-bottom: var(--spacing-2);">Telegram</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Telegram Title</label>
+                                    <input type="text" id="telegramTitle" class="form-input" placeholder="Usa OG Title se vazio">
+                                </div>
+                                <div class="form-group">
+                                    <label>Telegram Description</label>
+                                    <textarea id="telegramDescription" class="form-textarea" rows="2" placeholder="Usa OG Description se vazio"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h3>Preview</h3>
+                            <div id="metaPreview" class="preview-card">
+                                <div class="preview-card-header">
+                                    <div class="preview-card-title">Título da Página</div>
+                                    <div class="preview-card-url">https://kromi.online</div>
+                                </div>
+                                <div class="preview-card-description">Descrição da página...</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: var(--spacing-5);">
+                            <button class="btn btn-primary" onclick="BrandingSEO.savePageMeta()">
+                                <i class="fas fa-save"></i> Guardar Metadados
+                            </button>
+                            <button class="btn btn-secondary" onclick="BrandingSEO.publishPageMeta()">
+                                <i class="fas fa-paper-plane"></i> Publicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Thumbnails -->
+            <div id="tab-thumbnails" class="tab-content">
+                <div class="section">
+                    <h2>Thumbnails e Social Preview</h2>
+                    <p class="helper-text">Imagens para partilha em redes sociais por página</p>
+                    
+                    <div class="form-group" style="margin-bottom: var(--spacing-4);">
+                        <label>Selecionar Página</label>
+                        <select id="thumbnailPageSelector" class="form-select" onchange="BrandingSEO.loadThumbnails()">
+                            <option value="">Selecione uma página...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="thumbnailForm" style="display: none;">
+                        <div class="form-grid">
+                            <!-- Open Graph Image -->
+                            <div class="form-group full-width">
+                                <label>Facebook / Open Graph Image (1200x630px)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos Facebook/OG:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x630px (1.91:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Safe area: 60px margem</li>
+                                        <li>Usado em: Facebook, WhatsApp, Telegram</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('facebookImageInput').click()">
+                                    <i class="fab fa-facebook" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar Facebook/OG Image</p>
+                                    <input type="file" id="facebookImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('facebook_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="facebookImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('facebook_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="facebookImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- Twitter Image -->
+                            <div class="form-group full-width">
+                                <label>Twitter Card Image (1200x675px)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x675px (1.78:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Safe area: 60px margem</li>
+                                        <li>Para: summary_large_image</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('twitterImageInput').click()">
+                                    <i class="fas fa-image" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar Twitter Card Image</p>
+                                    <input type="file" id="twitterImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('twitter_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="twitterImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('twitter_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="twitterImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- Instagram Image -->
+                            <div class="form-group full-width">
+                                <label>Instagram Image (1080x1080px ou 1080x566px)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos Instagram:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1080x1080px (square) ou 1080x566px (landscape)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Recomendado: Square (1080x1080) para feed</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('instagramImageInput').click()">
+                                    <i class="fab fa-instagram" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar Instagram Image</p>
+                                    <input type="file" id="instagramImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('instagram_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="instagramImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('instagram_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="instagramImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- LinkedIn Image -->
+                            <div class="form-group full-width">
+                                <label>LinkedIn Image (1200x627px)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos LinkedIn:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x627px (1.91:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Safe area: 60px margem</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('linkedinImageInput').click()">
+                                    <i class="fab fa-linkedin" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar LinkedIn Image</p>
+                                    <input type="file" id="linkedinImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('linkedin_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="linkedinImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('linkedin_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="linkedinImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- Google Image -->
+                            <div class="form-group full-width">
+                                <label>Google Image (1200x675px)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos Google:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x675px (1.78:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Usado em: Google Search, Rich Snippets</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('googleImageInput').click()">
+                                    <i class="fab fa-google" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar Google Image</p>
+                                    <input type="file" id="googleImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('google_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="googleImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('google_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="googleImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- TikTok Image -->
+                            <div class="form-group full-width">
+                                <label>TikTok Image (1080x1920px - VERTICAL)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos TikTok:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1080x1920px (9:16 ratio - VERTICAL)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 2 MB</li>
+                                        <li>⚠️ IMPORTANTE: Imagem vertical (portrait)</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('tiktokImageInput').click()">
+                                    <i class="fab fa-tiktok" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar TikTok Image (Vertical)</p>
+                                    <input type="file" id="tiktokImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('tiktok_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (obrigatório)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="tiktokImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('tiktok_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="tiktokImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- WhatsApp Image -->
+                            <div class="form-group full-width">
+                                <label>WhatsApp Image (1200x630px - Opcional)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos WhatsApp:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x630px (1.91:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Nota: Usa Facebook/OG se não especificado</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('whatsappImageInput').click()">
+                                    <i class="fab fa-whatsapp" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar WhatsApp Image (opcional)</p>
+                                    <input type="file" id="whatsappImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('whatsapp_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (opcional)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="whatsappImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('whatsapp_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="whatsappImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                            
+                            <!-- Telegram Image -->
+                            <div class="form-group full-width">
+                                <label>Telegram Image (1200x630px - Opcional)</label>
+                                <div class="requirement-box">
+                                    <h4>📋 Requisitos Telegram:</h4>
+                                    <ul>
+                                        <li>Dimensões: 1200x630px (1.91:1 ratio)</li>
+                                        <li>Formato: JPG ou PNG</li>
+                                        <li>Tamanho máximo: 1.5 MB</li>
+                                        <li>Nota: Usa Facebook/OG se não especificado</li>
+                                    </ul>
+                                </div>
+                                <div class="upload-area" onclick="document.getElementById('telegramImageInput').click()">
+                                    <i class="fab fa-telegram" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                    <p>Carregar Telegram Image (opcional)</p>
+                                    <input type="file" id="telegramImageInput" accept=".jpg,.jpeg,.png" style="display: none;" onchange="BrandingSEO.handleThumbnailUpload('telegram_image', this)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt Text (opcional)</label>
+                                    <div style="display: flex; gap: var(--spacing-2);">
+                                        <input type="text" id="telegramImageAlt" class="form-input" placeholder="Descrição da imagem" style="flex: 1;">
+                                        <button type="button" class="btn btn-secondary" onclick="BrandingSEO.generateAltTextWithAI('telegram_image')" title="Gerar Alt Text com IA">
+                                            <i class="fas fa-magic"></i> IA
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="telegramImagePreview" class="preview-container" style="display: none;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: var(--spacing-5);">
+                            <button class="btn btn-primary" onclick="BrandingSEO.saveThumbnails()">
+                                <i class="fas fa-save"></i> Guardar Thumbnails
+                            </button>
+                            <button class="btn btn-secondary" onclick="BrandingSEO.publishThumbnails()">
+                                <i class="fas fa-paper-plane"></i> Publicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Geração com IA -->
+            <div id="tab-ai-generation" class="tab-content">
+                <div class="section">
+                    <h2>🤖 Geração com IA</h2>
+                    <p class="helper-text">Gere variações de títulos e descrições usando IA</p>
+                    
+                    <div class="form-group" style="margin-bottom: var(--spacing-4);">
+                        <label>Selecionar Página</label>
+                        <select id="aiPageSelector" class="form-select" onchange="BrandingSEO.loadAIPage()">
+                            <option value="">Selecione uma página...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="aiGenerationForm" style="display: none;">
+                        <div class="form-group full-width">
+                            <label>Draft / Contexto</label>
+                            <textarea id="aiDraftText" class="form-textarea" rows="4" placeholder="Descreva brevemente o conteúdo da página ou forneça um draft..."></textarea>
+                            <span class="helper-text">Ex: "Página de resultados de eventos desportivos com estatísticas em tempo real"</span>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Tarefa</label>
+                            <select id="aiTaskType" class="form-select">
+                                <option value="title_variations">Variações de Título</option>
+                                <option value="desc_variations">Variações de Descrição</option>
+                                <option value="seo_text">Texto SEO Completo</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="BrandingSEO.generateWithAI()">
+                            <i class="fas fa-magic"></i> Gerar com IA
+                        </button>
+                        
+                        <div id="aiResults" class="ai-suggestions" style="display: none; margin-top: var(--spacing-5);">
+                            <h3>Resultados:</h3>
+                            <div id="aiResultsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Media Library -->
+            <div id="tab-media-library" class="tab-content">
+                <div class="section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4);">
+                        <h2>📚 Media Library</h2>
+                        <div>
+                            <select id="mediaFilter" class="form-select" style="width: 200px; display: inline-block;" onchange="BrandingSEO.filterMediaLibrary()">
+                                <option value="">Todos os Tipos</option>
+                                <option value="logo">Logos</option>
+                                <option value="thumbnail">Thumbnails</option>
+                                <option value="variant">Variantes</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="mediaLibraryGrid" class="media-library-grid">
+                        <!-- Media items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Auditoria -->
+            <div id="tab-audit" class="tab-content">
+                <div class="section">
+                    <h2>📋 Auditoria e Versionamento</h2>
+                    <p class="helper-text">Histórico de alterações e comparação de versões</p>
+                    
+                    <div class="form-group" style="margin-bottom: var(--spacing-4);">
+                        <label>Filtrar por Entidade</label>
+                        <select id="auditEntityFilter" class="form-select" onchange="BrandingSEO.loadAuditLog()">
+                            <option value="">Todas as Entidades</option>
+                            <option value="site_brand_assets">Logos</option>
+                            <option value="page_meta">Metadados</option>
+                            <option value="page_thumbnails">Thumbnails</option>
+                        </select>
+                    </div>
+                    
+                    <div id="auditTimeline" class="audit-timeline">
+                        <!-- Audit entries will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+    
+    <!-- Scripts de Autenticação (obrigatório antes da navegação) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="/supabase.js?v=2025102605" defer></script>
+    <script src="/auth-client.js?v=2025102616" defer></script>
+    <script src="/auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="/navigation-config.js?v=2025102601" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    
+    <!-- Proteção de Rotas -->
+    <script src="/universal-route-protection.js?v=2025102618" defer></script>
+    
+    <!-- Script específico da página -->
+    <script src="/src/branding-seo.js"></script>
+    
+    <script>
+        // Aguardar navegação estar pronta antes de inicializar BrandingSEO
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 1) Aguardar Supabase
+                if (window.supabaseClient?.init) {
+                    await window.supabaseClient.init();
+                    await window.supabaseClient.ready();
+                }
+                
+                // 2) Verificar autenticação usando auth-helper
+                const autenticado = await verificarAutenticacao(['admin', 'superadmin']);
+                if (!autenticado) {
+                    console.warn('⚠️ Sem permissão - redirecionando');
+                    return; // verificarAutenticacao já redireciona
+                }
+                
+                console.log('✅ Autenticação validada');
+                
+                // 3) Aguardar navegação estar pronta
+                await waitForNavigation();
+                console.log('✅ Navegação pronta');
+                
+                // 4) Inicializar BrandingSEO
+                BrandingSEO.init();
+                
+            } catch (error) {
+                console.error('[BRANDING-SEO] Erro na inicialização:', error);
+            }
+        });
+        
+        // Função auxiliar: aguardar navegação estar pronta
+        async function waitForNavigation() {
+            return new Promise((resolve) => {
+                if (window.NavigationUtils) {
+                    resolve();
+                } else {
+                    window.addEventListener('navigationReady', resolve, { once: true });
+                    // Fallback timeout
+                    setTimeout(resolve, 5000);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+

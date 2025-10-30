@@ -1,4 +1,4 @@
-class VisionKrono {
+class Kromi.online {
     constructor() {
         this.stream = null;
         this.isDetecting = false;
@@ -2241,5 +2241,5 @@ class VisionKrono {
 
 // Inicializar aplicação quando página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    new VisionKrono();
+    new Kromi.online();
 });

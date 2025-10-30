@@ -1,4 +1,4 @@
-# 🏆 SUMÁRIO EXECUTIVO FINAL - Sessão Completa VisionKrono
+# 🏆 SUMÁRIO EXECUTIVO FINAL - Sessão Completa Kromi.online
 
 **Data:** 27 Outubro 2025  
 **Duração:** ~5 horas  
@@ -491,7 +491,7 @@ http://localhost/mobile-demo.html
 
 ## 🎉 CONCLUSÃO
 
-**Sistema VisionKrono está:**
+**Sistema Kromi.online está:**
 - ✅ Corrigido (todos os bugs eliminados)
 - ✅ Unificado (sidebar consistente)
 - ✅ Seguro (RLS + multi-tenancy)

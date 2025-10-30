@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * USER MANAGEMENT SYSTEM - VisionKrono
+ * USER MANAGEMENT SYSTEM - Kromi.online
  * ==========================================
  * 
  * Sistema completo de gestão de utilizadores

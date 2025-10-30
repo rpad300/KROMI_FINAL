@@ -1,4 +1,4 @@
-class VisionKronoEvents {
+class Kromi.onlineEvents {
     constructor() {
         this.supabaseClient = null;
         this.events = [];
@@ -9,7 +9,7 @@ class VisionKronoEvents {
     }
     
     async init() {
-        console.log('🚀 Iniciando VisionKronoEvents...');
+        console.log('🚀 Iniciando Kromi.onlineEvents...');
         
         console.log('🔧 Configurando elementos...');
         this.setupElements();
@@ -26,7 +26,7 @@ class VisionKronoEvents {
         console.log('🔧 Iniciando atualizações em tempo real...');
         this.startRealTimeUpdates();
         
-        console.log('✅ VisionKronoEvents inicializado com sucesso!');
+        console.log('✅ Kromi.onlineEvents inicializado com sucesso!');
     }
     
     setupElements() {
@@ -2272,7 +2272,7 @@ class VisionKronoEvents {
 document.addEventListener('DOMContentLoaded', async () => {
     // Só inicializar se estivermos na página de eventos
     if (window.location.pathname.includes('events.html')) {
-        console.log('🎯 Inicializando VisionKronoEvents na página de eventos');
+        console.log('🎯 Inicializando Kromi.onlineEvents na página de eventos');
         console.log('🔍 Estado inicial:', {
             supabaseClient: !!window.supabaseClient,
             authSystem: !!window.authSystem,
@@ -2281,9 +2281,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // IMPORTANTE: NÃO criar instância aqui!
         // Deixar o DOMContentLoaded do events.html fazer isso
-        console.log('⏸️ VisionKronoEvents será inicializado pelo DOMContentLoaded do events.html');
+        console.log('⏸️ Kromi.onlineEvents será inicializado pelo DOMContentLoaded do events.html');
         
     } else {
-        console.log('⏸️ VisionKronoEvents não inicializado - não é página de eventos');
+        console.log('⏸️ Kromi.onlineEvents não inicializado - não é página de eventos');
     }
 });

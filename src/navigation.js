@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Sistema de Navegação Global
+ * Kromi.online - Sistema de Navegação Global
  * Componente reutilizável para navegação consistente em todas as páginas
  */
 

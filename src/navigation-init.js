@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Inicialização Automática de Navegação
+ * Kromi.online - Inicialização Automática de Navegação
  * Inclui este script em todas as páginas para ativar a navegação unificada
  * 
  * @version 2025.10.26

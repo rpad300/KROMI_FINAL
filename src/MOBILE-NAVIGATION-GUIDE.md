@@ -1,4 +1,4 @@
-# 📱 Guia de Navegação Mobile - VisionKrono
+# 📱 Guia de Navegação Mobile - Kromi.online
 
 ## 🎯 COMO FUNCIONA
 

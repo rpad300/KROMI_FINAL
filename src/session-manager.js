@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * SESSION MANAGER - VisionKrono
+ * SESSION MANAGER - Kromi.online
  * ==========================================
  * 
  * Sistema profissional de gestão de sessões server-side

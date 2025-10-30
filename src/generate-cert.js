@@ -16,7 +16,7 @@ try {
         { name: 'countryName', value: 'PT' },
         { name: 'stateOrProvinceName', value: 'Lisboa' },
         { name: 'localityName', value: 'Lisboa' },
-        { name: 'organizationName', value: 'VisionKrono' },
+        { name: 'organizationName', value: 'Kromi.online' },
         { name: 'commonName', value: 'localhost' }
     ];
 

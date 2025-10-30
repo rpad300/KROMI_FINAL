@@ -1,4 +1,4 @@
-class VisionKronoDetection {
+class Kromi.onlineDetection {
     constructor() {
         this.stream = null;
         this.isDetecting = false;
@@ -157,7 +157,7 @@ class VisionKronoDetection {
         }
         
         if (this.eventId) {
-            document.title = 'VisionKrono - Detecção para Evento';
+            document.title = 'Kromi.online - Detecção para Evento';
         }
     }
     
@@ -2940,5 +2940,5 @@ A401`;
 
 // Inicializar quando página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    new VisionKronoDetection();
+    new Kromi.onlineDetection();
 });

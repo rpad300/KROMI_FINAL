@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Serviço de Navegação
+ * Kromi.online - Serviço de Navegação
  * Aplica regras de visibilidade e permissões aos menus
  * 
  * @version 2025.10.26

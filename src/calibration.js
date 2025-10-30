@@ -1,4 +1,4 @@
-class VisionKronoCalibration {
+class Kromi.onlineCalibration {
     constructor() {
         this.currentStep = 1;
         this.imageData = null;
@@ -59,7 +59,7 @@ class VisionKronoCalibration {
         
         if (this.eventId) {
             console.log('🏃‍♂️ Modo evento ativo:', this.eventId);
-            document.title = 'VisionKrono - Calibração para Evento';
+            document.title = 'Kromi.online - Calibração para Evento';
             this.headerSubtitle.textContent = `Configurando para evento: ${this.eventId}`;
             this.backBtn.style.display = 'block';
         }
@@ -1166,5 +1166,5 @@ Para usar no telemóvel:
 
 // Inicializar quando página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    new VisionKronoCalibration();
+    new Kromi.onlineCalibration();
 });

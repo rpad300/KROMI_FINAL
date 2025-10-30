@@ -1781,7 +1781,25 @@ Analise as imagens:`
             const base64Data = latestImage.image_data.replace(/^data:image\/[a-z]+;base64,/, '');
             
             // Processar com Google Vision API
+            const startTime = Date.now();
             const detectionResult = await this.processImageWithGoogleVisionAPI(base64Data);
+            const duration = Date.now() - startTime;
+            
+            // Registar custo da chamada Vision API
+            await this.costTracker.logApiCall({
+                service: 'google-vision',
+                model: 'vision-api-v1',
+                eventId: latestImage.event_id,
+                tokensInput: 1,
+                tokensOutput: 0,
+                tokensTotal: 1,
+                requestDurationMs: duration,
+                metadata: {
+                    image_id: latestImage.id,
+                    operation: 'text_detection',
+                    method: 'background-processor'
+                }
+            });
             
             if (detectionResult && detectionResult.number) {
                 this.log(`Google Vision detectou: ${detectionResult.number} (confiança: ${detectionResult.confidence})`, 'success');

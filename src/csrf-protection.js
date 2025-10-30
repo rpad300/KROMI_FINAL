@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * CSRF PROTECTION - VisionKrono
+ * CSRF PROTECTION - Kromi.online
  * ==========================================
  * 
  * Proteção contra Cross-Site Request Forgery

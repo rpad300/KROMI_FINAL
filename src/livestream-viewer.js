@@ -1,5 +1,5 @@
 /**
- * VisionKrono Live Stream Viewer
+ * Kromi.online Live Stream Viewer
  * 
  * Visualizador limpo e moderno para receber streams WebRTC via Socket.IO
  * - Conecta ao servidor de signaling

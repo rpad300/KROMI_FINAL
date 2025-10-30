@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * SESSION MIDDLEWARE - VisionKrono
+ * SESSION MIDDLEWARE - Kromi.online
  * ==========================================
  * 
  * Middleware para validação de sessões em todas as rotas

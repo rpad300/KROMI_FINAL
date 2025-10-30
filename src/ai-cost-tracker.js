@@ -11,16 +11,17 @@ class AICostTracker {
         this.supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
         
-        // Preços por modelo
+        // Preços por modelo (USD por 1 MILHÃO de tokens ou unidades)
         this.pricing = {
             // Gemini
-            'gemini-1.5-flash': { input: 0.000075, output: 0.0003 },
-            'gemini-1.5-flash-latest': { input: 0.000075, output: 0.0003 },
-            'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
-            'gemini-1.5-pro-latest': { input: 0.00125, output: 0.005 },
-            'gemini-2.0-flash-exp': { input: 0.000075, output: 0.0003 },
-            'gemini-2.0-flash-thinking-exp': { input: 0.000075, output: 0.0003 },
-            'gemini-ultra': { input: 0.0025, output: 0.01 },
+            'gemini-1.5-flash': { input: 0.075, output: 0.30 },
+            'gemini-1.5-flash-latest': { input: 0.075, output: 0.30 },
+            'gemini-1.5-pro': { input: 1.25, output: 5.0 },
+            'gemini-1.5-pro-latest': { input: 1.25, output: 5.0 },
+            'gemini-2.0-flash-exp': { input: 0.075, output: 0.30 },
+            'gemini-2.5-flash-exp': { input: 0.075, output: 0.30 },
+            'gemini-2.0-flash-thinking-exp': { input: 0.075, output: 0.30 },
+            'gemini-ultra': { input: 2.5, output: 10 },
             
             // OpenAI
             'gpt-4o': { input: 2.5, output: 10 },
@@ -35,7 +36,10 @@ class AICostTracker {
             'deepseek-chat': { input: 0.14, output: 0.28 },
             'deepseek-chat-0324': { input: 0.14, output: 0.28 },
             'deepseek-reasoner': { input: 0.55, output: 2.19 },
-            'deepseek-reasoner-0324': { input: 0.55, output: 2.19 }
+            'deepseek-reasoner-0324': { input: 0.55, output: 2.19 },
+            
+            // Google Vision API (preço fixo por imagem)
+            'vision-api-v1': { input: 1500, output: 0 }  // $1.50 por 1000 = $1500 por 1M
         };
     }
     

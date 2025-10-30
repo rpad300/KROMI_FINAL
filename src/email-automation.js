@@ -444,7 +444,7 @@ class EmailAutomation {
 
             // Enviar email
             const info = await transporter.sendMail({
-                from: `"VisionKrono System" <${emailConfig.user}>`,
+                from: `"Kromi.online System" <${emailConfig.user}>`,
                 to: recipient.email,
                 subject: subject,
                 html: body_html

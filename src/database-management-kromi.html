@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <title>VisionKrono - Gestão de Base de Dados</title>
+    <title>Kromi.online - Gestão de Base de Dados</title>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -864,7 +864,7 @@ UPDATE participants SET status = 'confirmed' WHERE dorsal = 123;"></textarea>
             try {
                 console.log('📋 Carregando lista completa de tabelas...');
                 
-                // Lista COMPLETA de TODAS as tabelas do projeto VisionKrono
+                // Lista COMPLETA de TODAS as tabelas do projeto Kromi.online
                 const tableDefs = [
                     // Core do Sistema
                     { name: 'events', description: 'Eventos desportivos', icon: '🏃', category: 'Core' },
@@ -1221,7 +1221,7 @@ UPDATE participants SET status = 'confirmed' WHERE dorsal = 123;"></textarea>
                 
                 const backup = {
                     version: '1.0',
-                    project: 'VisionKrono',
+                    project: 'Kromi.online',
                     timestamp: new Date().toISOString(),
                     exportedBy: window.authSystem?.currentUser?.email || 'unknown',
                     tables: {},

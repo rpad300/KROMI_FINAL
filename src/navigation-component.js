@@ -1,5 +1,5 @@
 /**
- * VisionKrono - Componente de Navegação Unificado
+ * Kromi.online - Componente de Navegação Unificado
  * Renderiza sidebar com menus global e de evento
  * 
  * @version 2025.10.26
@@ -118,7 +118,7 @@ class NavigationComponent {
     renderHeader() {
         return `
             <div class="sidebar-header">
-                <h2 class="sidebar-title">🏃 VisionKrono</h2>
+                <h2 class="sidebar-title">🏃 Kromi.online</h2>
                 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Alternar menu lateral" type="button">
                     <span></span>
                     <span></span>

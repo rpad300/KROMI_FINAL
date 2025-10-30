@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * AUTH CLIENT - VisionKrono
+ * AUTH CLIENT - Kromi.online
  * ==========================================
  * 
  * Cliente de autenticação que usa sistema server-side

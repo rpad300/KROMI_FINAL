@@ -1,5 +1,5 @@
 /**
- * VisionKrono Live Stream Client
+ * Kromi.online Live Stream Client
  * 
  * Cliente limpo e moderno para streaming WebRTC via Socket.IO
  * - Conecta dispositivo móvel ao servidor de signaling

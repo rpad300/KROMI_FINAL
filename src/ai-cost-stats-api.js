@@ -8,11 +8,10 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { Parser } = require('@json2csv/plainjs');
-const AICostSync = require('./ai-cost-sync');
+const getAIUsageTracker = require('./ai-usage-tracker');
 
 // Variável para armazenar sessionManager (será setada quando o módulo for carregado)
 let sessionManager = null;
-let aiCostSync = null;
 
 // Função para setar o sessionManager
 function setSessionManager(sm) {
@@ -22,12 +21,29 @@ function setSessionManager(sm) {
 
 // Função para inicializar o sistema de sincronização
 function initSync() {
-    if (!aiCostSync) {
-        aiCostSync = new AICostSync();
-        // Iniciar sincronização automática a cada 6 horas
-        aiCostSync.startAutoSync(6);
-    }
-    return aiCostSync;
+    const tracker = getAIUsageTracker();
+    console.log('[AI-COST-API] ✅ AI Usage Tracker inicializado');
+    
+    // Sincronizar custos de hoje imediatamente
+    setTimeout(() => {
+        tracker.syncTodayCosts().then(result => {
+            if (result.success) {
+                console.log('[AI-COST-API] ✅ Sincronização inicial concluída:', result.records, 'registos');
+            }
+        });
+    }, 5000);
+    
+    // Sincronizar a cada 30 minutos
+    setInterval(() => {
+        console.log('[AI-COST-API] 🔄 Sincronização automática de custos...');
+        tracker.syncTodayCosts().then(result => {
+            if (result.success && result.records > 0) {
+                console.log('[AI-COST-API] ✅ Sincronização automática:', result.records, 'novos registos');
+            }
+        });
+    }, 30 * 60 * 1000);
+    
+    return tracker;
 }
 
 // Middleware para verificar se o utilizador é administrador
@@ -398,36 +414,33 @@ router.post('/sync', requireAdmin, async (req, res) => {
             }
         }
 
-        // Inicializar sistema de sincronização se necessário
-        const syncSystem = initSync();
+        // Obter tracker de uso
+        const tracker = getAIUsageTracker();
 
-        // Definir período de sincronização (últimas 7 dias)
-        const endDate = new Date();
-        const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        // Executar sincronização imediata dos custos de hoje
+        console.log('[AI-COST-API] 🔄 Sincronizando custos de hoje...');
+        
+        const result = await tracker.syncTodayCosts();
 
-        // Executar sincronização em background
-        setImmediate(async () => {
-            try {
-                console.log('[AI-COST-API] 🔄 Iniciando sincronização em background...');
-                await syncSystem.syncGoogleCloudCosts(
-                    startDate.toISOString(),
-                    endDate.toISOString(),
-                    req.userId
-                );
-                console.log('[AI-COST-API] ✅ Sincronização background concluída');
-            } catch (error) {
-                console.error('[AI-COST-API] ❌ Erro na sincronização background:', error);
-            }
-        });
-
-        res.json({
-            message: 'Sincronização iniciada com sucesso',
-            status: 'running',
-            period: {
-                start: startDate.toISOString(),
-                end: endDate.toISOString()
-            }
-        });
+        if (result.success) {
+            console.log('[AI-COST-API] ✅ Sincronização manual concluída');
+            console.log('[AI-COST-API] Novos registos:', result.records);
+            console.log('[AI-COST-API] Custo sincronizado: $', result.totalCost.toFixed(6));
+            
+            res.json({
+                message: 'Sincronização concluída com sucesso',
+                status: 'completed',
+                records_synced: result.records,
+                total_cost: result.totalCost,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            console.error('[AI-COST-API] ❌ Erro na sincronização:', result.error);
+            res.status(500).json({
+                error: result.error || 'Erro ao sincronizar custos',
+                status: 'failed'
+            });
+        }
 
     } catch (error) {
         console.error('[AI-COST-API] ❌ Erro ao disparar sincronização:', error);

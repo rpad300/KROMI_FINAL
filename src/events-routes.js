@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * EVENTS ROUTES - VisionKrono
+ * EVENTS ROUTES - Kromi.online
  * ==========================================
  * 
  * Endpoints REST para gestão de eventos

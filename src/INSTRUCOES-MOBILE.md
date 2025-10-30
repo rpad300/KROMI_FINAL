@@ -1,4 +1,4 @@
-# 📱 INSTRUÇÕES MOBILE - VisionKrono
+# 📱 INSTRUÇÕES MOBILE - Kromi.online
 
 ## 🎯 COMO FUNCIONA O BOTÃO HAMBÚRGUER
 

@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * DATABASE ROUTES - VisionKrono
+ * DATABASE ROUTES - Kromi.online
  * ==========================================
  * 
  * Endpoints REST para gestão de base de dados
@@ -236,7 +236,7 @@ module.exports = function(app, sessionManager) {
                 version: '1.0',
                 exported: new Date().toISOString(),
                 exportedBy: req.userSession.userProfile.email,
-                database: 'VisionKrono',
+                database: 'Kromi.online',
                 note: 'Schema completo será implementado com pg_dump ou SQL queries',
                 tables: [],
                 triggers: [],
