@@ -19,6 +19,12 @@
     <!-- KROMI Design System -->
     <link rel="stylesheet" href="/kromi-design-system.css">
     
+    <!-- Logo Integration Styles -->
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    
+    <!-- Logo Loader (carregar antes de usar) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
+    
     <style>
         * {
             margin: 0;
@@ -197,36 +203,29 @@
             transform: none;
         }
         
-        .scanning-indicator {
+        
+        .logo-header {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
-            color: #10b981;
-            font-size: 16px;
-            font-weight: 600;
-            background: rgba(16, 185, 129, 0.2);
-            padding: 10px 20px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(16, 185, 129, 0.5);
-            z-index: 50;
-            display: none;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         
-        .scanning-indicator.active {
-            display: block;
-        }
-        
-        .scanning-indicator::before {
-            content: '🔍 ';
-            margin-right: 5px;
+        .logo-header img {
+            max-height: 120px;
+            width: auto;
+            object-fit: contain;
         }
         
         .scanner-header {
             position: absolute;
-            top: 20px;
+            top: 160px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -235,19 +234,29 @@
             padding: 12px 24px;
             border-radius: 20px;
             backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         
         .scanner-header h1 {
             font-size: 20px;
             color: #fc6b03;
             margin: 0;
+            margin-bottom: 8px;
             font-weight: 700;
+            display: block;
+            width: 100%;
         }
         
         .scanner-header p {
             color: rgba(255, 255, 255, 0.8);
             font-size: 12px;
-            margin-top: 4px;
+            margin: 0;
+            margin-top: 0;
+            display: block;
+            width: 100%;
         }
         
         #qrCanvas {
@@ -261,16 +270,15 @@
 </head>
 <body>
     <div class="scanner-container">
+        <!-- Logo no Topo ao Centro -->
+        <div class="logo-header" id="logoHeader"></div>
+        
         <!-- Header Minimalista -->
         <div class="scanner-header">
             <h1>🔐 Acesso ao Dispositivo</h1>
             <p>Escaneie o QR Code ou digite o código</p>
         </div>
         
-        <!-- Indicador de Escaneamento -->
-        <div class="scanning-indicator" id="scanningIndicator">
-            Escaneando QR Code...
-        </div>
         
         <!-- QR Code Scanner (Tela Cheia) -->
         <div class="qr-scanner-container">
@@ -328,8 +336,52 @@
         let currentDevice = null;
         
         // Inicializar Supabase
+        // Carregar logo no topo
+        async function loadTopLogo() {
+            const logoContainer = document.getElementById('logoHeader');
+            if (!logoContainer) return;
+            
+            // Aguardar logoLoader estar disponível
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            const tryLoad = async () => {
+                if (typeof window.logoLoader !== 'undefined' && window.logoLoader && typeof window.logoLoader.renderLogo === 'function') {
+                    try {
+                        await window.logoLoader.renderLogo(logoContainer, {
+                            type: 'primary', // Logo horizontal
+                            orientation: 'horizontal',
+                            alt: 'Kromi.online',
+                            className: 'top-logo',
+                            style: {
+                                maxHeight: '120px',
+                                width: 'auto',
+                                display: 'block'
+                            },
+                            fallback: '<h2 style="color: #fc6b03; font-size: 24px; margin: 0;">Kromi.online</h2>'
+                        });
+                        console.log('[DETECTIONS] Logo carregado no topo');
+                    } catch (error) {
+                        console.warn('[DETECTIONS] Erro ao carregar logo:', error);
+                    }
+                    return true;
+                }
+                
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(tryLoad, 100);
+                }
+            };
+            
+            // Aguardar um pouco antes de começar
+            setTimeout(tryLoad, 300);
+        }
+        
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 [DETECTIONS-KROMI] Inicializando página de scanner...');
+            
+            // Carregar logo no topo
+            loadTopLogo();
             
             if (window.supabaseClient) {
                 await window.supabaseClient.init();
@@ -355,7 +407,6 @@
         async function startQRScanner() {
             const video = document.getElementById('qrVideo');
             const placeholder = document.getElementById('qrPlaceholder');
-            const indicator = document.getElementById('scanningIndicator');
             const canvas = document.getElementById('qrCanvas');
             const startBtn = document.getElementById('startScanner');
             
@@ -383,7 +434,6 @@
                 video.srcObject = qrStream;
                 video.style.display = 'block';
                 if (placeholder) placeholder.style.display = 'none';
-                if (indicator) indicator.classList.add('active');
                 
                 // Aguardar video estar pronto
                 await new Promise((resolve) => {
@@ -424,7 +474,6 @@
                 }
                 
                 if (placeholder) placeholder.style.display = 'flex';
-                if (indicator) indicator.classList.remove('active');
             }
         }
         
@@ -442,11 +491,9 @@
             
             const video = document.getElementById('qrVideo');
             const placeholder = document.getElementById('qrPlaceholder');
-            const indicator = document.getElementById('scanningIndicator');
             
             if (video) video.style.display = 'none';
             if (placeholder) placeholder.style.display = 'flex';
-            if (indicator) indicator.classList.remove('active');
         }
         
         // Processar QR Code escaneado

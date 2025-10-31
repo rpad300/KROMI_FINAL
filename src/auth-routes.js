@@ -51,23 +51,46 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
                 });
             }
             
-            // Carregar perfil do utilizador
-            const { data: profile, error: profileError } = await supabase
+            // Carregar perfil do utilizador (usar admin para bypass RLS)
+            const { data: profile, error: profileError } = await supabaseAdmin
                 .from('user_profiles')
                 .select('*')
                 .eq('user_id', data.user.id)
-                .single();
+                .maybeSingle();
             
-            if (profileError) {
-                console.error(`❌ Erro ao carregar perfil: ${profileError.message}`);
-                // Usar perfil padrão
+            // Verificar status do utilizador (bloquear se inactive ou suspended)
+            if (profile) {
+                if (profile.status === 'inactive' || profile.status === 'suspended') {
+                    console.log(`🚫 Login bloqueado: ${email} - Status: ${profile.status}`);
+                    
+                    // Audit log
+                    auditLogger.log('LOGIN_BLOCKED', data.user.id, {
+                        email,
+                        reason: `Status: ${profile.status}`,
+                        ip: req.ip,
+                        userAgent: req.get('user-agent')
+                    });
+                    
+                    return res.status(403).json({
+                        error: 'Conta desativada',
+                        message: `Esta conta está ${profile.status === 'inactive' ? 'desativada' : 'suspensa'}. Contacte o administrador.`
+                    });
+                }
+            }
+            
+            // Se não existe perfil, criar um básico
+            if (!profile) {
                 profile = {
                     user_id: data.user.id,
                     email: data.user.email,
-                    name: data.user.email,
-                    role: 'admin',
-                    status: 'active'
+                    name: data.user.email?.split('@')[0] || 'Utilizador',
+                    role: 'user',
+                    status: 'pending_verification'
                 };
+            }
+            
+            if (profileError && profileError.code !== 'PGRST116') {
+                console.error(`❌ Erro ao carregar perfil: ${profileError.message}`);
             }
             
             // Atualizar último login e contador de logins
@@ -254,7 +277,7 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
     // ==========================================
     // GET /api/auth/session
     // ==========================================
-    app.get('/api/auth/session', (req, res) => {
+    app.get('/api/auth/session', async (req, res) => {
         const sessionId = req.cookies?.sid;
         
         if (!sessionId) {
@@ -272,6 +295,38 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
                 authenticated: false,
                 message: 'Sessão inválida ou expirada'
             });
+        }
+        
+        // Verificar status do utilizador (bloquear se inactive ou suspended)
+        if (supabaseAdmin && session.userProfile) {
+            try {
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('status')
+                    .eq('user_id', session.userId)
+                    .maybeSingle();
+                
+                if (profile && (profile.status === 'inactive' || profile.status === 'suspended')) {
+                    // Invalidar sessão
+                    sessionManager.revokeSession(sessionId);
+                    res.clearCookie('sid');
+                    
+                    // Audit log
+                    auditLogger.log('SESSION_TERMINATED_STATUS', session.userId, {
+                        reason: `Status: ${profile.status}`,
+                        ip: req.ip
+                    });
+                    
+                    return res.status(403).json({
+                        authenticated: false,
+                        message: `Conta ${profile.status === 'inactive' ? 'desativada' : 'suspensa'}. Contacte o administrador.`,
+                        status: profile.status
+                    });
+                }
+            } catch (statusError) {
+                console.error('⚠️ Erro ao verificar status do utilizador:', statusError);
+                // Continuar mesmo com erro na verificação de status
+            }
         }
         
         // Obter tempo restante

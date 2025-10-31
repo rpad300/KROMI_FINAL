@@ -125,42 +125,31 @@ class UserManagement {
 
     async getAllUsers() {
         try {
-            console.log('[USER MANAGEMENT] Carregando utilizadores...');
+            console.log('[USER MANAGEMENT] Carregando utilizadores via API server-side...');
             
-            // Garantir que Supabase está disponível
-            if (!this.supabase) {
-                console.log('[USER MANAGEMENT] Supabase não disponível, aguardando...');
-                await this.ensureSupabase();
-            }
-            
-            if (!this.supabase) {
-                throw new Error('Supabase não disponível');
-            }
-            
-            const { data: users, error } = await this.supabase
-                .from('user_profiles')
-                .select(`
-                    id,
-                    user_id,
-                    name,
-                    email,
-                    phone,
-                    organization,
-                    role,
-                    status,
-                    created_at,
-                    updated_at,
-                    last_login,
-                    login_count
-                `)
-                .order('created_at', { ascending: false });
+            // Usar rota server-side que usa Service Role Key (bypass RLS)
+            const response = await fetch('/api/users/list', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
 
-            if (error) {
-                console.error('[USER MANAGEMENT] Erro ao carregar utilizadores:', error);
-                throw error;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                throw new Error(errorData.error || `HTTP ${response.status}`);
             }
 
-            console.log('[USER MANAGEMENT] Utilizadores carregados:', users?.length || 0);
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao carregar utilizadores');
+            }
+
+            const users = result.users || [];
+            
+            console.log('[USER MANAGEMENT] Utilizadores carregados via API:', users.length);
             
             // Debug: verificar valores de last_login
             if (users && users.length > 0) {
@@ -171,7 +160,7 @@ class UserManagement {
                 });
             }
             
-            return users || [];
+            return users;
         } catch (error) {
             console.error('[USER MANAGEMENT] Erro ao carregar utilizadores:', error);
             // Retornar array vazio em caso de erro para não quebrar a interface
@@ -225,85 +214,34 @@ class UserManagement {
 
     async updateUser(userId, userData) {
         try {
-            console.log('[USER MANAGEMENT] Atualizando utilizador:', userId);
+            console.log('[USER MANAGEMENT] Atualizando utilizador via API server-side:', userId);
             
-            // Atualizar perfil - incluir todos os campos da ficha completa
-            const updateData = {
-                name: userData.name,
-                phone: userData.phone,
-                organization: userData.organization,
-                role: userData.role,
-                status: userData.status,
-                
-                // Informação pessoal
-                birth_date: userData.birth_date || null,
-                gender: userData.gender || null,
-                nationality: userData.nationality || null,
-                tax_id: userData.tax_id || null,
-                biography: userData.biography || null,
-                
-                // Contactos adicionais
-                phone_alt: userData.phone_alt || null,
-                email_alt: userData.email_alt || null,
-                website: userData.website || null,
-                social_media: userData.social_media || null,
-                
-                // Morada
-                address_line1: userData.address_line1 || null,
-                address_line2: userData.address_line2 || null,
-                city: userData.city || null,
-                state_province: userData.state_province || null,
-                postal_code: userData.postal_code || null,
-                country: userData.country || null,
-                
-                // Informação profissional
-                job_title: userData.job_title || null,
-                department: userData.department || null,
-                hire_date: userData.hire_date || null,
-                
-                // Contacto de emergência
-                emergency_contact_name: userData.emergency_contact_name || null,
-                emergency_contact_phone: userData.emergency_contact_phone || null,
-                emergency_contact_relation: userData.emergency_contact_relation || null,
-                
-                // Sistema
-                timezone: userData.timezone || null,
-                language: userData.language || null,
-                
-                updated_at: new Date().toISOString()
-            };
-            
-            const { data, error } = await this.supabase
-                .from('user_profiles')
-                .update(updateData)
-                .eq('id', userId)
-                .select()
-                .single();
+            // Usar endpoint server-side que valida se é admin e protege alterações de role/status
+            const response = await fetch('/api/users/update', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id: userId,
+                    ...userData
+                })
+            });
 
-            if (error) {
-                console.error('[USER MANAGEMENT] Erro ao atualizar perfil:', error);
-                throw error;
-            }
-            
-            // Se password foi fornecida, atualizar no Supabase Auth
-            if (userData.password && data.user_id) {
-                console.log('[USER MANAGEMENT] Atualizando password do utilizador...');
-                const { error: authError } = await this.supabase.auth.admin.updateUserById(
-                    data.user_id,
-                    { password: userData.password }
-                );
-                
-                if (authError) {
-                    console.error('[USER MANAGEMENT] Erro ao atualizar password:', authError);
-                    // Não lançar erro - perfil foi atualizado com sucesso
-                    console.warn('[USER MANAGEMENT] Perfil atualizado mas password falhou');
-                } else {
-                    console.log('[USER MANAGEMENT] Password atualizada com sucesso');
-                }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                throw new Error(errorData.error || `HTTP ${response.status}`);
             }
 
-            console.log('[USER MANAGEMENT] Utilizador atualizado com sucesso:', data);
-            return data;
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao atualizar utilizador');
+            }
+
+            console.log('[USER MANAGEMENT] Utilizador atualizado com sucesso:', result.user);
+            return result.user;
         } catch (error) {
             console.error('[USER MANAGEMENT] Erro ao atualizar utilizador:', error);
             throw error;
@@ -314,35 +252,25 @@ class UserManagement {
         try {
             console.log('[USER MANAGEMENT] Eliminando utilizador:', userId);
             
-            // Primeiro obter o user_id
-            const { data: profile, error: profileError } = await this.supabase
-                .from('user_profiles')
-                .select('user_id')
-                .eq('id', userId)
-                .single();
+            // Usar API server-side para eliminar (tem acesso ao auth.users)
+            const response = await fetch(`/api/users/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ id: userId, user_id: userId })
+            });
 
-            if (profileError) {
-                console.error('[USER MANAGEMENT] Erro ao obter perfil:', profileError);
-                throw profileError;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                throw new Error(errorData.error || `HTTP ${response.status}`);
             }
 
-            // Eliminar utilizador do Supabase Auth
-            const { error: authError } = await this.supabase.auth.admin.deleteUser(profile.user_id);
+            const result = await response.json();
             
-            if (authError) {
-                console.error('[USER MANAGEMENT] Erro ao eliminar utilizador do auth:', authError);
-                throw authError;
-            }
-
-            // Eliminar perfil
-            const { error: deleteError } = await this.supabase
-                .from('user_profiles')
-                .delete()
-                .eq('id', userId);
-
-            if (deleteError) {
-                console.error('[USER MANAGEMENT] Erro ao eliminar perfil:', deleteError);
-                throw deleteError;
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao eliminar utilizador');
             }
 
             console.log('[USER MANAGEMENT] Utilizador eliminado com sucesso');
@@ -560,7 +488,11 @@ class UserManagement {
             return;
         }
         
-        tbody.innerHTML = users.map(user => `
+        tbody.innerHTML = users.map(user => {
+            // Usar user_id se id for null (utilizador sem perfil ainda)
+            const identifier = user.id || user.user_id;
+            
+            return `
             <tr>
                 <td>${user.name || 'N/A'}</td>
                 <td>${user.email}</td>
@@ -569,16 +501,25 @@ class UserManagement {
                 <td>${this.formatDate(user.last_login)}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn-icon edit" onclick="window.userManagement.showEditUserModal('${user.id}')" title="Editar utilizador">
+                        <button class="btn-icon edit" onclick="window.userManagement.showEditUserModal('${identifier}')" title="Editar utilizador">
                             ✏️
                         </button>
-                        <button class="btn-icon delete" onclick="window.userManagement.confirmDeleteUser('${user.id}')" title="Eliminar utilizador">
+                        ${user.status === 'active' || user.status === 'pending_verification' 
+                            ? `<button class="btn-icon deactivate" onclick="window.userManagement.confirmDeactivateUser('${identifier}')" title="Desativar utilizador">
+                                ⏸️
+                            </button>`
+                            : `<button class="btn-icon activate" onclick="window.userManagement.confirmActivateUser('${identifier}')" title="Ativar utilizador">
+                                ▶️
+                            </button>`
+                        }
+                        <button class="btn-icon delete" onclick="window.userManagement.confirmDeleteUser('${identifier}')" title="Eliminar utilizador">
                             🗑️
                         </button>
                     </div>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     }
 
     getRoleBadgeClass(role) {
@@ -601,11 +542,13 @@ class UserManagement {
     
     getStatusLabel(status) {
         const labels = {
+            'pending_verification': '⏳ Aguardando Verificação',
             'active': '✅ Ativo',
             'inactive': '⏸️ Inativo',
-            'suspended': '🚫 Suspenso'
+            'suspended': '🚫 Suspenso',
+            'deleted': '🗑️ Eliminado'
         };
-        return labels[status] || status;
+        return labels[status] || status || '❓ Desconhecido';
     }
 
     formatDate(dateString) {
@@ -709,6 +652,22 @@ class UserManagement {
             department: formData.get('department') || null,
             hire_date: formData.get('hire_date') || null,
             
+            // Equipa/Clube
+            team_club_name: formData.get('team_club_name') || null,
+            team_club_category: formData.get('team_club_category') || null,
+            team_position: formData.get('team_position') || null,
+            team_athlete_number: formData.get('team_athlete_number') || null,
+            team_join_date: formData.get('team_join_date') || null,
+            team_notes: formData.get('team_notes') || null,
+            
+            // Dimensões de Roupa
+            clothing_tshirt: formData.get('clothing_tshirt') || null,
+            clothing_casaco: formData.get('clothing_casaco') || null,
+            clothing_calcoes: formData.get('clothing_calcoes') || null,
+            clothing_jersey: formData.get('clothing_jersey') || null,
+            clothing_calcas: formData.get('clothing_calcas') || null,
+            clothing_sapatos: formData.get('clothing_sapatos') || null,
+            
             // Emergência
             emergency_contact_name: formData.get('emergency_contact_name') || null,
             emergency_contact_phone: formData.get('emergency_contact_phone') || null,
@@ -791,16 +750,46 @@ class UserManagement {
                 return;
             }
             
-            // Carregar dados do utilizador
-            const { data: user, error } = await this.supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
+            // Se userId é null ou 'null', buscar pelos dados do allUsers
+            if (!userId || userId === 'null') {
+                console.error('[USER MANAGEMENT] ID inválido para editar');
+                this.showError('Erro: ID de utilizador inválido');
+                return;
+            }
             
-            if (error) {
-                console.error('[USER MANAGEMENT] Erro ao carregar utilizador:', error);
-                this.showError('Erro ao carregar dados do utilizador');
+            // Sempre usar API server-side que tem acesso completo ao auth.users
+            // Isso garante que funciona mesmo quando não há perfil ainda
+            let user = null;
+            
+            try {
+                // Passar ambos os parâmetros - o endpoint vai tentar ambos os métodos
+                // Isso garante que funciona tanto para id de perfil quanto para user_id
+                const url = `/api/users/get?id=${userId}&user_id=${userId}`;
+                
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.user) {
+                        user = result.user;
+                    } else {
+                        throw new Error('Utilizador não encontrado');
+                    }
+                } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || 'Erro ao buscar utilizador');
+                }
+            } catch (fetchError) {
+                console.error('[USER MANAGEMENT] Erro ao buscar via API:', fetchError);
+                this.showError('Erro ao carregar dados do utilizador: ' + fetchError.message);
+                return;
+            }
+            
+            if (!user) {
+                console.error('[USER MANAGEMENT] Utilizador não encontrado após busca');
+                this.showError('Utilizador não encontrado');
                 return;
             }
             
@@ -847,6 +836,23 @@ class UserManagement {
             document.getElementById('editUserJobTitle').value = user.job_title || '';
             document.getElementById('editUserDepartment').value = user.department || '';
             document.getElementById('editUserHireDate').value = user.hire_date || '';
+            
+            // Equipa/Clube
+            document.getElementById('editUserTeamClubName').value = user.team_club_name || '';
+            document.getElementById('editUserTeamClubCategory').value = user.team_club_category || '';
+            document.getElementById('editUserTeamPosition').value = user.team_position || '';
+            document.getElementById('editUserTeamAthleteNumber').value = user.team_athlete_number || '';
+            document.getElementById('editUserTeamJoinDate').value = user.team_join_date || '';
+            document.getElementById('editUserTeamNotes').value = user.team_notes || '';
+            
+            // Dimensões de Roupa
+            const clothingSizes = user.clothing_sizes || {};
+            document.getElementById('editUserClothingTshirt').value = clothingSizes.tshirt || '';
+            document.getElementById('editUserClothingCasaco').value = clothingSizes.casaco || '';
+            document.getElementById('editUserClothingCalcoes').value = clothingSizes.calcoes || '';
+            document.getElementById('editUserClothingJersey').value = clothingSizes.jersey || '';
+            document.getElementById('editUserClothingCalcas').value = clothingSizes.calcas || '';
+            document.getElementById('editUserClothingSapatos').value = clothingSizes.sapatos || '';
             
             // Emergência
             document.getElementById('editUserEmergencyName').value = user.emergency_contact_name || '';
@@ -963,19 +969,97 @@ class UserManagement {
     }
 
     confirmDeleteUser(userId) {
-        if (confirm('Tem certeza que deseja eliminar este utilizador? Esta ação não pode ser desfeita.')) {
+        if (confirm('⚠️ ATENÇÃO: Esta ação irá eliminar PERMANENTEMENTE todos os registros associados a este utilizador em toda a plataforma.\n\nEsta ação NÃO pode ser desfeita.\n\nTem certeza que deseja continuar?')) {
             this.handleDeleteUser(userId);
         }
     }
     
     async handleDeleteUser(userId) {
         try {
-            this.showLoading('Eliminando utilizador...');
+            this.showLoading('Eliminando utilizador e todos os registros associados...');
             await this.deleteUser(userId);
-            this.showSuccess('Utilizador eliminado com sucesso!');
+            this.showSuccess('Utilizador eliminado completamente!');
             await this.loadUsersTable();
         } catch (error) {
             this.showError('Erro ao eliminar utilizador: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    confirmActivateUser(userId) {
+        if (confirm('Deseja ativar este utilizador? O utilizador poderá fazer login e aceder à plataforma.')) {
+            this.handleActivateUser(userId);
+        }
+    }
+
+    async handleActivateUser(userId) {
+        try {
+            this.showLoading('Ativando utilizador...');
+            
+            // userId já é uma string (o identificador passado no onclick)
+            const identifier = userId;
+            
+            const response = await fetch('/api/users/activate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id: identifier,
+                    user_id: identifier
+                })
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error || 'Erro ao ativar utilizador');
+            }
+
+            this.showSuccess('Utilizador ativado com sucesso!');
+            await this.loadUsersTable();
+        } catch (error) {
+            this.showError('Erro ao ativar utilizador: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    confirmDeactivateUser(userId) {
+        if (confirm('Deseja desativar este utilizador? O utilizador NÃO poderá fazer login nem aceder à plataforma.\n\nTodas as sessões ativas serão encerradas.')) {
+            this.handleDeactivateUser(userId);
+        }
+    }
+
+    async handleDeactivateUser(userId) {
+        try {
+            this.showLoading('Desativando utilizador...');
+            
+            // userId já é uma string (o identificador passado no onclick)
+            const identifier = userId;
+            
+            const response = await fetch('/api/users/deactivate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id: identifier,
+                    user_id: identifier
+                })
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error || 'Erro ao desativar utilizador');
+            }
+
+            this.showSuccess('Utilizador desativado com sucesso! Todas as sessões foram encerradas.');
+            await this.loadUsersTable();
+        } catch (error) {
+            this.showError('Erro ao desativar utilizador: ' + error.message);
         } finally {
             this.hideLoading();
         }

@@ -13,7 +13,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-module.exports = function(app, sessionManager) {
+module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger = null) {
     console.log('📋 Carregando rotas de eventos...');
 
     // Inicializar cliente Supabase
@@ -51,7 +51,10 @@ module.exports = function(app, sessionManager) {
         }
     });
 
-    if (supabaseServiceKey) {
+    // Usar supabaseAdmin passado como parâmetro ou criar novo se tiver service key
+    const adminClient = supabaseAdmin || (supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null);
+
+    if (supabaseServiceKey || supabaseAdmin) {
         console.log('✅ Cliente Supabase (service role) inicializado para eventos - RLS bypassed');
     } else {
         console.log('⚠️ Cliente Supabase (anon key) inicializado para eventos - RLS ATIVO');
@@ -112,9 +115,9 @@ module.exports = function(app, sessionManager) {
     // ==========================================
     // GET /api/events/list
     // Listar eventos com escopo por role
-    // Acesso: admin (todos), moderator (próprios), event_manager (próprios)
+    // Acesso: admin (todos), moderator (próprios), event_manager (próprios), user (próprios)
     // ==========================================
-    app.get('/api/events/list', requireAuth, requireRole(['admin', 'moderator', 'event_manager']), async (req, res) => {
+    app.get('/api/events/list', requireAuth, requireRole(['admin', 'moderator', 'event_manager', 'user']), async (req, res) => {
         try {
             const userEmail = req.userSession.userProfile.email;
             const userRole = req.userSession.userProfile.role;
@@ -133,10 +136,11 @@ module.exports = function(app, sessionManager) {
                 console.log('👑 [GET /api/events/list] Admin - sem filtros (vê tudo)');
                 // Sem filtro adicional - vê tudo
             }
-            // MODERATOR/EVENT_MANAGER: vê APENAS seus eventos
-            else if (userRole === 'moderator' || userRole === 'event_manager') {
-                console.log('🔐 [GET /api/events/list] Moderator/Event Manager - filtrando por organizer_id:', userId);
-                query = query.eq('organizer_id', userId);
+            // MODERATOR/EVENT_MANAGER/USER: vê APENAS seus eventos
+            else if (userRole === 'moderator' || userRole === 'event_manager' || userRole === 'user') {
+                console.log('🔐 [GET /api/events/list] Moderator/Event Manager/User - filtrando por eventos do utilizador:', userId);
+                // Tentar vários campos possíveis para encontrar eventos do utilizador
+                query = query.or(`organizer_id.eq.${userId},created_by.eq.${userId},created_by.eq.${userEmail}`);
             }
             // Outros roles: sem acesso (já bloqueado pelo requireRole, mas double-check)
             else {
@@ -193,25 +197,127 @@ module.exports = function(app, sessionManager) {
     // ==========================================
     // GET /api/events/stats
     // Estatísticas gerais (eventos, dispositivos, detecções, participantes, classificações)
-    // Acesso: admin, moderator, event_manager
+    // Acesso: admin (todos), moderator/event_manager/user (apenas seus eventos)
     // ==========================================
-    app.get('/api/events/stats', requireAuth, requireRole(['admin', 'moderator', 'event_manager']), async (req, res) => {
+    app.get('/api/events/stats', requireAuth, requireRole(['admin', 'moderator', 'event_manager', 'user']), async (req, res) => {
         try {
-            console.log('📊 [GET /api/events/stats] Utilizador:', req.userSession.userProfile.email);
+            const userEmail = req.userSession.userProfile.email;
+            const userRole = req.userSession.userProfile.role;
+            const userId = req.userSession.userId;
+            
+            console.log('📊 [GET /api/events/stats] Utilizador:', userEmail, 'Role:', userRole, 'ID:', userId);
             
             // Calcular início do dia (para detecções hoje)
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const startISO = startOfDay.toISOString();
             
+            // ADMIN: vê TODOS os dados (sem filtro)
+            // OUTROS: vê APENAS dados dos seus eventos
+            let userEventIds = null;
+            
+            if (userRole !== 'admin') {
+                // Buscar IDs dos eventos do utilizador
+                // Tentar vários campos possíveis: organizer_id (UUID), created_by (TEXT ou UUID), manager_id (UUID)
+                let userEvents = [];
+                
+                // Estratégia: tentar organizer_id primeiro (campo mais comum)
+                const { data: eventsByOrganizer, error: err1 } = await supabase
+                    .from('events')
+                    .select('id')
+                    .eq('is_active', true)
+                    .eq('organizer_id', userId);
+                
+                if (!err1 && eventsByOrganizer) {
+                    userEvents = eventsByOrganizer;
+                }
+                
+                // Se não encontrou, tentar created_by como UUID
+                if (userEvents.length === 0) {
+                    const { data: eventsByCreated, error: err2 } = await supabase
+                        .from('events')
+                        .select('id')
+                        .eq('is_active', true)
+                        .eq('created_by', userId);
+                    
+                    if (!err2 && eventsByCreated) {
+                        userEvents = eventsByCreated;
+                    }
+                }
+                
+                // Se ainda não encontrou, tentar created_by como email (TEXT)
+                if (userEvents.length === 0) {
+                    const { data: eventsByEmail, error: err3 } = await supabase
+                        .from('events')
+                        .select('id')
+                        .eq('is_active', true)
+                        .eq('created_by', userEmail);
+                    
+                    if (!err3 && eventsByEmail) {
+                        userEvents = eventsByEmail;
+                    }
+                }
+                
+                // Se ainda não encontrou, tentar manager_id
+                if (userEvents.length === 0) {
+                    const { data: eventsByManager, error: err4 } = await supabase
+                        .from('events')
+                        .select('id')
+                        .eq('is_active', true)
+                        .eq('manager_id', userId);
+                    
+                    if (!err4 && eventsByManager) {
+                        userEvents = eventsByManager;
+                    }
+                }
+                
+                // Remover duplicados (caso algum evento tenha múltiplos campos)
+                userEventIds = [...new Set(userEvents.map(e => e.id))];
+                
+                console.log('🔐 [GET /api/events/stats] Eventos do utilizador encontrados:', userEventIds.length, userEventIds);
+                
+                // Se não tem eventos, retornar zeros
+                if (userEventIds.length === 0) {
+                    console.log('⚠️ [GET /api/events/stats] Utilizador não tem eventos, retornando zeros');
+                    return res.json({
+                        success: true,
+                        stats: {
+                            totalEvents: 0,
+                            totalDevices: 0,
+                            totalDetections: 0,
+                            totalDetectionsToday: 0,
+                            totalParticipants: 0,
+                            totalClassifications: 0
+                        }
+                    });
+                }
+            }
+            
+            // Construir queries baseadas no role
+            let eventsQuery = supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_active', true);
+            let devicesQuery = supabase.from('devices').select('*', { count: 'exact', head: true });
+            let detectionsQuery = supabase.from('detections').select('*', { count: 'exact', head: true });
+            let detectionsTodayQuery = supabase.from('detections').select('*', { count: 'exact', head: true }).gte('created_at', startISO);
+            let participantsQuery = supabase.from('participants').select('*', { count: 'exact', head: true });
+            let classificationsQuery = supabase.from('classifications').select('*', { count: 'exact', head: true });
+            
+            // Se não é admin, filtrar por event_id
+            if (userRole !== 'admin' && userEventIds && userEventIds.length > 0) {
+                eventsQuery = eventsQuery.in('id', userEventIds);
+                detectionsQuery = detectionsQuery.in('event_id', userEventIds);
+                detectionsTodayQuery = detectionsTodayQuery.in('event_id', userEventIds);
+                participantsQuery = participantsQuery.in('event_id', userEventIds);
+                classificationsQuery = classificationsQuery.in('event_id', userEventIds);
+            }
+            
             // Executar queries em paralelo
             const [eventsResult, devicesResult, detectionsResult, detectionsTodayResult, participantsResult, classificationsResult] = await Promise.all([
-                supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_active', true),
-                supabase.from('devices').select('*', { count: 'exact', head: true }),
-                supabase.from('detections').select('*', { count: 'exact', head: true }),
-                supabase.from('detections').select('*', { count: 'exact', head: true }).gte('created_at', startISO),
-                supabase.from('participants').select('*', { count: 'exact', head: true }),
-                supabase.from('classifications').select('*', { count: 'exact', head: true })
+                eventsQuery,
+                devicesQuery,
+                detectionsQuery,
+                detectionsTodayQuery,
+                participantsQuery,
+                classificationsQuery
             ]);
             
             const stats = {
@@ -223,7 +329,7 @@ module.exports = function(app, sessionManager) {
                 totalClassifications: classificationsResult.count || 0
             };
             
-            console.log('✅ [GET /api/events/stats] Estatísticas:', stats);
+            console.log('✅ [GET /api/events/stats] Estatísticas:', stats, userRole === 'admin' ? '(admin - todos)' : `(${userEventIds?.length || 0} eventos)`);
             
             res.json({
                 success: true,
@@ -296,9 +402,9 @@ module.exports = function(app, sessionManager) {
     // ==========================================
     // POST /api/events/create
     // Criar novo evento
-    // Acesso: admin, moderator
+    // Acesso: admin, moderator, user (promovido para moderator após criar)
     // ==========================================
-    app.post('/api/events/create', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+    app.post('/api/events/create', requireAuth, requireRole(['admin', 'moderator', 'user']), async (req, res) => {
         try {
             const { name, description, event_date, location } = req.body;
             
@@ -315,14 +421,22 @@ module.exports = function(app, sessionManager) {
                 });
             }
             
+            const userRole = req.userSession.userProfile.role;
+            const userId = req.userSession.userId;
+            
+            // Preparar dados do evento
             const eventData = {
                 name: name.trim(),
                 description: description?.trim() || null,
                 event_date: event_date || null,
                 location: location?.trim() || null,
                 status: 'active',
-                created_by: req.userSession.userId
+                created_by: userId
             };
+            
+            // Tentar adicionar organizer_id se o campo existir
+            // O Supabase vai ignorar campos que não existem na tabela
+            eventData.organizer_id = userId;
             
             const { data, error } = await supabase
                 .from('events')
@@ -343,10 +457,56 @@ module.exports = function(app, sessionManager) {
             
             console.log('✅ [POST /api/events/create] Evento criado:', data.id);
             
+            // Se o utilizador é 'user', promovê-lo para 'moderator' após criar o primeiro evento
+            if (userRole === 'user' && adminClient) {
+                try {
+                    console.log('🔄 [POST /api/events/create] Promovendo utilizador de "user" para "moderator":', userId);
+                    
+                    const { data: updatedProfile, error: updateError } = await adminClient
+                        .from('user_profiles')
+                        .update({ 
+                            role: 'moderator',
+                            profile_type: 'event_manager', // Manter compatibilidade
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', userId)
+                        .select()
+                        .single();
+                    
+                    if (updateError) {
+                        console.error('⚠️ [POST /api/events/create] Erro ao atualizar role do utilizador:', updateError);
+                        // Não bloquear a criação do evento se falhar a atualização do role
+                    } else {
+                        console.log('✅ [POST /api/events/create] Utilizador promovido para moderator:', updatedProfile.id);
+                        
+                        // Atualizar a sessão também
+                        if (req.userSession && req.userSession.userProfile) {
+                            req.userSession.userProfile.role = 'moderator';
+                            req.userSession.userProfile.profile_type = 'event_manager';
+                        }
+                        
+                        // Log de auditoria se disponível
+                        if (auditLogger) {
+                            auditLogger.log('USER_ROLE_UPDATED', userId, {
+                                old_role: 'user',
+                                new_role: 'moderator',
+                                reason: 'first_event_created',
+                                event_id: data.id,
+                                event_name: name.trim()
+                            });
+                        }
+                    }
+                } catch (promotionError) {
+                    console.error('⚠️ [POST /api/events/create] Exceção ao promover utilizador:', promotionError);
+                    // Não bloquear a criação do evento
+                }
+            }
+            
             res.status(201).json({
                 success: true,
                 event: data,
-                message: 'Evento criado com sucesso'
+                message: userRole === 'user' ? 'Evento criado com sucesso! Agora é moderator e pode gerir os seus eventos.' : 'Evento criado com sucesso',
+                roleUpdated: userRole === 'user'
             });
             
         } catch (error) {

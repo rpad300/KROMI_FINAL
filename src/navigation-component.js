@@ -105,11 +105,139 @@ class NavigationComponent {
         // Marcar link ativo
         this.setActiveLink();
 
+        // Carregar logo no header da sidebar (aguardar logoLoader estar disponível)
+        this.loadSidebarLogoDelayed();
+
         console.log('[NAV-COMPONENT] Navegação renderizada', {
             globalItems: navigation.global.length,
             eventItems: navigation.event.length,
             hasEventContext: !!navigation.context?.hasEvent
         });
+    }
+    
+    /**
+     * Carregar logo na sidebar com delay para garantir que logoLoader está carregado
+     */
+    async loadSidebarLogoDelayed() {
+        // Verificar se já está disponível imediatamente
+        if (typeof window.logoLoader !== 'undefined' && window.logoLoader && typeof window.logoLoader.renderLogo === 'function') {
+            console.log('[NAV-COMPONENT] LogoLoader já disponível, carregando logo imediatamente...');
+            await this.loadSidebarLogo();
+            return;
+        }
+        
+        // Escutar evento customizado de pronto
+        const onLogoLoaderReady = () => {
+            console.log('[NAV-COMPONENT] Evento logoLoaderReady recebido, carregando logo...');
+            window.removeEventListener('logoLoaderReady', onLogoLoaderReady);
+            this.loadSidebarLogo();
+        };
+        window.addEventListener('logoLoaderReady', onLogoLoaderReady);
+        
+        // Fallback: aguardar logoLoader estar disponível com polling
+        let attempts = 0;
+        const maxAttempts = 50; // 5 segundos máximo
+        
+        const checkAndLoad = async () => {
+            // Verificar se logoLoader existe e está inicializado
+            if (typeof window.logoLoader !== 'undefined' && window.logoLoader && typeof window.logoLoader.renderLogo === 'function') {
+                console.log('[NAV-COMPONENT] LogoLoader encontrado via polling, carregando logo...');
+                window.removeEventListener('logoLoaderReady', onLogoLoaderReady);
+                await this.loadSidebarLogo();
+                return true;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                // Log apenas a cada 10 tentativas para não poluir o console
+                if (attempts % 10 === 0) {
+                    console.log(`[NAV-COMPONENT] Aguardando LogoLoader... (tentativa ${attempts}/${maxAttempts})`, {
+                        logoLoaderExists: typeof window.logoLoader !== 'undefined',
+                        logoLoaderValue: window.logoLoader ? 'truthy' : 'falsy',
+                        hasRenderLogo: window.logoLoader && typeof window.logoLoader.renderLogo === 'function'
+                    });
+                }
+                setTimeout(checkAndLoad, 100);
+            } else {
+                console.warn('[NAV-COMPONENT] LogoLoader não disponível após espera. Usando fallback de texto...');
+                window.removeEventListener('logoLoaderReady', onLogoLoaderReady);
+                // Usar fallback de texto se logo não estiver disponível
+                const logoContainer = document.getElementById('sidebarLogo');
+                if (logoContainer) {
+                    logoContainer.innerHTML = '<h2 class="sidebar-title">🏃 Kromi.online</h2>';
+                }
+            }
+        };
+        
+        // Aguardar um pouco antes de começar o polling (para dar tempo do logo-loader.js carregar)
+        setTimeout(() => {
+            checkAndLoad();
+        }, 300);
+    }
+    
+    /**
+     * Carregar logo na sidebar
+     */
+    async loadSidebarLogo() {
+        const logoContainer = document.getElementById('sidebarLogo');
+        if (!logoContainer) {
+            console.warn('[NAV-COMPONENT] Container sidebarLogo não encontrado');
+            return;
+        }
+        
+        // Verificar se logoLoader está disponível
+        if (typeof window.logoLoader === 'undefined' || !window.logoLoader || typeof window.logoLoader.renderLogo !== 'function') {
+            console.warn('[NAV-COMPONENT] LogoLoader não disponível. Usando fallback de texto.');
+            logoContainer.innerHTML = '<h2 class="sidebar-title">🏃 Kromi.online</h2>';
+            return;
+        }
+        
+        try {
+            console.log('[NAV-COMPONENT] Carregando logo na sidebar...');
+            const success = await window.logoLoader.renderLogo(logoContainer, {
+                type: 'secondary', // Usar logo secundário (monocromático) para fundos escuros
+                orientation: 'horizontal', // Sidebar sempre horizontal
+                alt: 'Kromi.online',
+                className: 'sidebar-logo',
+                style: {
+                    maxHeight: '50px',
+                    width: 'auto',
+                    display: 'block',
+                    margin: '0 auto',
+                    objectFit: 'contain'
+                },
+                fallback: '<h2 class="sidebar-title">🏃 Kromi.online</h2>',
+                onError: (error) => {
+                    console.warn('[NAV-COMPONENT] Erro ao carregar logo:', error);
+                    // Se falhar, tentar logo primário como fallback
+                    setTimeout(async () => {
+                        console.log('[NAV-COMPONENT] Tentando logo primário como fallback...');
+                        await window.logoLoader.renderLogo(logoContainer, {
+                            type: 'primary',
+                            orientation: 'horizontal',
+                            alt: 'Kromi.online',
+                            className: 'sidebar-logo',
+                            style: {
+                                maxHeight: '50px',
+                                width: 'auto',
+                                display: 'block',
+                                margin: '0 auto',
+                                objectFit: 'contain'
+                            },
+                            fallback: '<h2 class="sidebar-title">🏃 Kromi.online</h2>'
+                        });
+                    }, 1000);
+                }
+            });
+            
+            if (success) {
+                console.log('[NAV-COMPONENT] Logo carregado com sucesso na sidebar');
+            } else {
+                console.log('[NAV-COMPONENT] Logo não encontrado, usando fallback');
+            }
+        } catch (error) {
+            console.error('[NAV-COMPONENT] Erro ao carregar logo:', error);
+        }
     }
 
     /**
@@ -118,7 +246,9 @@ class NavigationComponent {
     renderHeader() {
         return `
             <div class="sidebar-header">
-                <h2 class="sidebar-title">🏃 Kromi.online</h2>
+                <div class="sidebar-logo-container" id="sidebarLogo">
+                    <h2 class="sidebar-title">🏃 Kromi.online</h2>
+                </div>
                 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Alternar menu lateral" type="button">
                     <span></span>
                     <span></span>

@@ -87,6 +87,12 @@
     border: 1px solid var(--success);
 }
 
+.status-badge.pending_verification {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 .status-badge.active {
     background: rgba(16, 185, 129, 0.15);
     color: var(--success);
@@ -103,6 +109,31 @@
     background: rgba(239, 68, 68, 0.15);
     color: var(--danger);
     border: 1px solid var(--danger);
+}
+
+.status-badge.deleted {
+    background: rgba(75, 85, 99, 0.15);
+    color: #4b5563;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* Botões de ação */
+.btn-icon.activate {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.btn-icon.activate:hover {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.btn-icon.deactivate {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.btn-icon.deactivate:hover {
+    background: rgba(245, 158, 11, 0.2);
 }
 
 /* Ações da Tabela */

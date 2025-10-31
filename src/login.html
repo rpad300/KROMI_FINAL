@@ -37,7 +37,7 @@
 
         .login-header h1 {
             color: var(--primary);
-            margin-bottom: var(--spacing-3);
+            margin: 0;
             font-size: var(--font-size-4xl);
             font-weight: var(--font-weight-bold);
             text-shadow: 0 2px 10px rgba(252, 107, 3, 0.3);
@@ -46,6 +46,26 @@
         .login-header p {
             color: var(--text-secondary);
             font-size: var(--font-size-lg);
+        }
+
+        .login-logo-container {
+            margin-bottom: var(--spacing-3);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-logo-container img {
+            max-width: 200px;
+            max-height: 60px;
+            width: auto;
+            height: auto;
+            display: block;
+        }
+
+        .login-logo-container h1 {
+            margin: 0; /* Remove margin padrão do h1 quando logo não está disponível */
         }
 
         .login-form {
@@ -260,8 +280,9 @@
 <body data-theme="dark">
     <div class="login-container">
         <div class="login-header">
-            <h1>Kromi.online</h1>
-            <p>Sistema de Cronometragem e Classificações</p>
+            <div class="login-logo-container" id="loginLogo">
+                <h1>Kromi.online</h1>
+            </div>
         </div>
 
         <div class="error-message" id="errorMessage"></div>
@@ -325,6 +346,7 @@
     <script src="/terminal-debug.js?v=2025102603"></script>
     <script src="/auth-client.js?v=2025102616"></script>
     <script src="/universal-route-protection.js?v=2025102618"></script>
+    <script src="/logo-loader.js?v=2025012701" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('loginForm');
@@ -460,6 +482,62 @@
             if (window.authSystem && window.authSystem.currentUser) {
                 window.authSystem.redirectBasedOnProfile();
             }
+            
+            // Carregar logo na página de login
+            async function loadLoginLogo() {
+                const logoContainer = document.getElementById('loginLogo');
+                if (!logoContainer) return;
+                
+                // Aguardar logoLoader estar disponível
+                let attempts = 0;
+                const maxAttempts = 50; // 5 segundos máximo
+                
+                const checkAndLoad = async () => {
+                    if (typeof window.logoLoader !== 'undefined' && window.logoLoader) {
+                        try {
+                            console.log('[LOGIN] Carregando logo...');
+                            const success = await window.logoLoader.renderLogo(logoContainer, {
+                                type: 'secondary', // Usar logo secundário (monocromático) para fundos escuros
+                                orientation: 'horizontal',
+                                alt: 'Kromi.online',
+                                className: 'login-logo',
+                                style: {
+                                    maxWidth: '200px',
+                                    maxHeight: '60px',
+                                    width: 'auto',
+                                    height: 'auto',
+                                    display: 'block'
+                                },
+                                fallback: '<h1>Kromi.online</h1>',
+                                onError: (error) => {
+                                    console.warn('[LOGIN] Erro ao carregar logo:', error);
+                                }
+                            });
+                            
+                            if (success) {
+                                console.log('[LOGIN] Logo carregado com sucesso');
+                            } else {
+                                console.log('[LOGIN] Logo não encontrado, usando fallback');
+                            }
+                        } catch (error) {
+                            console.error('[LOGIN] Erro ao carregar logo:', error);
+                        }
+                        return true;
+                    }
+                    
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkAndLoad, 100);
+                    } else {
+                        console.warn('[LOGIN] LogoLoader não disponível após espera');
+                    }
+                };
+                
+                checkAndLoad();
+            }
+            
+            // Carregar logo após um pequeno delay para garantir que logoLoader carregou
+            setTimeout(loadLoginLogo, 500);
         });
     </script>
 </body>

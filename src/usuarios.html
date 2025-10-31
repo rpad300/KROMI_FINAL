@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
     <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
     
+    <!-- Logo Integration Styles -->
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    
     <style>
         /* Tabs Styles */
         .tabs {
@@ -117,9 +120,11 @@
                     </select>
                     <select id="filterStatus" style="padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text);">
                         <option value="">Todos os Estados</option>
+                        <option value="pending_verification">⏳ Aguardando Verificação</option>
                         <option value="active">✅ Ativo</option>
                         <option value="inactive">⏸️ Inativo</option>
                         <option value="suspended">🚫 Suspenso</option>
+                        <option value="deleted">🗑️ Eliminado</option>
                     </select>
                     <button onclick="window.userManagement.clearFilters()" class="btn btn-sm btn-secondary">
                         🔄 Limpar
@@ -222,6 +227,8 @@
                     <button class="tab-btn" onclick="switchTab('contact')">📞 Contactos</button>
                     <button class="tab-btn" onclick="switchTab('address')">📍 Morada</button>
                     <button class="tab-btn" onclick="switchTab('professional')">💼 Profissional</button>
+                    <button class="tab-btn" onclick="switchTab('team')">👥 Equipa/Clube</button>
+                    <button class="tab-btn" onclick="switchTab('clothing')">👕 Dimensões de Roupa</button>
                     <button class="tab-btn" onclick="switchTab('emergency')">⚠️ Emergência</button>
                     <button class="tab-btn" onclick="switchTab('system')">⚙️ Sistema</button>
                 </div>
@@ -261,9 +268,11 @@
                             <div class="form-group">
                                 <label for="editUserStatus">Estado</label>
                                 <select id="editUserStatus" name="status">
+                                    <option value="pending_verification">⏳ Aguardando Verificação</option>
                                     <option value="active">✅ Ativo</option>
                                     <option value="inactive">⏸️ Inativo</option>
                                     <option value="suspended">🚫 Suspenso</option>
+                                    <option value="deleted">🗑️ Eliminado</option>
                                 </select>
                             </div>
                         </div>
@@ -392,7 +401,128 @@
                         </div>
                     </div>
                     
-                    <!-- Tab 6: Emergência -->
+                    <!-- Tab 6: Equipa/Clube -->
+                    <div id="tab-team" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserTeamClubName">Nome da Equipa/Clube</label>
+                                <input type="text" id="editUserTeamClubName" name="team_club_name" placeholder="Ex: Clube de Corrida de Lisboa">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserTeamClubCategory">Categoria</label>
+                                <input type="text" id="editUserTeamClubCategory" name="team_club_category" placeholder="Ex: Seniores Masculinos, Sub-20, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserTeamPosition">Posição/Função</label>
+                                <input type="text" id="editUserTeamPosition" name="team_position" placeholder="Ex: Atleta, Treinador, Diretor, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserTeamAthleteNumber">Número de Atleta</label>
+                                <input type="text" id="editUserTeamAthleteNumber" name="team_athlete_number" placeholder="Ex: 123">
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserTeamJoinDate">Data de Entrada</label>
+                                <input type="date" id="editUserTeamJoinDate" name="team_join_date">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="editUserTeamNotes">Notas sobre a Equipa/Clube</label>
+                                <textarea id="editUserTeamNotes" name="team_notes" rows="4" placeholder="Informações adicionais sobre a sua participação na equipa/clube..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 7: Dimensões de Roupa -->
+                    <div id="tab-clothing" class="tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editUserClothingTshirt">T-Shirt</label>
+                                <select id="editUserClothingTshirt" name="clothing_tshirt">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS - Extra Pequeno</option>
+                                    <option value="S">S - Pequeno</option>
+                                    <option value="M">M - Médio</option>
+                                    <option value="L">L - Grande</option>
+                                    <option value="XL">XL - Extra Grande</option>
+                                    <option value="XXL">XXL - 2X Grande</option>
+                                    <option value="XXXL">XXXL - 3X Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserClothingCasaco">Casaco</label>
+                                <select id="editUserClothingCasaco" name="clothing_casaco">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS - Extra Pequeno</option>
+                                    <option value="S">S - Pequeno</option>
+                                    <option value="M">M - Médio</option>
+                                    <option value="L">L - Grande</option>
+                                    <option value="XL">XL - Extra Grande</option>
+                                    <option value="XXL">XXL - 2X Grande</option>
+                                    <option value="XXXL">XXXL - 3X Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserClothingCalcoes">Calções</label>
+                                <select id="editUserClothingCalcoes" name="clothing_calcoes">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS - Extra Pequeno</option>
+                                    <option value="S">S - Pequeno</option>
+                                    <option value="M">M - Médio</option>
+                                    <option value="L">L - Grande</option>
+                                    <option value="XL">XL - Extra Grande</option>
+                                    <option value="XXL">XXL - 2X Grande</option>
+                                    <option value="XXXL">XXXL - 3X Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserClothingJersey">Jersey</label>
+                                <select id="editUserClothingJersey" name="clothing_jersey">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS - Extra Pequeno</option>
+                                    <option value="S">S - Pequeno</option>
+                                    <option value="M">M - Médio</option>
+                                    <option value="L">L - Grande</option>
+                                    <option value="XL">XL - Extra Grande</option>
+                                    <option value="XXL">XXL - 2X Grande</option>
+                                    <option value="XXXL">XXXL - 3X Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserClothingCalcas">Calças</label>
+                                <select id="editUserClothingCalcas" name="clothing_calcas">
+                                    <option value="">Selecionar...</option>
+                                    <option value="XS">XS - Extra Pequeno</option>
+                                    <option value="S">S - Pequeno</option>
+                                    <option value="M">M - Médio</option>
+                                    <option value="L">L - Grande</option>
+                                    <option value="XL">XL - Extra Grande</option>
+                                    <option value="XXL">XXL - 2X Grande</option>
+                                    <option value="XXXL">XXXL - 3X Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserClothingSapatos">Sapatos</label>
+                                <select id="editUserClothingSapatos" name="clothing_sapatos">
+                                    <option value="">Selecionar...</option>
+                                    <option value="35">35</option>
+                                    <option value="36">36</option>
+                                    <option value="37">37</option>
+                                    <option value="38">38</option>
+                                    <option value="39">39</option>
+                                    <option value="40">40</option>
+                                    <option value="41">41</option>
+                                    <option value="42">42</option>
+                                    <option value="43">43</option>
+                                    <option value="44">44</option>
+                                    <option value="45">45</option>
+                                    <option value="46">46</option>
+                                    <option value="47">47</option>
+                                    <option value="48">48</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 8: Emergência -->
                     <div id="tab-emergency" class="tab-content">
                         <div class="form-grid">
                             <div class="form-group">
@@ -410,7 +540,7 @@
                         </div>
                     </div>
                     
-                    <!-- Tab 7: Sistema -->
+                    <!-- Tab 9: Sistema -->
                     <div id="tab-system" class="tab-content">
                         <div class="form-grid">
                             <div class="form-group">
@@ -448,6 +578,9 @@
     <script src="/supabase.js?v=2025102605" defer></script>
     <script src="/auth-client.js?v=2025102616" defer></script>
     <script src="/auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     
     <!-- Sistema de Navegação Unificado -->
     <script src="/navigation-config.js?v=2025102601" defer></script>

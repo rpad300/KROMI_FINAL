@@ -47,6 +47,16 @@ module.exports = function(app, sessionManager) {
         }
     });
     
+    // Cliente admin para criar buckets (usa service role se disponível)
+    const supabaseAdmin = supabaseServiceKey 
+        ? createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        })
+        : supabase; // Fallback para supabase normal se não houver service role
+    
     // Middleware: Verificar autenticação e role admin
     function requireAuth(req, res, next) {
         const sessionId = req.cookies?.sid;
@@ -95,7 +105,7 @@ module.exports = function(app, sessionManager) {
         storage: storage,
         limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
         fileFilter: (req, file, cb) => {
-            const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp', 'image/x-icon'];
+            const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/svg', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
             if (allowedMimes.includes(file.mimetype)) {
                 cb(null, true);
             } else {
@@ -152,12 +162,15 @@ module.exports = function(app, sessionManager) {
                 .from('site_brand_assets')
                 .select('*')
                 .is('deleted_at', null)
+                .order('type', { ascending: true })
+                .order('is_preferred', { ascending: false }) // Preferidos primeiro
+                .order('format', { ascending: true })
                 .order('created_at', { ascending: false });
             
             if (error) throw error;
             
             // Adicionar URLs dos ficheiros
-            const assetsWithUrls = await Promise.all(data.map(async (asset) => {
+            const assetsWithUrls = await Promise.all((data || []).map(async (asset) => {
                 const bucket = asset.type === 'favicon' || asset.type === 'app_icon' 
                     ? 'favicons-and-manifest' 
                     : 'media-originals';
@@ -170,7 +183,20 @@ module.exports = function(app, sessionManager) {
                 };
             }));
             
-            res.json({ success: true, data: assetsWithUrls });
+            // Agrupar por tipo para facilitar uso no frontend
+            const groupedByType = {};
+            assetsWithUrls.forEach(asset => {
+                if (!groupedByType[asset.type]) {
+                    groupedByType[asset.type] = [];
+                }
+                groupedByType[asset.type].push(asset);
+            });
+            
+            res.json({ 
+                success: true, 
+                data: assetsWithUrls,
+                grouped: groupedByType // Dados agrupados por tipo para facilitar
+            });
         } catch (error) {
             console.error('Erro ao listar brand assets:', error);
             res.status(500).json({ success: false, error: error.message });
@@ -180,26 +206,126 @@ module.exports = function(app, sessionManager) {
     // Upload logo
     app.post('/api/branding/upload-logo', requireAuth, upload.single('file'), async (req, res) => {
         try {
+            console.log('📤 Upload de logo iniciado');
+            console.log('📋 Request info:', {
+                hasFile: !!req.file,
+                body: req.body,
+                userId: req.userId,
+                fileInfo: req.file ? {
+                    originalname: req.file.originalname,
+                    mimetype: req.file.mimetype,
+                    size: req.file.size
+                } : null
+            });
+            
             if (!req.file) {
                 return res.status(400).json({ success: false, error: 'Ficheiro não fornecido' });
             }
             
-            const { type } = req.body;
-            if (!type || !['logo_primary', 'logo_secondary', 'favicon', 'app_icon', 'wordmark'].includes(type)) {
+            if (!req.userId) {
+                console.error('❌ req.userId não definido!');
+                return res.status(401).json({ success: false, error: 'Utilizador não autenticado' });
+            }
+            
+            const { type, targetWidth, targetHeight } = req.body;
+            if (!type || !['logo_primary', 'logo_primary_horizontal', 'logo_primary_vertical', 
+                           'logo_secondary', 'logo_secondary_horizontal', 'logo_secondary_vertical',
+                           'favicon', 'app_icon', 'wordmark'].includes(type)) {
                 return res.status(400).json({ success: false, error: 'Tipo de logo inválido' });
             }
             
-            const file = req.file;
+            let file = req.file;
+            
+            // Se dimensões foram especificadas, redimensionar a imagem antes do upload
+            if ((targetWidth || targetHeight) && file.mimetype !== 'image/svg+xml' && file.mimetype !== 'image/svg') {
+                try {
+                    console.log(`📐 Redimensionando imagem para: ${targetWidth || 'auto'}x${targetHeight || 'auto'}`);
+                    let processedBuffer = file.buffer;
+                    let sharpInstance = sharp(processedBuffer);
+                    
+                    // Obter dimensões originais
+                    const metadata = await sharpInstance.metadata();
+                    const originalWidth = metadata.width;
+                    const originalHeight = metadata.height;
+                    
+                    // Determinar dimensões finais
+                    let finalWidth = targetWidth ? parseInt(targetWidth) : null;
+                    let finalHeight = targetHeight ? parseInt(targetHeight) : null;
+                    
+                    // Se apenas uma dimensão foi especificada, calcular a outra mantendo proporção
+                    if (finalWidth && !finalHeight) {
+                        finalHeight = Math.round((originalHeight / originalWidth) * finalWidth);
+                    } else if (!finalWidth && finalHeight) {
+                        finalWidth = Math.round((originalWidth / originalHeight) * finalHeight);
+                    }
+                    
+                    // Redimensionar
+                    if (finalWidth && finalHeight) {
+                        processedBuffer = await sharpInstance
+                            .resize(finalWidth, finalHeight, {
+                                fit: 'contain',
+                                background: { r: 0, g: 0, b: 0, alpha: 0 }
+                            })
+                            .toBuffer();
+                        
+                        console.log(`✅ Imagem redimensionada: ${originalWidth}x${originalHeight} -> ${finalWidth}x${finalHeight}`);
+                        file.buffer = processedBuffer;
+                        file.size = processedBuffer.length;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao redimensionar imagem:', error.message);
+                    // Continuar com imagem original
+                }
+            }
             const fileExt = file.originalname.split('.').pop().toLowerCase();
+            
+            // Normalizar formato para corresponder aos valores permitidos na BD
+            let format = fileExt;
+            // Manter jpg como jpg (não converter)
+            if (!['png', 'svg', 'webp', 'ico', 'jpg'].includes(format)) {
+                // Tentar inferir do mimetype
+                if (file.mimetype === 'image/svg+xml' || file.mimetype === 'image/svg') format = 'svg';
+                else if (file.mimetype === 'image/webp') format = 'webp';
+                else if (file.mimetype === 'image/x-icon' || file.mimetype === 'image/vnd.microsoft.icon') format = 'ico';
+                else if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') format = 'jpg';
+                else format = 'png'; // Default
+            }
+            
             const fileName = `${type}/${Date.now()}.${fileExt}`;
             
+            console.log(`📄 Informações do ficheiro:`, {
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                fileExt,
+                format,
+                size: file.size
+            });
+            
             // Determinar bucket
-            const bucket = type === 'favicon' || type === 'app_icon' 
-                ? 'favicons-and-manifest' 
-                : 'media-originals';
+            // Opção 1: Usar bucket KROMI único (se configurado via env)
+            // Opção 2: Usar buckets específicos por tipo (padrão)
+            const useKromiBucket = process.env.BRANDING_USE_KROMI_BUCKET === 'true' || 
+                                   process.env.BRANDING_STORAGE_BUCKET === 'KROMI';
+            
+            let bucket;
+            if (useKromiBucket) {
+                // Usar bucket KROMI único para todos os tipos
+                bucket = 'KROMI';
+            } else if (type === 'favicon' || type === 'app_icon') {
+                // Buckets específicos por tipo (padrão)
+                bucket = 'favicons-and-manifest';
+            } else {
+                // Para logos e outros
+                bucket = 'media-originals';
+            }
             
             // Upload original
-            const { data: uploadData, error: uploadError } = await supabase
+            console.log(`📤 Uploadando logo: ${fileName} para bucket ${bucket} (${file.size} bytes)`);
+            
+            // Usar cliente admin (service role) para upload, que tem mais permissões
+            const uploadClient = supabaseAdmin || supabase;
+            
+            const { data: uploadData, error: uploadError } = await uploadClient
                 .storage
                 .from(bucket)
                 .upload(fileName, file.buffer, {
@@ -207,71 +333,245 @@ module.exports = function(app, sessionManager) {
                     upsert: false
                 });
             
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                console.error('❌ Erro no upload para Supabase Storage:', uploadError);
+                
+                // Se o erro for bucket não encontrado, dar instruções claras
+                if (uploadError.message && (uploadError.message.includes('not found') || uploadError.message.includes('Bucket not found')) || uploadError.statusCode === '404' || uploadError.status === 400) {
+                    const errorMessage = `Bucket "${bucket}" não encontrado!\n\n` +
+                        `📦 Por favor, crie os buckets necessários no Supabase Dashboard:\n\n` +
+                        `1. Ir para: https://supabase.com/dashboard\n` +
+                        `2. Selecionar o projeto\n` +
+                        `3. Ir para: Storage > New Bucket\n\n` +
+                        `Buckets necessários:\n` +
+                        `- media-originals (privado, 5MB)\n` +
+                        `- media-processed (público, 5MB)\n` +
+                        `- favicons-and-manifest (público, 1MB)\n\n` +
+                        `📖 Veja instruções detalhadas em: docs/CRIAR-BUCKETS-STORAGE.md`;
+                    
+                    return res.status(400).json({ 
+                        success: false, 
+                        error: errorMessage,
+                        code: 'BUCKET_NOT_FOUND',
+                        requiredBuckets: ['media-originals', 'media-processed', 'favicons-and-manifest']
+                    });
+                }
+                
+                throw new Error(`Erro ao fazer upload: ${uploadError.message}`);
+            }
+            
+            console.log(`✅ Upload concluído: ${uploadData.path}`);
             
             // Obter dimensões da imagem
             let width, height;
             try {
-                const metadata = await sharp(file.buffer).metadata();
-                width = metadata.width;
-                height = metadata.height;
+                const isSvg = file.mimetype === 'image/svg+xml' || file.mimetype === 'image/svg' || fileExt === 'svg';
+                const isIco = file.mimetype === 'image/x-icon' || file.mimetype === 'image/vnd.microsoft.icon' || fileExt === 'ico';
+                
+                if (!isSvg && !isIco) {
+                    try {
+                        const metadata = await sharp(file.buffer).metadata();
+                        width = metadata.width;
+                        height = metadata.height;
+                        console.log(`📏 Dimensões detectadas: ${width}x${height}`);
+                    } catch (sharpError) {
+                        console.warn('⚠️ Erro ao obter dimensões com Sharp:', sharpError.message);
+                        // Continuar sem dimensões
+                    }
+                } else {
+                    console.log(`ℹ️ Formato ${isSvg ? 'SVG' : 'ICO'} - dimensões não detectadas`);
+                }
             } catch (e) {
-                console.warn('Não foi possível obter dimensões:', e);
+                console.warn('⚠️ Não foi possível obter dimensões:', e.message);
+            }
+            
+            // Verificar se já existe um formato preferido para este tipo
+            let isPreferred = true; // Por padrão, o primeiro será preferido
+            try {
+                const { data: existingPreferred, error: checkError } = await supabase
+                    .from('site_brand_assets')
+                    .select('id, format, is_preferred')
+                    .eq('type', type)
+                    .eq('is_preferred', true)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+                
+                if (checkError) {
+                    console.warn('⚠️ Erro ao verificar formato preferido (pode ser coluna não existente):', checkError.message);
+                    // Se a coluna não existe, não usar is_preferred
+                    isPreferred = false;
+                } else {
+                    // Se não existe formato preferido, este será o preferido
+                    // Se já existe, este não será preferido
+                    isPreferred = !existingPreferred;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao verificar formato preferido:', error.message);
+                isPreferred = false; // Em caso de erro, não marcar como preferido
             }
             
             // Criar registo na base de dados
-            const { data: assetData, error: dbError } = await supabase
+            console.log(`💾 Criando registo na base de dados para tipo: ${type}, formato: ${format}, preferido: ${isPreferred}`);
+            
+            // Construir objeto de inserção, tentando incluir is_preferred se possível
+            const insertData = {
+                type,
+                file_path: uploadData.path,
+                format: format, // Usar formato normalizado (png, svg, webp, ico, jpg)
+                width: width || null,
+                height: height || null,
+                status: 'draft',
+                created_by: req.userId,
+                updated_by: req.userId
+            };
+            
+            // Tentar adicionar is_preferred apenas se não houver erro
+            // Se a coluna não existir, a inserção ainda funcionará sem este campo
+            try {
+                insertData.is_preferred = isPreferred;
+            } catch (e) {
+                // Ignorar se não conseguir adicionar
+            }
+            
+            console.log('📝 Dados a inserir:', JSON.stringify(insertData, null, 2));
+            
+            // Tentar inserir com is_preferred primeiro
+            let assetData;
+            let dbError;
+            let insertAttempt = await supabase
                 .from('site_brand_assets')
-                .insert({
-                    type,
-                    file_path: uploadData.path,
-                    format: fileExt,
-                    width,
-                    height,
-                    status: 'draft',
-                    created_by: req.userId,
-                    updated_by: req.userId
-                })
+                .insert(insertData)
                 .select()
                 .single();
             
-            if (dbError) throw dbError;
+            assetData = insertAttempt.data;
+            dbError = insertAttempt.error;
             
-            // Gerar variantes para logos
-            if (type.includes('logo') && file.mimetype !== 'image/svg+xml') {
-                const variants = await generateImageVariants(file.buffer, fileExt, [
-                    { width: 512, height: 512, format: 'png' },
-                    { width: 256, height: 256, format: 'png' },
-                    { width: 512, height: 512, format: 'webp' },
-                    { width: 256, height: 256, format: 'webp' }
-                ]);
+            // Se houver erro relacionado com is_preferred, tentar sem esse campo
+            if (dbError && (dbError.message.includes('is_preferred') || dbError.message.includes('column') || dbError.code === '42703')) {
+                console.warn('⚠️ Erro com is_preferred, tentando sem este campo:', dbError.message);
+                delete insertData.is_preferred;
                 
-                // Guardar variantes no bucket media-processed
-                for (const variant of variants) {
-                    const variantPath = `${type}/variants/${variant.width}x${variant.height}.${variant.format}`;
+                const retryAttempt = await supabase
+                    .from('site_brand_assets')
+                    .insert(insertData)
+                    .select()
+                    .single();
+                
+                assetData = retryAttempt.data;
+                dbError = retryAttempt.error;
+            }
+            
+            if (dbError) {
+                console.error('❌ Erro ao inserir na base de dados:', dbError);
+                console.error('❌ Detalhes do erro:', JSON.stringify(dbError, null, 2));
+                throw new Error(`Erro na base de dados: ${dbError.message || JSON.stringify(dbError)}`);
+            }
+            
+            console.log(`✅ Registo criado: ${assetData.id}`);
+            
+            // Gerar variantes para logos (apenas para imagens raster, não SVG)
+            const isSvgForVariants = file.mimetype === 'image/svg+xml' || file.mimetype === 'image/svg' || fileExt === 'svg';
+            if (type.includes('logo') && !isSvgForVariants) {
+                try {
+                    console.log('🔄 Gerando variantes de logo...');
+                    const variants = await generateImageVariants(file.buffer, fileExt, [
+                        { width: 512, height: 512, format: 'png' },
+                        { width: 256, height: 256, format: 'png' },
+                        { width: 512, height: 512, format: 'webp' },
+                        { width: 256, height: 256, format: 'webp' }
+                    ]);
                     
-                    await supabase.storage.from('media-processed').upload(variantPath, variant.buffer, {
-                        contentType: `image/${variant.format}`,
-                        upsert: true
-                    });
+                    console.log(`✅ ${variants.length} variantes geradas`);
                     
-                    // Registar variante
-                    await supabase.from('media_variants').insert({
-                        source_asset_id: assetData.id,
-                        source_type: 'brand_asset',
-                        variant_key: `${type}_${variant.width}_${variant.format}`,
-                        file_path: variantPath,
-                        format: variant.format,
-                        width: variant.width,
-                        height: variant.height,
-                        generated_by: 'automatic'
-                    });
+                    // Guardar variantes no bucket media-processed
+                    for (const variant of variants) {
+                        try {
+                            const variantPath = `${type}/variants/${variant.width}x${variant.height}.${variant.format}`;
+                            
+                            await supabase.storage.from('media-processed').upload(variantPath, variant.buffer, {
+                                contentType: `image/${variant.format}`,
+                                upsert: true
+                            });
+                            
+                            // Registar variante
+                            await supabase.from('media_variants').insert({
+                                source_asset_id: assetData.id,
+                                source_type: 'brand_asset',
+                                variant_key: `${type}_${variant.width}_${variant.format}`,
+                                file_path: variantPath,
+                                format: variant.format,
+                                width: variant.width,
+                                height: variant.height,
+                                generated_by: 'automatic'
+                            });
+                        } catch (variantError) {
+                            console.warn(`⚠️ Erro ao guardar variante ${variant.width}x${variant.height}:`, variantError.message);
+                            // Continuar com outras variantes
+                        }
+                    }
+                } catch (variantGenError) {
+                    console.warn('⚠️ Erro ao gerar variantes (continuando sem variantes):', variantGenError.message);
+                    // Não bloquear o upload principal se as variantes falharem
                 }
             }
             
             res.json({ success: true, data: assetData });
         } catch (error) {
-            console.error('Erro ao carregar logo:', error);
+            console.error('❌ Erro ao carregar logo:', error);
+            console.error('❌ Stack trace:', error.stack);
+            console.error('❌ Request body:', req.body);
+            console.error('❌ File info:', req.file ? {
+                originalname: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            } : 'Nenhum ficheiro recebido');
+            res.status(500).json({ 
+                success: false, 
+                error: error.message || 'Erro ao carregar logo',
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
+        }
+    });
+    
+    // Marcar formato como preferido
+    app.post('/api/branding/brand-assets/:id/set-preferred', requireAuth, async (req, res) => {
+        try {
+            const { id } = req.params;
+            
+            // Obter o asset para saber o tipo
+            const { data: asset, error: assetError } = await supabase
+                .from('site_brand_assets')
+                .select('type')
+                .eq('id', id)
+                .is('deleted_at', null)
+                .single();
+            
+            if (assetError || !asset) {
+                return res.status(404).json({ success: false, error: 'Asset não encontrado' });
+            }
+            
+            // Primeiro, desmarcar todos os outros formatos do mesmo tipo
+            await supabase
+                .from('site_brand_assets')
+                .update({ is_preferred: false, updated_by: req.userId })
+                .eq('type', asset.type)
+                .neq('id', id)
+                .is('deleted_at', null);
+            
+            // Marcar este como preferido
+            const { data: updated, error: updateError } = await supabase
+                .from('site_brand_assets')
+                .update({ is_preferred: true, updated_by: req.userId })
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (updateError) throw updateError;
+            
+            res.json({ success: true, data: updated });
+        } catch (error) {
+            console.error('Erro ao marcar formato como preferido:', error);
             res.status(500).json({ success: false, error: error.message });
         }
     });
@@ -1589,11 +1889,12 @@ Notas finais
     // Gerar todas as variantes de logos
     app.post('/api/branding/generate-logo-variants', requireAuth, async (req, res) => {
         try {
-            // Buscar todos os logos existentes
+            // Buscar todos os logos existentes (incluindo horizontais e verticais)
             const { data: logos, error: logosError } = await supabase
                 .from('site_brand_assets')
                 .select('*')
-                .in('type', ['logo_primary', 'logo_secondary'])
+                .in('type', ['logo_primary', 'logo_primary_horizontal', 'logo_primary_vertical',
+                             'logo_secondary', 'logo_secondary_horizontal', 'logo_secondary_vertical'])
                 .is('deleted_at', null);
             
             if (logosError) throw logosError;
@@ -1610,42 +1911,15 @@ Notas finais
             
             for (const logo of logos) {
                 try {
-                    // Definir dimensões para cada tipo de logo
-                    const variants = [
-                        // Desktop
-                        { width: 512, height: 512, format: 'png', name: 'desktop' },
-                        { width: 256, height: 256, format: 'png', name: 'desktop-small' },
-                        { width: 512, height: 512, format: 'webp', name: 'desktop-webp' },
-                        { width: 256, height: 256, format: 'webp', name: 'desktop-small-webp' },
-                        
-                        // Tablet
-                        { width: 384, height: 384, format: 'png', name: 'tablet' },
-                        { width: 192, height: 192, format: 'png', name: 'tablet-small' },
-                        { width: 384, height: 384, format: 'webp', name: 'tablet-webp' },
-                        
-                        // Mobile
-                        { width: 256, height: 256, format: 'png', name: 'mobile' },
-                        { width: 128, height: 128, format: 'png', name: 'mobile-small' },
-                        { width: 256, height: 256, format: 'webp', name: 'mobile-webp' },
-                        
-                        // Favicon sizes
-                        { width: 32, height: 32, format: 'png', name: 'favicon-32' },
-                        { width: 16, height: 16, format: 'png', name: 'favicon-16' },
-                        { width: 48, height: 48, format: 'png', name: 'favicon-48' },
-                        
-                        // App icon sizes
-                        { width: 180, height: 180, format: 'png', name: 'app-180' },
-                        { width: 152, height: 152, format: 'png', name: 'app-152' },
-                        { width: 144, height: 144, format: 'png', name: 'app-144' },
-                        { width: 120, height: 120, format: 'png', name: 'app-120' },
-                        { width: 76, height: 76, format: 'png', name: 'app-76' },
-                        { width: 60, height: 60, format: 'png', name: 'app-60' },
-                        { width: 40, height: 40, format: 'png', name: 'app-40' },
-                        { width: 29, height: 29, format: 'png', name: 'app-29' },
-                        { width: 20, height: 20, format: 'png', name: 'app-20' }
-                    ];
+                    // Detetar orientação do logo
+                    const isHorizontal = logo.type.includes('horizontal') || 
+                                        (logo.type === 'logo_primary' || logo.type === 'logo_secondary');
+                    const isVertical = logo.type.includes('vertical');
+                    const isLogo = logo.type.includes('logo') && 
+                                  !logo.type.includes('favicon') && 
+                                  !logo.type.includes('app_icon');
                     
-                    // Baixar imagem original
+                    // Baixar imagem original primeiro para obter dimensões
                     const bucket = logo.type === 'favicon' || logo.type === 'app_icon' 
                         ? 'favicons-and-manifest' 
                         : 'media-originals';
@@ -1661,13 +1935,94 @@ Notas finais
                     
                     const imageBuffer = Buffer.from(await imageData.arrayBuffer());
                     
+                    // Obter dimensões originais da imagem
+                    const metadata = await sharp(imageBuffer).metadata();
+                    const originalWidth = metadata.width || logo.width || 512;
+                    const originalHeight = metadata.height || logo.height || 512;
+                    const aspectRatio = originalWidth / originalHeight;
+                    
+                    // Detetar orientação real da imagem se não especificada no tipo
+                    let detectedOrientation = 'horizontal';
+                    if (isVertical) {
+                        detectedOrientation = 'vertical';
+                    } else if (aspectRatio < 1) {
+                        detectedOrientation = 'vertical';
+                    } else if (aspectRatio > 1) {
+                        detectedOrientation = 'horizontal';
+                    }
+                    
+                    // Definir variantes baseadas na orientação
+                    let variants = [];
+                    
+                    if (isLogo) {
+                        if (detectedOrientation === 'horizontal' || isHorizontal) {
+                            // Variantes horizontais - manter proporção horizontal
+                            variants = [
+                                // Desktop horizontal
+                                { width: 512, height: Math.round(512 / aspectRatio), format: 'png', name: 'desktop' },
+                                { width: 256, height: Math.round(256 / aspectRatio), format: 'png', name: 'desktop-small' },
+                                { width: 512, height: Math.round(512 / aspectRatio), format: 'webp', name: 'desktop-webp' },
+                                { width: 256, height: Math.round(256 / aspectRatio), format: 'webp', name: 'desktop-small-webp' },
+                                
+                                // Tablet horizontal
+                                { width: 384, height: Math.round(384 / aspectRatio), format: 'png', name: 'tablet' },
+                                { width: 192, height: Math.round(192 / aspectRatio), format: 'png', name: 'tablet-small' },
+                                { width: 384, height: Math.round(384 / aspectRatio), format: 'webp', name: 'tablet-webp' },
+                                
+                                // Mobile horizontal
+                                { width: 256, height: Math.round(256 / aspectRatio), format: 'png', name: 'mobile' },
+                                { width: 128, height: Math.round(128 / aspectRatio), format: 'png', name: 'mobile-small' },
+                                { width: 256, height: Math.round(256 / aspectRatio), format: 'webp', name: 'mobile-webp' }
+                            ];
+                        } else {
+                            // Variantes verticais - manter proporção vertical
+                            variants = [
+                                // Desktop vertical
+                                { width: Math.round(512 * aspectRatio), height: 512, format: 'png', name: 'desktop' },
+                                { width: Math.round(256 * aspectRatio), height: 256, format: 'png', name: 'desktop-small' },
+                                { width: Math.round(512 * aspectRatio), height: 512, format: 'webp', name: 'desktop-webp' },
+                                { width: Math.round(256 * aspectRatio), height: 256, format: 'webp', name: 'desktop-small-webp' },
+                                
+                                // Tablet vertical
+                                { width: Math.round(384 * aspectRatio), height: 384, format: 'png', name: 'tablet' },
+                                { width: Math.round(192 * aspectRatio), height: 192, format: 'png', name: 'tablet-small' },
+                                { width: Math.round(384 * aspectRatio), height: 384, format: 'webp', name: 'tablet-webp' },
+                                
+                                // Mobile vertical
+                                { width: Math.round(256 * aspectRatio), height: 256, format: 'png', name: 'mobile' },
+                                { width: Math.round(128 * aspectRatio), height: 128, format: 'png', name: 'mobile-small' },
+                                { width: Math.round(256 * aspectRatio), height: 256, format: 'webp', name: 'mobile-webp' }
+                            ];
+                        }
+                    } else {
+                        // Favicon e App Icon - sempre quadrados
+                        variants = [
+                            // Favicon sizes
+                            { width: 32, height: 32, format: 'png', name: 'favicon-32' },
+                            { width: 16, height: 16, format: 'png', name: 'favicon-16' },
+                            { width: 48, height: 48, format: 'png', name: 'favicon-48' },
+                            
+                            // App icon sizes
+                            { width: 180, height: 180, format: 'png', name: 'app-180' },
+                            { width: 152, height: 152, format: 'png', name: 'app-152' },
+                            { width: 144, height: 144, format: 'png', name: 'app-144' },
+                            { width: 120, height: 120, format: 'png', name: 'app-120' },
+                            { width: 76, height: 76, format: 'png', name: 'app-76' },
+                            { width: 60, height: 60, format: 'png', name: 'app-60' },
+                            { width: 40, height: 40, format: 'png', name: 'app-40' },
+                            { width: 29, height: 29, format: 'png', name: 'app-29' },
+                            { width: 20, height: 20, format: 'png', name: 'app-20' }
+                        ];
+                    }
+                    
                     // Gerar variantes
                     for (const variant of variants) {
                         try {
                             const variantBuffer = await sharp(imageBuffer)
                                 .resize(variant.width, variant.height, {
                                     fit: 'contain',
-                                    background: { r: 0, g: 0, b: 0, alpha: 0 }
+                                    background: { r: 0, g: 0, b: 0, alpha: 0 },
+                                    withoutEnlargement: true
                                 })
                                 .toFormat(variant.format)
                                 .toBuffer();
@@ -1825,11 +2180,12 @@ Notas finais
     // Obter variantes de logos
     app.get('/api/branding/logo-variants', requireAuth, async (req, res) => {
         try {
-            // Buscar logos
+            // Buscar logos (incluindo horizontais e verticais)
             const { data: logos, error: logosError } = await supabase
                 .from('site_brand_assets')
                 .select('id, type')
-                .in('type', ['logo_primary', 'logo_secondary'])
+                .in('type', ['logo_primary', 'logo_primary_horizontal', 'logo_primary_vertical',
+                             'logo_secondary', 'logo_secondary_horizontal', 'logo_secondary_vertical'])
                 .is('deleted_at', null);
             
             if (logosError) throw logosError;
@@ -1869,6 +2225,226 @@ Notas finais
         }
     });
     
+    // Obter logo conforme contexto (horizontal ou vertical)
+    app.get('/api/branding/logo/:type/:orientation?', async (req, res) => {
+        try {
+            const { type, orientation = 'horizontal' } = req.params;
+            // type pode ser 'primary', 'secondary', ou 'favicon'
+            // orientation pode ser 'horizontal', 'vertical' (ignorado para favicon)
+            
+            // Tratar favicon separadamente
+            if (type === 'favicon') {
+                // Buscar favicon publicado primeiro, senão buscar draft
+                let { data: favicon, error: faviconError } = await supabase
+                    .from('site_brand_assets')
+                    .select('*')
+                    .eq('type', 'favicon')
+                    .eq('status', 'published')
+                    .is('deleted_at', null)
+                    .order('is_preferred', { ascending: false })
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+                
+                // Se não encontrou publicado, buscar draft
+                if ((!favicon || favicon.length === 0) && !faviconError) {
+                    const draftResult = await supabase
+                        .from('site_brand_assets')
+                        .select('*')
+                        .eq('type', 'favicon')
+                        .eq('status', 'draft')
+                        .is('deleted_at', null)
+                        .order('is_preferred', { ascending: false })
+                        .order('updated_at', { ascending: false })
+                        .limit(1);
+                    favicon = draftResult.data;
+                    faviconError = draftResult.error;
+                }
+                
+                // Se favicon é array, pegar o primeiro elemento
+                if (Array.isArray(favicon) && favicon.length > 0) {
+                    favicon = favicon[0];
+                }
+                
+                if (faviconError) throw faviconError;
+                
+                if (!favicon) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        error: 'Nenhum favicon encontrado' 
+                    });
+                }
+                
+                const bucket = 'favicons-and-manifest';
+                const { data: urlData } = supabase.storage
+                    .from(bucket)
+                    .getPublicUrl(favicon.file_path);
+                
+                return res.json({
+                    success: true,
+                    data: {
+                        ...favicon,
+                        url: urlData?.publicUrl || favicon.file_path
+                    }
+                });
+            }
+            
+            if (!['primary', 'secondary'].includes(type)) {
+                return res.status(400).json({ success: false, error: 'Tipo inválido. Use "primary", "secondary" ou "favicon"' });
+            }
+            
+            if (!['horizontal', 'vertical'].includes(orientation)) {
+                return res.status(400).json({ success: false, error: 'Orientação inválida. Use "horizontal" ou "vertical"' });
+            }
+            
+            // Tentar buscar logo (primeiro published, depois draft)
+            // Construir tipos possíveis baseados no tipo e orientação
+            const possibleTypes = [];
+            if (type === 'primary') {
+                if (orientation === 'horizontal') {
+                    possibleTypes.push('logo_primary_horizontal', 'logo_primary');
+                } else {
+                    possibleTypes.push('logo_primary_vertical', 'logo_primary');
+                }
+            } else if (type === 'secondary') {
+                if (orientation === 'horizontal') {
+                    possibleTypes.push('logo_secondary_horizontal', 'logo_secondary');
+                } else {
+                    possibleTypes.push('logo_secondary_vertical', 'logo_secondary');
+                }
+            }
+            
+            // Buscar primeiro published (preferido primeiro)
+            let result = await supabase
+                .from('site_brand_assets')
+                .select('*')
+                .in('type', possibleTypes)
+                .eq('status', 'published')
+                .is('deleted_at', null)
+                .order('is_preferred', { ascending: false })
+                .order('updated_at', { ascending: false })
+                .limit(1);
+            
+            // Se não encontrou published, buscar draft
+            if ((!result.data || result.data.length === 0) && !result.error) {
+                result = await supabase
+                    .from('site_brand_assets')
+                    .select('*')
+                    .in('type', possibleTypes)
+                    .eq('status', 'draft')
+                    .is('deleted_at', null)
+                    .order('is_preferred', { ascending: false })
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+            }
+            
+            if (result.error) throw result.error;
+            
+            if (!result.data || result.data.length === 0) {
+                return res.status(404).json({ 
+                    success: false, 
+                    error: `Nenhum logo ${type} ${orientation} encontrado` 
+                });
+            }
+            
+            const logo = result.data[0];
+            
+            // Obter URL pública ou assinada dependendo se o bucket é público
+            const bucket = logo.type === 'favicon' || logo.type === 'app_icon' 
+                ? 'favicons-and-manifest' 
+                : 'media-originals';
+            
+            // Buckets conhecidos como públicos
+            const isPublicBucket = bucket === 'favicons-and-manifest' || bucket === 'media-processed';
+            
+            let logoUrl;
+            
+            if (isPublicBucket) {
+                // Para buckets públicos, usar URL pública
+                const { data: urlData } = supabase.storage
+                    .from(bucket)
+                    .getPublicUrl(logo.file_path);
+                logoUrl = urlData?.publicUrl;
+            } else {
+                // Para buckets privados (media-originals), usar endpoint proxy diretamente
+                // O endpoint proxy serve o ficheiro usando service role, contornando RLS
+                logoUrl = `/api/branding/logo-file/${logo.id}`;
+                console.log(`📦 Usando endpoint proxy para logo privado: ${logoUrl}`);
+            }
+            
+            res.json({
+                success: true,
+                data: {
+                    ...logo,
+                    url: logoUrl || logo.file_path
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao obter logo:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    });
+    
+    // Endpoint proxy para servir logos de buckets privados
+    app.get('/api/branding/logo-file/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            
+            // Buscar logo na base de dados
+            const { data: logo, error: logoError } = await supabase
+                .from('site_brand_assets')
+                .select('*')
+                .eq('id', id)
+                .is('deleted_at', null)
+                .single();
+            
+            if (logoError || !logo) {
+                return res.status(404).json({ success: false, error: 'Logo não encontrado' });
+            }
+            
+            // Determinar bucket
+            const bucket = logo.type === 'favicon' || logo.type === 'app_icon' 
+                ? 'favicons-and-manifest' 
+                : 'media-originals';
+            
+            // Baixar ficheiro do storage usando cliente admin
+            const { data: fileData, error: downloadError } = await supabaseAdmin
+                .storage
+                .from(bucket)
+                .download(logo.file_path);
+            
+            if (downloadError || !fileData) {
+                console.error('Erro ao baixar logo do storage:', downloadError);
+                return res.status(404).json({ success: false, error: 'Ficheiro não encontrado no storage' });
+            }
+            
+            // Converter para buffer
+            const arrayBuffer = await fileData.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            
+            // Determinar content type baseado no formato
+            const contentTypeMap = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'svg': 'image/svg+xml',
+                'webp': 'image/webp',
+                'ico': 'image/x-icon'
+            };
+            
+            const contentType = contentTypeMap[logo.format] || 'image/png';
+            
+            // Enviar ficheiro com headers apropriados
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Length', buffer.length);
+            res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+            res.send(buffer);
+            
+        } catch (error) {
+            console.error('Erro ao servir logo file:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    });
+    
     // Publicar logos
     app.post('/api/branding/publish-logos', requireAuth, async (req, res) => {
         try {
@@ -1880,7 +2456,9 @@ Notas finais
                     updated_by: req.userId,
                     updated_at: new Date().toISOString()
                 })
-                .in('type', ['logo_primary', 'logo_secondary', 'favicon', 'app_icon'])
+                .in('type', ['logo_primary', 'logo_primary_horizontal', 'logo_primary_vertical',
+                             'logo_secondary', 'logo_secondary_horizontal', 'logo_secondary_vertical',
+                             'favicon', 'app_icon'])
                 .is('deleted_at', null);
             
             if (error) throw error;

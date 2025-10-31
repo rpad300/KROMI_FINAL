@@ -479,17 +479,28 @@
             <div id="tab-logos" class="tab-content active">
                 <div class="section">
                     <h2>Logos do Site</h2>
+                    <div class="info-box" style="background: var(--primary); color: var(--text-dark); padding: var(--spacing-4); border-radius: var(--radius-base); margin-bottom: var(--spacing-4);">
+                        <strong>ℹ️ Nota Importante:</strong> O sistema utiliza automaticamente o <strong>Logo Secundário (Monocromático)</strong> em todas as interfaces, pois o fundo da plataforma é escuro. Certifique-se de carregar versões monocromáticas adequadas para fundos escuros nos logos secundários.
+                    </div>
                     <p class="helper-text">Carregue os logos da plataforma em múltiplos formatos. O sistema gerará automaticamente todas as variantes necessárias para desktop, tablet e mobile.</p>
                     
                     <!-- Status dos Logos -->
                     <div id="logosStatus" class="status-grid" style="display: none;">
                         <div class="status-item">
-                            <span class="status-label">Logo Primário:</span>
-                            <span id="logoPrimaryStatus" class="status-value">Não carregado</span>
+                            <span class="status-label">Logo Primário Horizontal:</span>
+                            <span id="logoPrimaryHorizontalStatus" class="status-value">Não carregado</span>
                         </div>
                         <div class="status-item">
-                            <span class="status-label">Logo Secundário:</span>
-                            <span id="logoSecondaryStatus" class="status-value">Não carregado</span>
+                            <span class="status-label">Logo Primário Vertical:</span>
+                            <span id="logoPrimaryVerticalStatus" class="status-value">Não carregado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Logo Secundário Horizontal:</span>
+                            <span id="logoSecondaryHorizontalStatus" class="status-value">Não carregado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Logo Secundário Vertical:</span>
+                            <span id="logoSecondaryVerticalStatus" class="status-value">Não carregado</span>
                         </div>
                         <div class="status-item">
                             <span class="status-label">Favicon:</span>
@@ -502,46 +513,164 @@
                     </div>
                     
                     <div class="form-grid">
-                        <!-- Logo Primário -->
+                        <!-- Logo Primário Horizontal -->
                         <div class="form-group full-width">
-                            <label>Logo Primário (Principal)</label>
+                            <label>Logo Primário Horizontal (Principal)</label>
                             <div class="requirement-box">
                                 <h4>📋 Requisitos:</h4>
                                 <ul>
-                                    <li>Formato: SVG (preferido) ou PNG</li>
-                                    <li>Dimensões: 2048px largura (PNG)</li>
-                                    <li>Fundo: Transparente</li>
-                                    <li>Tamanho máximo: 2 MB</li>
-                                    <li>Usado em: Header, footer, impressões, documentos</li>
+                                    <li><strong>Formatos aceites:</strong> SVG (preferido), PNG, WebP, JPG</li>
+                                    <li><strong>Orientação:</strong> Horizontal (largura maior que altura)</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 2048px largura (PNG) ou SVG vetorial</li>
+                                    <li><strong>Fundo:</strong> Transparente</li>
+                                    <li><strong>Tamanho máximo:</strong> 2 MB</li>
+                                    <li><strong>Usado em:</strong> Header, navbar, documentos horizontais</li>
                                 </ul>
                             </div>
-                            <div class="upload-area" onclick="document.getElementById('logoPrimaryInput').click()">
-                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
-                                <p>Clique ou arraste para carregar Logo Primário</p>
-                                <input type="file" id="logoPrimaryInput" accept=".svg,.png,.webp" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_primary', this)">
+                            
+                            <!-- Campos opcionais para dimensões -->
+                            <div class="form-grid" style="margin-bottom: var(--spacing-3);">
+                                <div class="form-group">
+                                    <label>Largura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoPrimaryHorizontalWidth" class="form-input" placeholder="Ex: 2048" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para usar dimensões originais</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Altura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoPrimaryHorizontalHeight" class="form-input" placeholder="Ex: 512" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para manter proporção</span>
+                                </div>
                             </div>
-                            <div id="logoPrimaryPreview" class="preview-container" style="display: none;"></div>
+                            
+                            <div class="upload-area" onclick="document.getElementById('logoPrimaryHorizontalInput').click()">
+                                <i class="fas fa-arrows-alt-h" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Primário Horizontal</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: SVG, PNG, WebP, JPG
+                                </p>
+                                <input type="file" id="logoPrimaryHorizontalInput" accept=".svg,.png,.webp,.jpg,.jpeg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_primary_horizontal', this)">
+                            </div>
+                            <div id="logoPrimaryHorizontalPreview" class="preview-container" style="display: none;"></div>
                         </div>
                         
-                        <!-- Logo Secundário -->
+                        <!-- Logo Primário Vertical -->
                         <div class="form-group full-width">
-                            <label>Logo Secundário (Monocromático)</label>
+                            <label>Logo Primário Vertical (Principal)</label>
                             <div class="requirement-box">
                                 <h4>📋 Requisitos:</h4>
                                 <ul>
-                                    <li>Formato: SVG (preferido) ou PNG</li>
-                                    <li>Versão monocromática para fundo escuro</li>
-                                    <li>Dimensões: 2048px largura (PNG)</li>
-                                    <li>Tamanho máximo: 2 MB</li>
-                                    <li>Usado em: Fundos escuros, impressões em preto e branco</li>
+                                    <li><strong>Formatos aceites:</strong> SVG (preferido), PNG, WebP, JPG</li>
+                                    <li><strong>Orientação:</strong> Vertical (altura maior que largura)</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 1024px altura (PNG) ou SVG vetorial</li>
+                                    <li><strong>Fundo:</strong> Transparente</li>
+                                    <li><strong>Tamanho máximo:</strong> 2 MB</li>
+                                    <li><strong>Usado em:</strong> Mobile, documentos verticais, apps</li>
                                 </ul>
                             </div>
-                            <div class="upload-area" onclick="document.getElementById('logoSecondaryInput').click()">
-                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
-                                <p>Clique ou arraste para carregar Logo Secundário</p>
-                                <input type="file" id="logoSecondaryInput" accept=".svg,.png,.webp" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_secondary', this)">
+                            
+                            <!-- Campos opcionais para dimensões -->
+                            <div class="form-grid" style="margin-bottom: var(--spacing-3);">
+                                <div class="form-group">
+                                    <label>Largura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoPrimaryVerticalWidth" class="form-input" placeholder="Ex: 512" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para usar dimensões originais</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Altura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoPrimaryVerticalHeight" class="form-input" placeholder="Ex: 1024" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para manter proporção</span>
+                                </div>
                             </div>
-                            <div id="logoSecondaryPreview" class="preview-container" style="display: none;"></div>
+                            
+                            <div class="upload-area" onclick="document.getElementById('logoPrimaryVerticalInput').click()">
+                                <i class="fas fa-arrows-alt-v" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Primário Vertical</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: SVG, PNG, WebP, JPG
+                                </p>
+                                <input type="file" id="logoPrimaryVerticalInput" accept=".svg,.png,.webp,.jpg,.jpeg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_primary_vertical', this)">
+                            </div>
+                            <div id="logoPrimaryVerticalPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Logo Secundário Horizontal -->
+                        <div class="form-group full-width">
+                            <label>Logo Secundário Horizontal (Monocromático)</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li><strong>Formatos aceites:</strong> SVG (preferido), PNG, WebP, JPG</li>
+                                    <li><strong>Orientação:</strong> Horizontal</li>
+                                    <li><strong>Versão:</strong> Monocromática para fundo escuro</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 2048px largura (PNG) ou SVG vetorial</li>
+                                    <li><strong>Tamanho máximo:</strong> 2 MB</li>
+                                    <li><strong>Usado em:</strong> Fundos escuros, impressões em preto e branco</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Campos opcionais para dimensões -->
+                            <div class="form-grid" style="margin-bottom: var(--spacing-3);">
+                                <div class="form-group">
+                                    <label>Largura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoSecondaryHorizontalWidth" class="form-input" placeholder="Ex: 2048" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para usar dimensões originais</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Altura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoSecondaryHorizontalHeight" class="form-input" placeholder="Ex: 512" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para manter proporção</span>
+                                </div>
+                            </div>
+                            
+                            <div class="upload-area" onclick="document.getElementById('logoSecondaryHorizontalInput').click()">
+                                <i class="fas fa-arrows-alt-h" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Secundário Horizontal</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: SVG, PNG, WebP, JPG
+                                </p>
+                                <input type="file" id="logoSecondaryHorizontalInput" accept=".svg,.png,.webp,.jpg,.jpeg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_secondary_horizontal', this)">
+                            </div>
+                            <div id="logoSecondaryHorizontalPreview" class="preview-container" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Logo Secundário Vertical -->
+                        <div class="form-group full-width">
+                            <label>Logo Secundário Vertical (Monocromático)</label>
+                            <div class="requirement-box">
+                                <h4>📋 Requisitos:</h4>
+                                <ul>
+                                    <li><strong>Formatos aceites:</strong> SVG (preferido), PNG, WebP, JPG</li>
+                                    <li><strong>Orientação:</strong> Vertical</li>
+                                    <li><strong>Versão:</strong> Monocromática para fundo escuro</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 1024px altura (PNG) ou SVG vetorial</li>
+                                    <li><strong>Tamanho máximo:</strong> 2 MB</li>
+                                    <li><strong>Usado em:</strong> Mobile, fundos escuros verticais</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Campos opcionais para dimensões -->
+                            <div class="form-grid" style="margin-bottom: var(--spacing-3);">
+                                <div class="form-group">
+                                    <label>Largura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoSecondaryVerticalWidth" class="form-input" placeholder="Ex: 512" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para usar dimensões originais</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Altura desejada (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                    <input type="number" id="logoSecondaryVerticalHeight" class="form-input" placeholder="Ex: 1024" min="1" max="4096">
+                                    <span class="helper-text">Deixe vazio para manter proporção</span>
+                                </div>
+                            </div>
+                            
+                            <div class="upload-area" onclick="document.getElementById('logoSecondaryVerticalInput').click()">
+                                <i class="fas fa-arrows-alt-v" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                                <p>Clique ou arraste para carregar Logo Secundário Vertical</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: SVG, PNG, WebP, JPG
+                                </p>
+                                <input type="file" id="logoSecondaryVerticalInput" accept=".svg,.png,.webp,.jpg,.jpeg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('logo_secondary_vertical', this)">
+                            </div>
+                            <div id="logoSecondaryVerticalPreview" class="preview-container" style="display: none;"></div>
                         </div>
                         
                         <!-- Favicon -->
@@ -550,15 +679,26 @@
                             <div class="requirement-box">
                                 <h4>📋 Requisitos:</h4>
                                 <ul>
-                                    <li>Formato: ICO, PNG</li>
-                                    <li>Dimensões: 16x16, 32x32, 48x48</li>
-                                    <li>Usado em: Aba do browser, bookmarks</li>
+                                    <li><strong>Formatos aceites:</strong> ICO, PNG, SVG</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 32x32px ou múltiplos tamanhos</li>
+                                    <li><strong>Usado em:</strong> Aba do browser, bookmarks</li>
                                 </ul>
                             </div>
+                            
+                            <!-- Campo opcional para dimensões -->
+                            <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                                <label>Tamanho desejado (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                <input type="number" id="faviconSize" class="form-input" placeholder="Ex: 32" min="16" max="256">
+                                <span class="helper-text">Para ICO, múltiplos tamanhos são gerados automaticamente</span>
+                            </div>
+                            
                             <div class="upload-area" onclick="document.getElementById('faviconInput').click()">
                                 <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
-                                <p>Carregar Favicon</p>
-                                <input type="file" id="faviconInput" accept=".ico,.png" style="display: none;" onchange="BrandingSEO.handleLogoUpload('favicon', this)">
+                                <p>Clique ou arraste para carregar Favicon</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: ICO, PNG, SVG
+                                </p>
+                                <input type="file" id="faviconInput" accept=".ico,.png,.svg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('favicon', this)">
                             </div>
                             <div id="faviconPreview" class="preview-container" style="display: none;"></div>
                         </div>
@@ -569,16 +709,27 @@
                             <div class="requirement-box">
                                 <h4>📋 Requisitos:</h4>
                                 <ul>
-                                    <li>Formato: PNG</li>
-                                    <li>Dimensões: 512x512px</li>
-                                    <li>Android maskable icon</li>
-                                    <li>Usado em: PWA, instalação mobile</li>
+                                    <li><strong>Formatos aceites:</strong> PNG, SVG</li>
+                                    <li><strong>Dimensões recomendadas:</strong> 512x512px (quadrado)</li>
+                                    <li><strong>Requisitos:</strong> Android maskable icon</li>
+                                    <li><strong>Usado em:</strong> PWA, instalação mobile</li>
                                 </ul>
                             </div>
+                            
+                            <!-- Campo opcional para dimensões -->
+                            <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                                <label>Tamanho desejado (px) <span class="helper-text" style="font-weight: normal;">(opcional)</span></label>
+                                <input type="number" id="appIconSize" class="form-input" placeholder="Ex: 512" min="128" max="1024">
+                                <span class="helper-text">Será usado como base para gerar todas as variantes</span>
+                            </div>
+                            
                             <div class="upload-area" onclick="document.getElementById('appIconInput').click()">
                                 <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
-                                <p>Carregar App Icon</p>
-                                <input type="file" id="appIconInput" accept=".png" style="display: none;" onchange="BrandingSEO.handleLogoUpload('app_icon', this)">
+                                <p>Clique ou arraste para carregar App Icon</p>
+                                <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-1);">
+                                    Formatos: PNG, SVG
+                                </p>
+                                <input type="file" id="appIconInput" accept=".png,.svg" style="display: none;" onchange="BrandingSEO.handleLogoUpload('app_icon', this)">
                             </div>
                             <div id="appIconPreview" class="preview-container" style="display: none;"></div>
                         </div>
@@ -1364,6 +1515,12 @@
     <script src="/supabase.js?v=2025102605" defer></script>
     <script src="/auth-client.js?v=2025102616" defer></script>
     <script src="/auth-helper.js?v=2025102620" defer></script>
+    
+    <!-- Logo Integration Styles -->
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     
     <!-- Sistema de Navegação Unificado -->
     <script src="/navigation-config.js?v=2025102601" defer></script>

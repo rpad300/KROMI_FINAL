@@ -1,0 +1,128 @@
+/**
+ * Logo Integration Styles
+ * =======================
+ * Estilos para integração de logos dinâmicos
+ */
+
+/* Sidebar Logo */
+.sidebar-logo-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2, 0.5rem);
+    min-height: 40px;
+}
+
+.sidebar-logo {
+    max-height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Header Logo */
+.header-logo-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3, 0.75rem);
+}
+
+.header-logo {
+    max-height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
+.header-logo-small {
+    max-height: 32px;
+    width: auto;
+}
+
+.header-logo-large {
+    max-height: 80px;
+    width: auto;
+}
+
+/* Footer Logo */
+.footer-logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-4, 1rem);
+}
+
+.footer-logo {
+    max-height: 60px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Mobile Logo */
+.mobile-logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2, 0.5rem);
+}
+
+.mobile-logo {
+    max-height: 44px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Logo com link */
+.logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.logo-link:hover {
+    opacity: 0.8;
+}
+
+.logo-link:focus {
+    outline: 2px solid var(--primary, #ff6b35);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 4px);
+}
+
+/* Loading state */
+.logo-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.logo-loading::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color, #333);
+    border-top-color: var(--primary, #ff6b35);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: var(--spacing-2, 0.5rem);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-logo {
+        max-height: 40px;
+    }
+    
+    .sidebar-logo {
+        max-height: 32px;
+    }
+    
+    .footer-logo {
+        max-height: 48px;
+    }
+}
+

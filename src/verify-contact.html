@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Contacto - VisionKrono</title>
+    <link rel="stylesheet" href="/styles.css?v=20250130">
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --primary: #FC6B03;
+            --primary-hover: #FF8800;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #333;
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-6: 1.5rem;
+            --spacing-8: 2rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-4);
+        }
+
+        .verify-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: var(--spacing-8);
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+        }
+
+        .verify-header {
+            text-align: center;
+            margin-bottom: var(--spacing-6);
+        }
+
+        .verify-header h1 {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-2);
+            color: var(--primary);
+        }
+
+        .verify-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .status-section {
+            margin-bottom: var(--spacing-6);
+        }
+
+        .contact-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-4);
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-3);
+            border: 1px solid var(--border);
+        }
+
+        .contact-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+        }
+
+        .contact-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .contact-icon.email {
+            background: rgba(252, 107, 3, 0.2);
+            color: var(--primary);
+        }
+
+        .contact-icon.phone {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .contact-details h3 {
+            font-size: 1rem;
+            margin-bottom: var(--spacing-1);
+        }
+
+        .contact-details p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-badge.confirmed {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .verify-form {
+            margin-top: var(--spacing-6);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-4);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-2);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: var(--spacing-3) var(--spacing-4);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .code-input {
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            width: 100%;
+            padding: var(--spacing-3) var(--spacing-4);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: var(--spacing-2);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .message {
+            padding: var(--spacing-3);
+            border-radius: 6px;
+            margin-bottom: var(--spacing-4);
+            font-size: 0.9rem;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .message.info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .resend-info {
+            text-align: center;
+            margin-top: var(--spacing-4);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .resend-info .countdown {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .verify-container {
+                padding: var(--spacing-4);
+            }
+
+            .verify-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="verify-container">
+        <div class="verify-header">
+            <h1>✅ Verificar Contacto</h1>
+            <p>Confirme o seu email ou telefone para ativar a conta</p>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div class="status-section">
+            <div class="contact-status">
+                <div class="contact-info">
+                    <div class="contact-icon email">📧</div>
+                    <div class="contact-details">
+                        <h3>Email</h3>
+                        <p id="emailDisplay">Carregando...</p>
+                    </div>
+                </div>
+                <span class="status-badge pending" id="emailStatus">Pendente</span>
+            </div>
+
+            <div class="contact-status">
+                <div class="contact-info">
+                    <div class="contact-icon phone">📱</div>
+                    <div class="contact-details">
+                        <h3>Telefone</h3>
+                        <p id="phoneDisplay">Carregando...</p>
+                    </div>
+                </div>
+                <span class="status-badge pending" id="phoneStatus">Pendente</span>
+            </div>
+        </div>
+
+        <!-- Formulário de verificação SMS -->
+        <div class="verify-form" id="smsVerifyForm">
+            <div class="form-group">
+                <label for="smsCode">Código SMS (6 dígitos)</label>
+                <input 
+                    type="text" 
+                    id="smsCode" 
+                    name="smsCode" 
+                    class="code-input"
+                    maxlength="6" 
+                    placeholder="000000"
+                    autocomplete="one-time-code"
+                    inputmode="numeric"
+                >
+            </div>
+            <button class="btn" id="verifySmsBtn">✅ Verificar Telefone</button>
+            <button class="btn btn-secondary" id="resendSmsBtn">🔄 Reenviar SMS</button>
+            <div class="resend-info" id="resendSmsInfo"></div>
+        </div>
+
+        <!-- Botões de ação -->
+        <div style="margin-top: var(--spacing-6);">
+            <button class="btn btn-secondary" id="resendEmailBtn">🔄 Reenviar Email</button>
+            <div class="resend-info" id="resendEmailInfo"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/supabase.js?v=2025102605"></script>
+    <script src="/auth-client.js?v=2025102616"></script>
+    
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+        let resendSmsCooldown = 0;
+        let resendEmailCooldown = 0;
+        let smsCooldownInterval = null;
+        let emailCooldownInterval = null;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Verificar se veio do callback de email
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('email_verified') === 'true') {
+                await confirmEmailFromCallback(urlParams.get('token'));
+            }
+            
+            await checkAuthStatus();
+            setupEventListeners();
+        });
+
+        async function confirmEmailFromCallback(token) {
+            try {
+                // Sincronizar email_confirmed_at do auth.users para user_profiles
+                const response = await fetch('/api/auth/sync-email-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ token: token })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        showMessage('✅ Email confirmado com sucesso!', 'success');
+                        await loadUserProfile();
+                        updateUI();
+                    } else {
+                        showMessage('❌ ' + (result.error || 'Erro ao confirmar email'), 'error');
+                    }
+                } else {
+                    showMessage('❌ Erro ao confirmar email', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao confirmar email:', error);
+                showMessage('❌ Erro ao confirmar email: ' + error.message, 'error');
+            }
+        }
+
+        async function checkAuthStatus() {
+            try {
+                // Aguardar AuthClient
+                if (!window.authSystem) {
+                    await new Promise(resolve => {
+                        const check = setInterval(() => {
+                            if (window.authSystem) {
+                                clearInterval(check);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                }
+
+                const session = await window.authSystem.checkExistingSession();
+                if (!session || !session.user) {
+                    window.location.href = '/login.html';
+                    return;
+            }
+
+                currentUser = session.user;
+                
+                // Buscar perfil
+                await loadUserProfile();
+                updateUI();
+            } catch (error) {
+                console.error('Erro ao verificar autenticação:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/users/get?user_id=' + currentUser.id, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        userProfile = result.user;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar perfil:', error);
+            }
+        }
+
+        function updateUI() {
+            if (!userProfile) return;
+
+            // Atualizar email
+            document.getElementById('emailDisplay').textContent = userProfile.email || 'Não configurado';
+            const emailConfirmed = userProfile.email_confirmed_at !== null;
+            const emailStatusBadge = document.getElementById('emailStatus');
+            emailStatusBadge.textContent = emailConfirmed ? 'Confirmado' : 'Pendente';
+            emailStatusBadge.className = 'status-badge ' + (emailConfirmed ? 'confirmed' : 'pending');
+
+            // Atualizar telefone
+            const phone = userProfile.phone || 'Não configurado';
+            document.getElementById('phoneDisplay').textContent = phone;
+            const phoneConfirmed = userProfile.phone_confirmed_at !== null;
+            const phoneStatusBadge = document.getElementById('phoneStatus');
+            phoneStatusBadge.textContent = phoneConfirmed ? 'Confirmado' : 'Pendente';
+            phoneStatusBadge.className = 'status-badge ' + (phoneConfirmed ? 'confirmed' : 'pending');
+
+            // Mostrar/esconder formulário SMS
+            const smsForm = document.getElementById('smsVerifyForm');
+            if (phoneConfirmed || phone === 'Não configurado') {
+                smsForm.classList.add('hidden');
+            } else {
+                smsForm.classList.remove('hidden');
+            }
+
+            // Verificar se pode acessar (pelo menos um confirmado)
+            if (emailConfirmed || phoneConfirmed) {
+                // Status será active, pode redirecionar
+                setTimeout(() => {
+                    showMessage('Conta ativada com sucesso! Redirecionando...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/index-kromi.html';
+                    }, 2000);
+                }, 500);
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('verifySmsBtn').addEventListener('click', verifyPhoneCode);
+            document.getElementById('resendSmsBtn').addEventListener('click', resendSMS);
+            document.getElementById('resendEmailBtn').addEventListener('click', resendEmail);
+            
+            // Enter no campo SMS
+            document.getElementById('smsCode').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    verifyPhoneCode();
+                }
+            });
+
+            // Formatar código SMS (só números)
+            document.getElementById('smsCode').addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+            });
+        }
+
+        async function verifyPhoneCode() {
+            const code = document.getElementById('smsCode').value;
+            const phone = userProfile?.phone;
+            
+            if (!code || code.length !== 6) {
+                showMessage('Por favor, introduza o código de 6 dígitos', 'error');
+                return;
+            }
+
+            if (!phone || phone === 'Não configurado') {
+                showMessage('Telefone não configurado', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('verifySmsBtn');
+            btn.disabled = true;
+            btn.textContent = 'A verificar...';
+
+            try {
+                const response = await fetch('/api/auth/verify-phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        code: code,
+                        phone: phone,
+                        user_id: currentUser.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Telefone confirmado com sucesso!', 'success');
+                    document.getElementById('smsCode').value = '';
+                    
+                    // Se retornou sessão, atualizar authSystem
+                    if (result.session) {
+                        await checkAuthStatus();
+                    }
+                    
+                    await loadUserProfile();
+                    updateUI();
+                } else {
+                    showMessage('❌ ' + (result.error || 'Código inválido'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Erro ao verificar código: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Verificar Telefone';
+            }
+        }
+
+        async function resendSMS() {
+            if (resendSmsCooldown > 0) {
+                showMessage(`Aguarde ${resendSmsCooldown} segundo(s) antes de reenviar`, 'info');
+                return;
+            }
+
+            const btn = document.getElementById('resendSmsBtn');
+            btn.disabled = true;
+            btn.textContent = 'A enviar...';
+
+            try {
+                const phone = userProfile?.phone;
+                if (!phone || phone === 'Não configurado') {
+                    showMessage('Telefone não configurado', 'error');
+                    return;
+                }
+
+                // Usar endpoint de reenvio ou diretamente Supabase Auth
+                const response = await fetch('/api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        type: 'sms',
+                        user_id: currentUser.id,
+                        phone: phone
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ SMS reenviado com sucesso!', 'success');
+                    startSmsCooldown(60);
+                } else {
+                    if (result.secondsLeft) {
+                        startSmsCooldown(result.secondsLeft);
+                    }
+                    showMessage('❌ ' + (result.error || 'Erro ao reenviar SMS'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Erro ao reenviar SMS: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Reenviar SMS';
+            }
+        }
+
+        async function resendEmail() {
+            if (resendEmailCooldown > 0) {
+                showMessage(`Aguarde ${resendEmailCooldown} segundo(s) antes de reenviar`, 'info');
+                return;
+            }
+
+            const btn = document.getElementById('resendEmailBtn');
+            btn.disabled = true;
+            btn.textContent = 'A enviar...';
+
+            try {
+                const response = await fetch('/api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        type: 'email',
+                        user_id: currentUser.id,
+                        email: userProfile.email
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✅ Email reenviado com sucesso! Verifique a sua caixa de entrada.', 'success');
+                    startEmailCooldown(60);
+                } else {
+                    if (result.secondsLeft) {
+                        startEmailCooldown(result.secondsLeft);
+                    }
+                    showMessage('❌ ' + (result.error || 'Erro ao reenviar email'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Erro ao reenviar email: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Reenviar Email';
+            }
+        }
+
+        function startSmsCooldown(seconds) {
+            resendSmsCooldown = seconds;
+            const infoDiv = document.getElementById('resendSmsInfo');
+            
+            if (smsCooldownInterval) clearInterval(smsCooldownInterval);
+            
+            smsCooldownInterval = setInterval(() => {
+                resendSmsCooldown--;
+                if (resendSmsCooldown > 0) {
+                    infoDiv.textContent = `Aguarde ${resendSmsCooldown} segundo(s) para reenviar`;
+                } else {
+                    infoDiv.textContent = '';
+                    clearInterval(smsCooldownInterval);
+                }
+            }, 1000);
+        }
+
+        function startEmailCooldown(seconds) {
+            resendEmailCooldown = seconds;
+            const infoDiv = document.getElementById('resendEmailInfo');
+            
+            if (emailCooldownInterval) clearInterval(emailCooldownInterval);
+            
+            emailCooldownInterval = setInterval(() => {
+                resendEmailCooldown--;
+                if (resendEmailCooldown > 0) {
+                    infoDiv.textContent = `Aguarde ${resendEmailCooldown} segundo(s) para reenviar`;
+                } else {
+                    infoDiv.textContent = '';
+                    clearInterval(emailCooldownInterval);
+                }
+            }, 1000);
+        }
+
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+

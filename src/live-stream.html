@@ -11,6 +11,7 @@
     
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/src/navigation-component.css?v=2025102701">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
     
     <style>
         body {
@@ -341,6 +342,8 @@
     <!-- Sistema de Navegação Unificado -->
     <script src="/src/navigation-config.js?v=2025102701" defer></script>
     <script src="/src/navigation-service.js?v=2025102701" defer></script>
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     <script src="/src/navigation-component.js?v=2025102701" defer></script>
     <script src="/src/navigation-init.js?v=2025102701" defer></script>
     
@@ -1200,7 +1203,7 @@
                 }
                 
                 // Verificar autenticação
-                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager']);
+                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager', 'user']);
                 if (!autenticado) {
                     console.warn('⚠️ Sem permissão');
                     return;

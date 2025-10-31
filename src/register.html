@@ -9,127 +9,156 @@
     <link rel="stylesheet" href="/kromi-mobile-detection-fixes.css">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-primary);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px 0;
+            font-family: var(--font-family-base);
+            margin: 0;
+            padding: var(--spacing-4);
+            box-sizing: border-box;
         }
 
         .register-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 40px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-2xl);
+            padding: var(--spacing-6);
             width: 100%;
             max-width: 450px;
-            margin: 20px;
+            margin: 0;
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
         }
 
         .register-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: var(--spacing-4);
         }
 
         .register-header h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            text-shadow: 0 2px 10px rgba(252, 107, 3, 0.3);
         }
 
         .register-header p {
-            color: #666;
-            font-size: 1rem;
+            color: var(--text-secondary);
+            font-size: var(--font-size-base);
+            margin-top: var(--spacing-2);
+        }
+
+        .register-logo-container {
+            margin-bottom: var(--spacing-2);
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .register-logo-container img {
+            max-width: 180px;
+            max-height: 50px;
+            width: auto;
+            height: auto;
+            display: block;
+        }
+
+        .register-logo-container h1 {
+            margin: 0;
         }
 
         .register-form {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: var(--spacing-3);
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: var(--spacing-2);
         }
 
         .form-group label {
-            color: #333;
-            font-weight: 600;
-            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: var(--font-weight-semibold);
+            font-size: var(--font-size-sm);
         }
 
         .form-group input {
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
+            padding: var(--spacing-3);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-base);
+            transition: all var(--transition-base);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-family-base);
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-primary);
         }
 
         .form-group input.error {
-            border-color: #e74c3c;
-            background: #fdf2f2;
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
         }
 
         .form-group input.success {
-            border-color: #27ae60;
-            background: #f2fdf2;
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
         }
 
         .password-strength {
-            margin-top: 5px;
-            font-size: 0.8rem;
+            margin-top: var(--spacing-2);
+            font-size: var(--font-size-xs);
         }
 
         .password-strength.weak {
-            color: #e74c3c;
+            color: var(--danger);
         }
 
         .password-strength.medium {
-            color: #f39c12;
+            color: var(--warning);
         }
 
         .password-strength.strong {
-            color: #27ae60;
+            color: var(--success);
         }
 
         .register-options {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            margin-top: 20px;
+            gap: var(--spacing-3);
+            margin-top: var(--spacing-3);
         }
 
         .btn-register {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-dark);
             border: none;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
+            padding: var(--spacing-3);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all var(--transition-base);
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-family: var(--font-family-base);
         }
 
         .btn-register:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: var(--shadow-primary-lg);
         }
 
         .btn-register:disabled {
@@ -139,31 +168,32 @@
         }
 
         .btn-google {
-            background: white;
-            color: #333;
-            border: 2px solid #e1e5e9;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            padding: var(--spacing-3);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all var(--transition-base);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: var(--spacing-3);
+            font-family: var(--font-family-base);
         }
 
         .btn-google:hover {
-            border-color: #4285f4;
-            background: #f8f9fa;
+            border-color: var(--info);
+            background: var(--bg-secondary);
         }
 
         .divider {
             text-align: center;
-            margin: 20px 0;
+            margin: var(--spacing-3) 0;
             position: relative;
-            color: #666;
+            color: var(--text-tertiary);
         }
 
         .divider::before {
@@ -173,61 +203,63 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: #e1e5e9;
+            background: var(--border-color);
         }
 
         .divider span {
-            background: white;
-            padding: 0 15px;
+            background: var(--bg-secondary);
+            padding: 0 var(--spacing-4);
         }
 
         .register-footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e1e5e9;
+            margin-top: var(--spacing-4);
+            padding-top: var(--spacing-3);
+            border-top: 1px solid var(--border-color);
         }
 
         .register-footer a {
-            color: #667eea;
+            color: var(--primary);
             text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
+            font-weight: var(--font-weight-semibold);
+            transition: color var(--transition-base);
         }
 
         .register-footer a:hover {
-            color: #764ba2;
+            color: var(--primary-dark);
         }
 
         .error-message {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #fcc;
-            margin-bottom: 20px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            padding: var(--spacing-4);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--danger);
+            margin-bottom: var(--spacing-5);
             display: none;
+            font-size: var(--font-size-sm);
         }
 
         .success-message {
-            background: #efe;
-            color: #3c3;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #cfc;
-            margin-bottom: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: var(--spacing-4);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--success);
+            margin-bottom: var(--spacing-5);
             display: none;
+            font-size: var(--font-size-sm);
         }
 
         .loading {
             display: none;
             text-align: center;
-            margin: 20px 0;
+            margin: var(--spacing-5) 0;
         }
 
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -243,8 +275,8 @@
         .terms-checkbox {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
-            margin-top: 10px;
+            gap: var(--spacing-2);
+            margin-top: var(--spacing-2);
         }
 
         .terms-checkbox input[type="checkbox"] {
@@ -252,13 +284,13 @@
         }
 
         .terms-checkbox label {
-            font-size: 0.9rem;
-            color: #666;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
             line-height: 1.4;
         }
 
         .terms-checkbox a {
-            color: #667eea;
+            color: var(--primary);
             text-decoration: none;
         }
 
@@ -266,22 +298,79 @@
             text-decoration: underline;
         }
 
+        /* Seletor de método de registo */
+        .register-method-selector {
+            margin-bottom: var(--spacing-4);
+            padding: var(--spacing-3);
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .method-options {
+            display: flex;
+            gap: var(--spacing-2);
+            flex-wrap: wrap;
+        }
+
+        .method-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: var(--spacing-2) var(--spacing-3);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            font-family: var(--font-family-base);
+        }
+
+        .method-btn:hover {
+            border-color: var(--primary);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+        }
+
+        .method-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: var(--text-dark);
+            box-shadow: var(--shadow-primary);
+        }
+
+        .required-indicator {
+            color: var(--danger);
+            margin-left: var(--spacing-1);
+        }
+
+        .form-group.hidden {
+            display: none !important;
+        }
+
         @media (max-width: 480px) {
+            body {
+                padding: var(--spacing-3);
+            }
+            
             .register-container {
-                margin: 10px;
-                padding: 30px 20px;
+                padding: var(--spacing-5) var(--spacing-4);
             }
             
             .register-header h1 {
-                font-size: 2rem;
+                font-size: var(--font-size-2xl);
             }
         }
     </style>
 </head>
-<body>
+<body data-theme="dark">
     <div class="register-container">
         <div class="register-header">
-            <h1>Kromi.online</h1>
+            <div class="register-logo-container" id="registerLogo">
+                <h1>Kromi.online</h1>
+            </div>
             <p>Criar nova conta</p>
         </div>
 
@@ -293,31 +382,46 @@
             <p>A criar conta...</p>
         </div>
 
+        <!-- Seletor de método de registo -->
+        <div class="register-method-selector" id="methodSelector">
+            <div class="method-options">
+                <button type="button" class="method-btn active" data-method="email">
+                    📧 Email
+                </button>
+                <button type="button" class="method-btn" data-method="phone">
+                    📱 Telefone
+                </button>
+                <button type="button" class="method-btn" data-method="both">
+                    📧📱 Ambos
+                </button>
+            </div>
+        </div>
+
         <form class="register-form" id="registerForm">
-            <div class="form-group">
+            <div class="form-group" id="fullNameGroup">
                 <label for="fullName">Nome Completo</label>
-                <input type="text" id="fullName" name="fullName" required>
+                <input type="text" id="fullName" name="fullName" autocomplete="name" required>
             </div>
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
+            <div class="form-group" id="emailGroup">
+                <label for="email">Email <span class="required-indicator" id="emailRequired">*</span></label>
+                <input type="email" id="email" name="email" autocomplete="email" placeholder="exemplo@email.com">
             </div>
 
-            <div class="form-group">
-                <label for="phone">Telefone (opcional)</label>
-                <input type="tel" id="phone" name="phone" placeholder="+351 123 456 789">
+            <div class="form-group" id="phoneGroup" style="display: none;">
+                <label for="phone">Telefone <span class="required-indicator" id="phoneRequired" style="display: none;">*</span></label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+351 912 345 678">
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="passwordGroup">
                 <label for="password">Palavra-passe</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" autocomplete="new-password" required>
                 <div class="password-strength" id="passwordStrength"></div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="confirmPasswordGroup">
                 <label for="confirmPassword">Confirmar Palavra-passe</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" required>
             </div>
 
             <div class="terms-checkbox">
@@ -355,7 +459,11 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="/auth-system.js"></script>
+    <script src="/supabase.js?v=2025102603"></script>
+    <script src="/terminal-debug.js?v=2025102603"></script>
+    <script src="/auth-client.js?v=2025102620"></script>
+    <script src="/universal-route-protection.js?v=2025102618"></script>
+    <script src="/logo-loader.js?v=2025012701" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const registerForm = document.getElementById('registerForm');
@@ -371,6 +479,59 @@
             const successMessage = document.getElementById('successMessage');
             const loading = document.getElementById('loading');
             const passwordStrength = document.getElementById('passwordStrength');
+            
+            // Seletores de método
+            const methodButtons = document.querySelectorAll('.method-btn');
+            const emailGroup = document.getElementById('emailGroup');
+            const phoneGroup = document.getElementById('phoneGroup');
+            const emailRequired = document.getElementById('emailRequired');
+            const phoneRequired = document.getElementById('phoneRequired');
+            
+            let selectedMethod = 'email'; // email, phone, both
+
+            // Gerenciar seleção de método
+            methodButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    methodButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedMethod = this.dataset.method;
+                    updateFormFields();
+                });
+            });
+
+            // Atualizar campos do formulário conforme método selecionado
+            function updateFormFields() {
+                // Resetar validação
+                emailInput.removeAttribute('required');
+                phoneInput.removeAttribute('required');
+                emailRequired.style.display = 'none';
+                phoneRequired.style.display = 'none';
+
+                switch(selectedMethod) {
+                    case 'email':
+                        emailGroup.style.display = 'flex';
+                        phoneGroup.style.display = 'none';
+                        emailInput.setAttribute('required', 'required');
+                        emailRequired.style.display = 'inline';
+                        break;
+                    
+                    case 'phone':
+                        emailGroup.style.display = 'none';
+                        phoneGroup.style.display = 'flex';
+                        phoneInput.setAttribute('required', 'required');
+                        phoneRequired.style.display = 'inline';
+                        break;
+                    
+                    case 'both':
+                        emailGroup.style.display = 'flex';
+                        phoneGroup.style.display = 'flex';
+                        // Pelo menos um deve ser preenchido (validação customizada)
+                        break;
+                }
+            }
+
+            // Inicializar
+            updateFormFields();
 
             // Validação de força da palavra-passe
             passwordInput.addEventListener('input', function() {
@@ -417,27 +578,42 @@
                 const password = passwordInput.value;
                 const confirmPassword = confirmPasswordInput.value;
 
-                // Validações
+                // Validações base
                 if (!fullName) {
                     showError('Por favor, introduza o nome completo');
                     return;
                 }
 
-                if (!email) {
-                    showError('Por favor, introduza o email');
+                // Validação conforme método selecionado
+                if (selectedMethod === 'email' || selectedMethod === 'both') {
+                    if (!email) {
+                        showError('Por favor, introduza o email');
+                        return;
+                    }
+                    if (!isValidEmail(email)) {
+                        showError('Por favor, introduza um email válido');
+                        return;
+                    }
+                }
+
+                if (selectedMethod === 'phone' || selectedMethod === 'both') {
+                    if (!phone) {
+                        showError('Por favor, introduza o telefone');
+                        return;
+                    }
+                    if (!isValidPhone(phone)) {
+                        showError('Por favor, introduza um telefone válido (ex: +351 912 345 678)');
+                        return;
+                    }
+                }
+
+                // Para método 'both', garantir que pelo menos um está preenchido
+                if (selectedMethod === 'both' && !email && !phone) {
+                    showError('Por favor, introduza pelo menos email ou telefone');
                     return;
                 }
 
-                if (!isValidEmail(email)) {
-                    showError('Por favor, introduza um email válido');
-                    return;
-                }
-
-                if (!password) {
-                    showError('Por favor, introduza a palavra-passe');
-                    return;
-                }
-
+                // Validações de palavra-passe
                 if (password.length < 6) {
                     showError('A palavra-passe deve ter pelo menos 6 caracteres');
                     return;
@@ -457,13 +633,43 @@
                 hideMessages();
 
                 try {
-                    const result = await window.authSystem.signUp(email, password, fullName, phone);
+                    // Chamar signUp com os dados conforme método selecionado
+                    const result = await window.authSystem.signUp(
+                        selectedMethod === 'phone' ? null : email,
+                        password,
+                        fullName,
+                        selectedMethod === 'email' ? null : phone,
+                        selectedMethod
+                    );
                     
-                    showSuccess('Conta criada com sucesso! Verifique o seu email para confirmar a conta.');
+                    let successMsg = 'Conta criada com sucesso!';
+                    if (selectedMethod === 'email' || (selectedMethod === 'both' && email)) {
+                        successMsg += ' Verifique o seu email para confirmar a conta.';
+                    }
+                    if (selectedMethod === 'phone' || (selectedMethod === 'both' && phone)) {
+                        if (selectedMethod === 'both' && email) {
+                            successMsg += ' Verifique também o seu telefone para receber o código de confirmação.';
+                        } else {
+                            successMsg += ' Verifique o seu telefone para receber o código de confirmação.';
+                        }
+                    }
                     
-                    // Redirecionar para login após 3 segundos
+                    showSuccess(successMsg);
+                    
+                    // Redirecionar conforme método e resultado
                     setTimeout(() => {
-                        window.location.href = 'login.html';
+                        if (result && result.requires_verification) {
+                            // Se requer verificação, ir para página de verificação
+                            window.location.href = '/verify-contact.html';
+                        } else if (selectedMethod === 'phone' || (selectedMethod === 'both' && phone && !email)) {
+                            // Se só telefone ou ambos mas só telefone válido, ir para verificação
+                            window.location.href = '/verify-contact.html';
+                        } else if (selectedMethod === 'email' || (selectedMethod === 'both' && email)) {
+                            // Se tem email, pode ir para login (email será confirmado depois)
+                            window.location.href = 'login.html?registered=true';
+                        } else {
+                            window.location.href = 'login.html?registered=true';
+                        }
                     }, 3000);
                     
                 } catch (error) {
@@ -471,10 +677,12 @@
                     
                     let errorMsg = 'Erro ao criar conta';
                     
-                    if (error.message.includes('User already registered')) {
-                        errorMsg = 'Este email já está registado';
+                    if (error.message.includes('User already registered') || error.message.includes('already exists')) {
+                        errorMsg = 'Este email ou telefone já está registado';
                     } else if (error.message.includes('Invalid email')) {
                         errorMsg = 'Email inválido';
+                    } else if (error.message.includes('Invalid phone')) {
+                        errorMsg = 'Telefone inválido';
                     } else if (error.message.includes('Password should be at least')) {
                         errorMsg = 'A palavra-passe deve ter pelo menos 6 caracteres';
                     } else if (error.message) {
@@ -535,6 +743,13 @@
                 return emailRegex.test(email);
             }
 
+            function isValidPhone(phone) {
+                // Aceitar formatos como: +351 912 345 678, +351912345678, 912345678, etc.
+                const phoneRegex = /^(\+?351)?[\s]?[9][0-9]{8}$/;
+                const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+                return phoneRegex.test(cleaned) || cleaned.length >= 9;
+            }
+
             function setLoading(loadingState) {
                 loading.style.display = loadingState ? 'block' : 'none';
                 registerBtn.disabled = loadingState;
@@ -562,6 +777,62 @@
             if (window.authSystem && window.authSystem.currentUser) {
                 window.authSystem.redirectBasedOnProfile();
             }
+            
+            // Carregar logo na página de registro
+            async function loadRegisterLogo() {
+                const logoContainer = document.getElementById('registerLogo');
+                if (!logoContainer) return;
+                
+                // Aguardar logoLoader estar disponível
+                let attempts = 0;
+                const maxAttempts = 50; // 5 segundos máximo
+                
+                const checkAndLoad = async () => {
+                    if (typeof window.logoLoader !== 'undefined' && window.logoLoader) {
+                        try {
+                            console.log('[REGISTER] Carregando logo...');
+                            const success = await window.logoLoader.renderLogo(logoContainer, {
+                                type: 'secondary', // Usar logo secundário (monocromático) para fundos escuros
+                                orientation: 'horizontal',
+                                alt: 'Kromi.online',
+                                className: 'register-logo',
+                                style: {
+                                    maxWidth: '200px',
+                                    maxHeight: '60px',
+                                    width: 'auto',
+                                    height: 'auto',
+                                    display: 'block'
+                                },
+                                fallback: '<h1>Kromi.online</h1>',
+                                onError: (error) => {
+                                    console.warn('[REGISTER] Erro ao carregar logo:', error);
+                                }
+                            });
+                            
+                            if (success) {
+                                console.log('[REGISTER] Logo carregado com sucesso');
+                            } else {
+                                console.log('[REGISTER] Logo não encontrado, usando fallback');
+                            }
+                        } catch (error) {
+                            console.error('[REGISTER] Erro ao carregar logo:', error);
+                        }
+                        return true;
+                    }
+                    
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkAndLoad, 100);
+                    } else {
+                        console.warn('[REGISTER] LogoLoader não disponível após espera');
+                    }
+                };
+                
+                checkAndLoad();
+            }
+            
+            // Carregar logo após um pequeno delay para garantir que logoLoader carregou
+            setTimeout(loadRegisterLogo, 500);
         });
 
         function showTerms() {

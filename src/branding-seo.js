@@ -299,50 +299,103 @@ const BrandingSEO = {
         
         // Mapear tipos de logo para IDs no HTML
         const logoPreviewMap = {
-            'logo_primary': 'logoPrimaryPreview',
-            'logo_secondary': 'logoSecondaryPreview',
+            'logo_primary': 'logoPrimaryPreview', // Mantido para compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalPreview',
+            'logo_primary_vertical': 'logoPrimaryVerticalPreview',
+            'logo_secondary': 'logoSecondaryPreview', // Mantido para compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalPreview',
+            'logo_secondary_vertical': 'logoSecondaryVerticalPreview',
             'favicon': 'faviconPreview',
             'app_icon': 'appIconPreview'
         };
         
-        // Mapear logos por tipo
-        const logosByType = {};
-        logos.forEach(logo => {
-            if (!logosByType[logo.type]) {
-                logosByType[logo.type] = [];
+        // Se receber dados agrupados, usar diretamente, senão agrupar
+        let grouped = {};
+        if (Array.isArray(logos)) {
+            // Se for array, agrupar por tipo
+            logos.forEach(logo => {
+                if (!grouped[logo.type]) {
+                    grouped[logo.type] = [];
+                }
+                grouped[logo.type].push(logo);
+            });
+        } else if (typeof logos === 'object' && logos !== null) {
+            // Se for objeto, verificar se tem propriedade 'grouped' ou se já é um objeto agrupado
+            if (logos.grouped && typeof logos.grouped === 'object') {
+                // Caso 1: tem propriedade grouped (ex: {grouped: {...}})
+                grouped = logos.grouped;
+            } else if (!Array.isArray(logos) && Object.keys(logos).length > 0) {
+                // Caso 2: já é um objeto agrupado diretamente (ex: {logo_primary_horizontal: [...]})
+                // Verificar se as chaves parecem tipos de logo e os valores são arrays
+                const firstKey = Object.keys(logos)[0];
+                const firstValue = logos[firstKey];
+                if (Array.isArray(firstValue) || (typeof firstValue === 'object' && firstValue !== null && !Array.isArray(firstValue))) {
+                    grouped = logos;
+                } else {
+                    // Não é um objeto agrupado válido
+                    console.warn('⚠️ Objeto recebido não é um objeto agrupado válido:', logos);
+                    grouped = {};
+                }
+            } else {
+                // Objeto vazio ou inválido
+                grouped = {};
             }
-            logosByType[logo.type].push(logo);
-        });
+        } else {
+            // Tipo não suportado
+            console.warn('⚠️ Tipo de dados inesperado em displayLogos:', typeof logos, logos);
+            grouped = {};
+        }
         
-        // Exibir cada tipo de logo
-        Object.keys(logosByType).forEach(type => {
-            const logo = logosByType[type][0]; // Pegar o mais recente
+        // Exibir TODOS os formatos de cada tipo
+        Object.keys(grouped).forEach(type => {
+            const formats = grouped[type];
             const previewId = logoPreviewMap[type] || `${type}Preview`;
             const previewContainer = document.getElementById(previewId);
             
-            if (previewContainer) {
-                console.log(`✅ Exibindo logo ${type} em ${previewId}`);
-                previewContainer.innerHTML = `
-                    <img src="${logo.url}" class="preview-image" alt="${type}">
-                    <div class="preview-meta">
-                        <p><strong>Nome:</strong> ${logo.file_path.split('/').pop()}</p>
-                        ${logo.width ? `<p><strong>Dimensões:</strong> ${logo.width}x${logo.height}px</p>` : ''}
-                        ${logo.format ? `<p><strong>Formato:</strong> ${logo.format.toUpperCase()}</p>` : ''}
-                        <p><strong>Status:</strong> <span class="status-badge status-${logo.status || 'draft'}">${logo.status || 'draft'}</span></p>
-                        <div style="margin-top: var(--spacing-2); display: flex; gap: var(--spacing-2);">
-                            <button class="btn btn-primary btn-sm" onclick="BrandingSEO.handleLogoUpload('${type}', document.getElementById('${type === 'logo_primary' ? 'logoPrimaryInput' : type === 'logo_secondary' ? 'logoSecondaryInput' : type === 'favicon' ? 'faviconInput' : 'appIconInput'}'))">
-                                <i class="fas fa-upload"></i> Substituir
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="BrandingSEO.deleteLogo('${logo.id}')">
-                                <i class="fas fa-trash"></i> Eliminar
-                            </button>
-                        </div>
-                    </div>
-                `;
-                previewContainer.style.display = 'block';
-            } else {
-                console.warn(`⚠️ Container de preview não encontrado: ${previewId}`);
+            if (!previewContainer) {
+                console.warn(`⚠️ Container não encontrado: ${previewId}`);
+                return;
             }
+            
+            if (formats.length === 0) {
+                previewContainer.innerHTML = '<p class="helper-text" style="padding: var(--spacing-3);">Nenhum formato carregado ainda. Carregue múltiplos formatos (SVG, PNG, WebP, JPG) para este tipo.</p>';
+                previewContainer.style.display = 'block';
+                return;
+            }
+            
+            // Criar grid mostrando TODOS os formatos deste tipo
+            console.log(`✅ Exibindo ${formats.length} formatos para ${type}`);
+            previewContainer.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
+                    ${formats.map(logo => `
+                        <div class="variant-card" style="${logo.is_preferred ? 'border: 2px solid var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);' : 'border: 1px solid var(--border-color);'}">
+                            <div class="variant-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-2); padding-bottom: var(--spacing-2); border-bottom: 1px solid var(--border-color);">
+                                <h4 class="variant-title" style="text-transform: uppercase; margin: 0; font-weight: 600; color: var(--primary);">${logo.format || 'N/A'}</h4>
+                                ${logo.is_preferred ? '<span class="badge badge-primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">⭐ Preferido</span>' : ''}
+                            </div>
+                            <div class="variant-preview" style="margin: var(--spacing-2) 0; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center; background: var(--bg-secondary); border-radius: var(--radius-sm); padding: var(--spacing-2);">
+                                <img src="${logo.url || logo.file_path}" alt="${type} ${logo.format}" style="max-width: 100%; max-height: 100px; height: auto; border-radius: var(--radius-sm);">
+                            </div>
+                            <div class="variant-info" style="margin-top: var(--spacing-2);">
+                                ${logo.width && logo.height ? `<p style="margin: var(--spacing-1) 0;"><strong>Dimensões:</strong> ${logo.width}x${logo.height}px</p>` : '<p style="margin: var(--spacing-1) 0;"><strong>Tipo:</strong> Vetorial (SVG)</p>'}
+                                <p style="margin: var(--spacing-1) 0;"><strong>Status:</strong> <span class="status-badge status-${logo.status || 'draft'}">${logo.status || 'draft'}</span></p>
+                                <p class="helper-text" style="font-size: 0.75rem; margin-top: var(--spacing-1); word-break: break-all;">
+                                    ${logo.file_path.split('/').pop()}
+                                </p>
+                            </div>
+                            <div class="variant-actions" style="display: flex; gap: var(--spacing-2); flex-wrap: wrap; margin-top: var(--spacing-2); padding-top: var(--spacing-2); border-top: 1px solid var(--border-color);">
+                                ${!logo.is_preferred ? `<button class="btn btn-sm btn-primary" onclick="BrandingSEO.setPreferredFormat('${logo.id}')" title="Tornar este o formato preferido">
+                                    <i class="fas fa-star"></i> Preferir
+                                </button>` : '<span class="badge badge-success" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;"><i class="fas fa-check-circle"></i> Formato Ativo</span>'}
+                                <button class="btn btn-sm btn-danger" onclick="BrandingSEO.deleteLogo('${logo.id}')" title="Eliminar este formato">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            previewContainer.style.display = 'block';
         });
         
         // Sempre mostrar secção de variantes, mesmo sem variantes
@@ -352,7 +405,38 @@ const BrandingSEO = {
         }
         
         // Carregar variantes se existirem
-        this.loadLogoVariants(logos);
+        const logosArray = Array.isArray(logos) ? logos : (logos.data || []);
+        this.loadLogoVariants(logosArray);
+        
+        console.log('✅ Todos os formatos exibidos por tipo');
+    },
+    
+    async setPreferredFormat(assetId) {
+        try {
+            this.showToast('A definir formato preferido...', 'info');
+            
+            const response = await fetch(`/api/branding/brand-assets/${assetId}/set-preferred`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('Formato preferido atualizado!', 'success');
+                // Recarregar logos para mostrar atualização
+                await this.loadBrandAssets();
+            } else {
+                throw new Error(result.error || 'Erro ao definir formato preferido');
+            }
+        } catch (error) {
+            console.error('Erro ao definir formato preferido:', error);
+            this.showToast(`Erro: ${error.message}`, 'error');
+        }
     },
     
     async loadLogoVariants(logos) {
@@ -569,24 +653,35 @@ const BrandingSEO = {
         
         // Mapear tipos de logo para IDs no HTML
         const logoTypeMap = {
-            'logo_primary': 'logoPrimaryStatus',
-            'logo_secondary': 'logoSecondaryStatus',
+            'logo_primary': 'logoPrimaryHorizontalStatus', // Compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalStatus',
+            'logo_primary_vertical': 'logoPrimaryVerticalStatus',
+            'logo_secondary': 'logoSecondaryHorizontalStatus', // Compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalStatus',
+            'logo_secondary_vertical': 'logoSecondaryVerticalStatus',
             'favicon': 'faviconStatus',
             'app_icon': 'appIconStatus'
         };
         
+        // Agrupar logos por tipo e contar formatos
         const logosByType = {};
         logos.forEach(logo => {
-            logosByType[logo.type] = logo;
+            if (!logosByType[logo.type]) {
+                logosByType[logo.type] = [];
+            }
+            logosByType[logo.type].push(logo);
         });
         
-        // Atualizar cada status
+        // Atualizar cada status - mostrar quantos formatos existem
         Object.keys(logoTypeMap).forEach(type => {
             const statusId = logoTypeMap[type];
             const statusElement = document.getElementById(statusId);
             if (statusElement) {
-                if (logosByType[type]) {
-                    statusElement.textContent = 'Carregado';
+                if (logosByType[type] && logosByType[type].length > 0) {
+                    const formatCount = logosByType[type].length;
+                    const preferredFormat = logosByType[type].find(l => l.is_preferred);
+                    const formatText = preferredFormat ? `${formatCount} formato(s) (${preferredFormat.format.toUpperCase()} ⭐)` : `${formatCount} formato(s)`;
+                    statusElement.textContent = formatText;
                     statusElement.className = 'status-value loaded';
                 } else {
                     statusElement.textContent = 'Não carregado';
@@ -612,26 +707,121 @@ const BrandingSEO = {
             return;
         }
         
-        // Mostrar preview
-        const previewId = `${type}Preview`;
+        // Mapear tipo para ID do preview correto
+        const logoPreviewMap = {
+            'logo_primary': 'logoPrimaryHorizontalPreview', // Compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalPreview',
+            'logo_primary_vertical': 'logoPrimaryVerticalPreview',
+            'logo_secondary': 'logoSecondaryHorizontalPreview', // Compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalPreview',
+            'logo_secondary_vertical': 'logoSecondaryVerticalPreview',
+            'favicon': 'faviconPreview',
+            'app_icon': 'appIconPreview'
+        };
+        
+        const previewId = logoPreviewMap[type] || `${type}Preview`;
         const previewContainer = document.getElementById(previewId);
-        if (previewContainer) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
+        
+        if (!previewContainer) {
+            console.error('⚠️ Container de preview não encontrado:', previewId);
+            this.showToast('Erro ao mostrar preview', 'error');
+            return;
+        }
+        
+        // Mostrar preview imediatamente
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // Obter dimensões da imagem
+            const img = new Image();
+            img.onload = () => {
                 previewContainer.innerHTML = `
-                    <img src="${e.target.result}" class="preview-image" alt="${type}">
-                    <div class="preview-meta">
-                        <p><strong>Nome:</strong> ${file.name}</p>
-                        <p><strong>Tamanho:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
-                        <p><strong>Formato:</strong> ${file.type}</p>
-                        <button class="btn btn-primary btn-sm" onclick="BrandingSEO.uploadLogo('${type}', '${previewId}')" style="margin-top: var(--spacing-2);">
-                            <i class="fas fa-upload"></i> Carregar
-                        </button>
+                    <div style="text-align: center; padding: var(--spacing-3);">
+                        <img src="${e.target.result}" class="preview-image" alt="${type}" style="max-width: 300px; max-height: 300px; width: auto; height: auto; border-radius: var(--radius-base); box-shadow: 0 2px 8px rgba(0,0,0,0.2); background: var(--bg-primary); padding: var(--spacing-2);">
+                        <div class="preview-meta" style="margin-top: var(--spacing-3);">
+                            <p><strong>Nome:</strong> ${file.name}</p>
+                            <p><strong>Dimensões:</strong> ${img.width}x${img.height}px</p>
+                            <p><strong>Tamanho:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                            <p><strong>Formato:</strong> ${file.type || file.name.split('.').pop().toUpperCase()}</p>
+                            <div style="margin-top: var(--spacing-3); display: flex; gap: var(--spacing-2); justify-content: center;">
+                                <button class="btn btn-primary btn-sm" onclick="BrandingSEO.uploadLogo('${type}', '${previewId}')">
+                                    <i class="fas fa-upload"></i> Carregar
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="BrandingSEO.clearLogoPreview('${type}')">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `;
                 previewContainer.style.display = 'block';
             };
-            reader.readAsDataURL(file);
+            img.onerror = () => {
+                // Se não conseguir carregar como imagem, mostrar info básica
+                previewContainer.innerHTML = `
+                    <div style="text-align: center; padding: var(--spacing-3);">
+                        <div style="padding: var(--spacing-4); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                            <i class="fas fa-file-image" style="font-size: 48px; color: var(--primary); margin-bottom: var(--spacing-2);"></i>
+                            <p><strong>Nome:</strong> ${file.name}</p>
+                            <p><strong>Tamanho:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                            <p><strong>Formato:</strong> ${file.type || file.name.split('.').pop().toUpperCase()}</p>
+                            <div style="margin-top: var(--spacing-3); display: flex; gap: var(--spacing-2); justify-content: center;">
+                                <button class="btn btn-primary btn-sm" onclick="BrandingSEO.uploadLogo('${type}', '${previewId}')">
+                                    <i class="fas fa-upload"></i> Carregar
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="BrandingSEO.clearLogoPreview('${type}')">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                            </div>
+                        habagatang</div>
+                    </div>
+                `;
+                previewContainer.style.display = 'block';
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = () => {
+            this.showToast('Erro ao ler ficheiro', 'error');
+        };
+        reader.readAsDataURL(file);
+    },
+    
+    clearLogoPreview(type) {
+        // Mapear tipo para ID do preview correto
+        const logoPreviewMap = {
+            'logo_primary': 'logoPrimaryHorizontalPreview', // Compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalPreview',
+            'logo_primary_vertical': 'logoPrimaryVerticalPreview',
+            'logo_secondary': 'logoSecondaryHorizontalPreview', // Compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalPreview',
+            'logo_secondary_vertical': 'logoSecondaryVerticalPreview',
+            'favicon': 'faviconPreview',
+            'app_icon': 'appIconPreview'
+        };
+        
+        const previewId = logoPreviewMap[type] || `${type}Preview`;
+        const previewContainer = document.getElementById(previewId);
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            previewContainer.style.display = 'none';
+        }
+        
+        // Limpar input
+        const logoInputMap = {
+            'logo_primary': 'logoPrimaryHorizontalInput', // Compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalInput',
+            'logo_primary_vertical': 'logoPrimaryVerticalInput',
+            'logo_secondary': 'logoSecondaryHorizontalInput', // Compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalInput',
+            'logo_secondary_vertical': 'logoSecondaryVerticalInput',
+            'favicon': 'faviconInput',
+            'app_icon': 'appIconInput'
+        };
+        const inputId = logoInputMap[type];
+        if (inputId) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = '';
+            }
         }
     },
     
@@ -643,10 +833,14 @@ const BrandingSEO = {
         }
         
         const allowedTypes = {
-            'logo_primary': ['image/svg+xml', 'image/png', 'image/webp'],
-            'logo_secondary': ['image/svg+xml', 'image/png'],
-            'favicon': ['image/x-icon', 'image/png'],
-            'app_icon': ['image/png']
+            'logo_primary': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'logo_primary_horizontal': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'logo_primary_vertical': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'logo_secondary': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'logo_secondary_horizontal': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'logo_secondary_vertical': ['image/svg+xml', 'image/svg', 'image/png', 'image/webp', 'image/jpeg', 'image/jpg'],
+            'favicon': ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/svg+xml', 'image/svg'],
+            'app_icon': ['image/png', 'image/svg+xml', 'image/svg']
         };
         
         if (!allowedTypes[type]?.includes(file.type)) {
@@ -657,13 +851,86 @@ const BrandingSEO = {
     },
     
     async uploadLogo(type, previewId) {
-        const fileInput = document.getElementById(`${type}Input`);
-        if (!fileInput?.files[0]) return;
+        // Mapear tipo para ID do input correto
+        const logoInputMap = {
+            'logo_primary': 'logoPrimaryHorizontalInput', // Compatibilidade
+            'logo_primary_horizontal': 'logoPrimaryHorizontalInput',
+            'logo_primary_vertical': 'logoPrimaryVerticalInput',
+            'logo_secondary': 'logoSecondaryHorizontalInput', // Compatibilidade
+            'logo_secondary_horizontal': 'logoSecondaryHorizontalInput',
+            'logo_secondary_vertical': 'logoSecondaryVerticalInput',
+            'favicon': 'faviconInput',
+            'app_icon': 'appIconInput'
+        };
         
-        const file = fileInput.files[0];
+        // Mapear tipo para IDs dos campos de dimensões
+        const dimensionFieldsMap = {
+            'logo_primary_horizontal': { width: 'logoPrimaryHorizontalWidth', height: 'logoPrimaryHorizontalHeight' },
+            'logo_primary_vertical': { width: 'logoPrimaryVerticalWidth', height: 'logoPrimaryVerticalHeight' },
+            'logo_secondary_horizontal': { width: 'logoSecondaryHorizontalWidth', height: 'logoSecondaryHorizontalHeight' },
+            'logo_secondary_vertical': { width: 'logoSecondaryVerticalWidth', height: 'logoSecondaryVerticalHeight' },
+            'favicon': { size: 'faviconSize' },
+            'app_icon': { size: 'appIconSize' }
+        };
+        
+        const inputId = logoInputMap[type] || `${type}Input`;
+        const fileInput = document.getElementById(inputId);
+        
+        if (!fileInput?.files[0]) {
+            this.showToast('Nenhum ficheiro selecionado', 'error');
+            return;
+        }
+        
+        let file = fileInput.files[0];
+        
+        // Obter dimensões especificadas pelo utilizador
+        const dimensionFields = dimensionFieldsMap[type];
+        let targetWidth = null;
+        let targetHeight = null;
+        
+        if (dimensionFields) {
+            if (dimensionFields.width && dimensionFields.height) {
+                // Logos - largura e altura
+                const widthInput = document.getElementById(dimensionFields.width);
+                const heightInput = document.getElementById(dimensionFields.height);
+                targetWidth = widthInput?.value ? parseInt(widthInput.value) : null;
+                targetHeight = heightInput?.value ? parseInt(heightInput.value) : null;
+            } else if (dimensionFields.size) {
+                // Favicon/App Icon - tamanho único
+                const sizeInput = document.getElementById(dimensionFields.size);
+                const size = sizeInput?.value ? parseInt(sizeInput.value) : null;
+                if (size) {
+                    targetWidth = size;
+                    targetHeight = size;
+                }
+            }
+        }
+        
+        // Se dimensões foram especificadas e o ficheiro é uma imagem raster (não SVG)
+        if ((targetWidth || targetHeight) && file.type !== 'image/svg+xml' && file.type !== 'image/svg') {
+            try {
+                this.showToast('Redimensionando imagem...', 'info');
+                
+                // Ler ficheiro como ArrayBuffer
+                const arrayBuffer = await file.arrayBuffer();
+                let sharpBuffer = Buffer.from(arrayBuffer);
+                
+                // Carregar sharp (precisa estar disponível no frontend ou fazer no backend)
+                // Por enquanto, vamos enviar as dimensões para o backend processar
+                console.log(`📐 Dimensões desejadas: ${targetWidth || 'auto'}x${targetHeight || 'auto'}`);
+            } catch (error) {
+                console.warn('⚠️ Erro ao processar dimensões:', error);
+                // Continuar com upload normal
+            }
+        }
+        
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', type);
+        
+        // Enviar dimensões desejadas se especificadas
+        if (targetWidth) formData.append('targetWidth', targetWidth.toString());
+        if (targetHeight) formData.append('targetHeight', targetHeight.toString());
         
         try {
             this.showToast('A carregar logo...', 'info');
@@ -712,8 +979,8 @@ const BrandingSEO = {
             
             if (result.success && result.data && result.data.length > 0) {
                 console.log('✅ Brand assets carregados:', result.data.length);
-                // Usar displayLogos para exibir tudo corretamente
-                this.displayLogos(result.data);
+                // Usar displayLogos com dados agrupados
+                this.displayLogos(result.grouped || result.data);
                 this.updateLogosStatus(result.data);
                 // Carregar variantes também
                 this.loadLogoVariants(result.data);

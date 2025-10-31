@@ -22,6 +22,9 @@ const setupAuthRoutes = require('./src/auth-routes');
 const AuditLogger = require('./src/audit-logger');
 const CSRFProtection = require('./src/csrf-protection');
 
+// Supabase Auth já tem integração Twilio configurada
+// Usaremos supabase.auth.signInWithOtp() e verifyOtp() para SMS
+
 const app = express();
 const PORT = 1144;
 
@@ -94,6 +97,10 @@ const imageProcessor = new BackgroundImageProcessor();
 app.use(cookieParser()); // Parser de cookies
 app.use(express.json()); // Parser de JSON
 app.use(express.urlencoded({ extended: true })); // Parser de form data
+
+// Expor serviços no app para acesso via req.app.get()
+app.set('sessionManager', sessionManager);
+app.set('auditLogger', auditLogger);
 
 // Middleware de sessão em todas as rotas
 app.use(createSessionMiddleware(sessionManager));
@@ -191,6 +198,1394 @@ app.get('/api/config', (req, res) => {
 // ROTAS DE AUTENTICAÇÃO
 // ==========================================
 setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdmin);
+
+// ==========================================
+// SISTEMA DE VERIFICAÇÃO DE CONTACTO
+// ==========================================
+
+// Funções helper para verificação
+async function checkRateLimit(userId, actionType, maxAttempts = 5, windowMinutes = 60) {
+    if (!supabaseAdmin) return { allowed: false, error: 'Service Role Key não configurada' };
+    
+    const { data: rateLimit, error } = await supabaseAdmin
+        .from('verification_rate_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('action_type', actionType)
+        .single();
+    
+    if (error && error.code !== 'PGRST116') {
+        return { allowed: false, error: error.message };
+    }
+    
+    const now = new Date();
+    
+    // Se não existe, criar
+    if (!rateLimit) {
+        await supabaseAdmin
+            .from('verification_rate_limits')
+            .insert({
+                user_id: userId,
+                action_type: actionType,
+                attempt_count: 1,
+                window_start: now.toISOString()
+            });
+        return { allowed: true };
+    }
+    
+    // Verificar se está bloqueado
+    if (rateLimit.blocked_until && new Date(rateLimit.blocked_until) > now) {
+        const blockedUntil = new Date(rateLimit.blocked_until);
+        const minutesLeft = Math.ceil((blockedUntil - now) / 60000);
+        return { 
+            allowed: false, 
+            error: `Bloqueado. Tente novamente em ${minutesLeft} minuto(s)`,
+            blocked_until: rateLimit.blocked_until
+        };
+    }
+    
+    // Verificar janela de tempo
+    const windowStart = new Date(rateLimit.window_start);
+    const windowEnd = new Date(windowStart.getTime() + windowMinutes * 60000);
+    
+    if (now > windowEnd) {
+        // Nova janela, resetar contador
+        await supabaseAdmin
+            .from('verification_rate_limits')
+            .update({
+                attempt_count: 1,
+                window_start: now.toISOString(),
+                blocked_until: null
+            })
+            .eq('id', rateLimit.id);
+        return { allowed: true };
+    }
+    
+    // Verificar tentativas
+    if (rateLimit.attempt_count >= maxAttempts) {
+        // Bloquear por 1 hora
+        const blockedUntil = new Date(now.getTime() + 60 * 60000);
+        await supabaseAdmin
+            .from('verification_rate_limits')
+            .update({
+                blocked_until: blockedUntil.toISOString()
+            })
+            .eq('id', rateLimit.id);
+        
+        return { 
+            allowed: false, 
+            error: `Limite de tentativas excedido. Bloqueado por 1 hora.`,
+            blocked_until: blockedUntil.toISOString()
+        };
+    }
+    
+    // Incrementar contador
+    await supabaseAdmin
+        .from('verification_rate_limits')
+        .update({
+            attempt_count: rateLimit.attempt_count + 1
+        })
+        .eq('id', rateLimit.id);
+    
+    return { allowed: true, attemptsLeft: maxAttempts - rateLimit.attempt_count - 1 };
+}
+
+async function checkCooldown(userId, actionType, cooldownSeconds = 60) {
+    if (!supabaseAdmin) return { allowed: true }; // Se não há admin, permitir
+    
+    const { data: rateLimit } = await supabaseAdmin
+        .from('verification_rate_limits')
+        .select('updated_at')
+        .eq('user_id', userId)
+        .eq('action_type', actionType)
+        .single();
+    
+    if (!rateLimit) return { allowed: true };
+    
+    const lastUpdate = new Date(rateLimit.updated_at);
+    const now = new Date();
+    const secondsSince = (now - lastUpdate) / 1000;
+    
+    if (secondsSince < cooldownSeconds) {
+        const secondsLeft = Math.ceil(cooldownSeconds - secondsSince);
+        return { 
+            allowed: false, 
+            error: `Aguarde ${secondsLeft} segundo(s) antes de reenviar`,
+            secondsLeft 
+        };
+    }
+    
+    return { allowed: true };
+}
+
+// Função para renderizar template SMS
+async function renderSMSTemplate(templateKey, variables = {}) {
+    try {
+        if (!supabaseAdmin) {
+            throw new Error('Service Role Key não configurada');
+        }
+        
+        const { data, error } = await supabaseAdmin
+            .rpc('render_sms_template', {
+                template_key_param: templateKey,
+                variables_param: variables
+            });
+        
+        if (error) {
+            console.warn(`⚠️ Erro ao renderizar template SMS ${templateKey}:`, error);
+            // Fallback para template padrão
+            return `O seu código Kromi é ${variables.code || 'XXXXXX'}. Válido por 10 minutos.`;
+        }
+        
+        if (data && data.length > 0) {
+            return data[0].message;
+        }
+        
+        throw new Error('Template retornou vazio');
+    } catch (error) {
+        console.warn(`⚠️ Erro ao renderizar SMS template:`, error);
+        // Fallback simples
+        return `O seu código Kromi é ${variables.code || 'XXXXXX'}. Válido por 10 minutos.`;
+    }
+}
+
+// Função para registrar SMS no log
+async function logSMS(templateKey, phone, message, status = 'sent', metadata = {}) {
+    try {
+        if (!supabaseAdmin) {
+            return; // Silenciosamente falhar se não tiver admin client
+        }
+        
+        await supabaseAdmin
+            .from('sms_logs')
+            .insert({
+                template_key: templateKey,
+                recipient_phone: phone,
+                message: message,
+                status: status,
+                sent_at: new Date().toISOString(),
+                metadata: metadata
+            });
+    } catch (error) {
+        console.warn('⚠️ Erro ao registrar SMS no log:', error);
+        // Não falhar se o log falhar
+    }
+}
+
+// Função para enviar SMS via Supabase Auth OTP (com template logging)
+async function sendSMSViaSupabase(phone, supabaseClient, templateKey = 'phone_verification', templateVars = {}) {
+    try {
+        // Renderizar template para logging (mesmo que Supabase use mensagem padrão)
+        const renderedMessage = await renderSMSTemplate(templateKey, templateVars);
+        
+        // Usar signInWithOtp do Supabase (usa Twilio configurado no Supabase)
+        // Nota: Supabase Auth gerencia a mensagem automaticamente, mas registramos nosso template
+        const { data, error } = await supabaseClient.auth.signInWithOtp({
+            phone: phone,
+            options: {
+                channel: 'sms'
+            }
+        });
+        
+        if (error) {
+            // Registrar falha no log
+            await logSMS(templateKey, phone, renderedMessage, 'failed', {
+                error: error.message,
+                provider: 'supabase_auth'
+            });
+            throw error;
+        }
+        
+        // Registrar sucesso no log
+        await logSMS(templateKey, phone, renderedMessage, 'sent', {
+            provider: 'supabase_auth',
+            message_id: data?.messageId || null
+        });
+        
+        return { success: true, messageId: data?.messageId, renderedMessage: renderedMessage };
+    } catch (error) {
+        throw new Error('Erro ao enviar SMS: ' + error.message);
+    }
+}
+
+// Endpoint: Enviar código SMS para verificação (via Supabase Auth OTP)
+app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
+    try {
+        const { phone, user_id, email } = req.body;
+        
+        if (!phone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Telefone é obrigatório'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar utilizador se fornecido (opcional, pode ser login com telefone apenas)
+        let userId = user_id;
+        if (!userId && email) {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const authUser = authUsers.users.find(u => u.email === email);
+            if (authUser) {
+                userId = authUser.id;
+            }
+        }
+        
+        // Se temos user_id, verificar rate limiting
+        if (userId) {
+            // Verificar cooldown (60 segundos)
+            const cooldownCheck = await checkCooldown(userId, 'sms_send', 60);
+            if (!cooldownCheck.allowed) {
+                return res.status(429).json({
+                    success: false,
+                    error: cooldownCheck.error,
+                    secondsLeft: cooldownCheck.secondsLeft
+                });
+            }
+            
+            // Verificar rate limit (5 tentativas por hora)
+            const rateLimitCheck = await checkRateLimit(userId, 'sms_send', 5, 60);
+            if (!rateLimitCheck.allowed) {
+                return res.status(429).json({
+                    success: false,
+                    error: rateLimitCheck.error,
+                    blocked_until: rateLimitCheck.blocked_until
+                });
+            }
+        }
+        
+        // Buscar perfil para obter nome do utilizador (se disponível)
+        let userName = null;
+        if (userId) {
+            try {
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('name')
+                    .eq('user_id', userId)
+                    .single();
+                
+                if (profile) {
+                    userName = profile.name;
+                }
+            } catch (e) {
+                // Ignorar erro
+            }
+        }
+        
+        // Preparar variáveis para template (código será gerado pelo Supabase)
+        // Nota: O Supabase gera o código automaticamente, então não temos acesso a ele antes do envio
+        // Mas podemos usar o template para logging e futuras customizações
+        const templateVars = {
+            user_name: userName || 'Utilizador',
+            expires_minutes: '10'
+        };
+        
+        // Usar Supabase Auth para enviar OTP SMS (usa Twilio configurado no Supabase)
+        // Criar cliente Supabase temporário com chave anon (necessário para OTP)
+        const supabaseClient = supabase; // Usar cliente anon existente
+        
+        const { data, error } = await supabaseClient.auth.signInWithOtp({
+            phone: phone,
+            options: {
+                channel: 'sms'
+            }
+        });
+        
+        if (error) {
+            console.error('❌ Erro ao enviar SMS via Supabase:', error);
+            
+            // Registrar falha no log
+            await logSMS('phone_verification', phone, 'Falha no envio', 'failed', {
+                error: error.message,
+                provider: 'supabase_auth'
+            });
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Erro ao enviar SMS: ' + error.message
+            });
+        }
+        
+        // Registrar sucesso no log com template
+        const renderedMessage = await renderSMSTemplate('phone_verification', {
+            ...templateVars,
+            code: 'XXXXXX' // Placeholder - código real gerado pelo Supabase
+        });
+        
+        await logSMS('phone_verification', phone, renderedMessage, 'sent', {
+            provider: 'supabase_auth',
+            user_id: userId || null,
+            email: email || null
+        });
+        
+        console.log(`📱 SMS enviado para ${phone} via Supabase Auth (template: phone_verification)`);
+        
+        // Se temos user_id, atualizar perfil e fazer audit log
+        if (userId) {
+            // Atualizar telefone no perfil se necessário
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('phone')
+                .eq('user_id', userId)
+                .single();
+            
+            if (profile && profile.phone !== phone) {
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({ phone: phone })
+                    .eq('user_id', userId);
+            }
+            
+            // Audit log
+            await auditLogger.log('SMS_CODE_SENT', userId, {
+                phone: phone,
+                method: 'supabase_auth_otp'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Código SMS enviado com sucesso',
+            expires_in: 600 // 10 minutos (padrão Supabase)
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao enviar código SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Verificar código SMS (via Supabase Auth OTP)
+app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
+    try {
+        const { code, phone, user_id } = req.body;
+        
+        if (!code || !phone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código e telefone são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Verificar OTP via Supabase Auth
+        const supabaseClient = supabase; // Usar cliente anon
+        
+        const { data: verifyData, error: verifyError } = await supabaseClient.auth.verifyOtp({
+            phone: phone,
+            token: code,
+            type: 'sms'
+        });
+        
+        if (verifyError || !verifyData || !verifyData.user) {
+            console.error('❌ Erro ao verificar OTP:', verifyError);
+            
+            // Se temos user_id, incrementar tentativas de rate limiting
+            if (user_id) {
+                await checkRateLimit(user_id, 'sms_verify', 5, 60);
+            }
+            
+            return res.status(400).json({
+                success: false,
+                error: verifyError?.message || 'Código inválido ou expirado'
+            });
+        }
+        
+        const userId = verifyData.user.id;
+        
+        // Buscar perfil ou criar se necessário
+        let profile = null;
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+        
+        if (profileError && profileError.code === 'PGRST116') {
+            // Criar perfil básico
+            const { data: newProfile, error: createError } = await supabaseAdmin
+                .from('user_profiles')
+                .insert({
+                    user_id: userId,
+                    email: verifyData.user.email || null,
+                    phone: phone,
+                    status: 'pending_verification'
+                })
+                .select()
+                .single();
+            
+            if (!createError && newProfile) {
+                profile = newProfile;
+            }
+        } else if (profileData) {
+            profile = profileData;
+        }
+        
+        // Confirmar telefone no perfil
+        await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                phone: phone,
+                phone_confirmed_at: new Date().toISOString(),
+                last_verification_channel: 'phone'
+            })
+            .eq('user_id', userId);
+        
+        // O trigger SQL vai atualizar o status para 'active' automaticamente
+        
+        console.log(`✅ Telefone confirmado para user_id: ${userId}`);
+        
+        // Audit log
+        await auditLogger.log('PHONE_VERIFIED', userId, {
+            phone: phone,
+            method: 'supabase_auth_otp'
+        });
+        
+        // Criar sessão se necessário
+        let sessionData = null;
+        try {
+            if (profile) {
+                const sessionId = sessionManager.createSession(userId, {
+                    user_id: userId,
+                    email: profile.email || verifyData.user.email,
+                    name: profile.name,
+                    role: profile.role || 'user',
+                    status: profile.status
+                }, {
+                    ip: req.ip,
+                    userAgent: req.get('user-agent'),
+                    loginAt: Date.now()
+                });
+                
+                // Configurar cookie
+                res.cookie('sid', sessionId, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'lax',
+                    maxAge: sessionManager.MAX_SESSION_LIFETIME,
+                    path: '/'
+                });
+                
+                sessionData = {
+                    expiresIn: sessionManager.INACTIVITY_TIMEOUT / 1000,
+                    maxLifetime: sessionManager.MAX_SESSION_LIFETIME / 1000
+                };
+            }
+        } catch (sessionError) {
+            console.warn('⚠️ Erro ao criar sessão:', sessionError);
+        }
+        
+        res.json({
+            success: true,
+            message: 'Telefone confirmado com sucesso',
+            user: {
+                id: userId,
+                email: verifyData.user.email,
+                phone: phone
+            },
+            session: sessionData
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar código SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Verificar email (callback do Supabase)
+app.get('/api/auth/verify-email-callback', async (req, res) => {
+    try {
+        const { token, type } = req.query;
+        
+        if (!token) {
+            return res.redirect('/auth/email-verification-failed?error=token_missing');
+        }
+        
+        if (!supabaseAdmin) {
+            return res.redirect('/auth/email-verification-failed?error=config_error');
+        }
+        
+        // O Supabase já processou o token quando o utilizador clica no link
+        // Precisamos sincronizar o email_confirmed_at do auth.users para user_profiles
+        // Vamos redirecionar para página que faz isso via API (com sessão do utilizador)
+        return res.redirect(`/verify-contact.html?email_verified=true&token=${token}`);
+        
+    } catch (error) {
+        console.error('❌ Erro no callback de verificação de email:', error);
+        res.redirect('/auth/email-verification-failed?error=' + encodeURIComponent(error.message));
+    }
+});
+
+// Endpoint: Reenviar SMS ou Email
+app.post('/api/auth/resend-verification', express.json(), async (req, res) => {
+    try {
+        const { type, user_id, email, phone } = req.body; // type: 'sms' ou 'email'
+        
+        if (!type || !user_id && !email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipo e user_id ou email são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar utilizador
+        let userId = user_id;
+        if (!userId && email) {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const authUser = authUsers.users.find(u => u.email === email);
+            if (!authUser) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Utilizador não encontrado'
+                });
+            }
+            userId = authUser.id;
+        }
+        
+        if (type === 'sms') {
+            if (!phone) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Telefone é obrigatório para reenvio de SMS'
+                });
+            }
+            
+            // Buscar nome do utilizador para template
+            let userName = null;
+            try {
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('name')
+                    .eq('user_id', userId)
+                    .single();
+                
+                if (profile) {
+                    userName = profile.name;
+                }
+            } catch (e) {
+                // Ignorar erro
+            }
+            
+            // Verificar cooldown
+            const cooldownCheck = await checkCooldown(userId, 'sms_send', 60);
+            if (!cooldownCheck.allowed) {
+                return res.status(429).json({
+                    success: false,
+                    error: cooldownCheck.error,
+                    secondsLeft: cooldownCheck.secondsLeft
+                });
+            }
+            
+            // Enviar SMS via Supabase Auth com template
+            const supabaseClient = supabase;
+            const templateVars = {
+                user_name: userName || 'Utilizador',
+                expires_minutes: '10'
+            };
+            
+            try {
+                const smsResult = await sendSMSViaSupabase(
+                    phone,
+                    supabaseClient,
+                    'phone_verification',
+                    templateVars
+                );
+                
+                if (!smsResult.success) {
+                    throw new Error('Falha ao enviar SMS');
+                }
+                
+                res.json({
+                    success: true,
+                    message: 'SMS reenviado com sucesso'
+                });
+            } catch (smsError) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Erro ao enviar SMS: ' + smsError.message
+                });
+            }
+            
+        } else if (type === 'email') {
+            // Reenviar email de confirmação
+            const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+            
+            // Gerar novo link de confirmação
+            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'signup',
+                email: authUser.user.email,
+                options: { redirectTo: null }
+            });
+            
+            if (linkError || !linkData) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Erro ao gerar link de confirmação'
+                });
+            }
+            
+            const urlObj = new URL(linkData.properties.action_link);
+            const token = urlObj.searchParams.get('token');
+            
+            // Buscar APP_URL
+            let appUrl = process.env.APP_URL || `https://${req.get('host')}`;
+            try {
+                const { data: urlConfig } = await supabaseAdmin
+                    .from('platform_configurations')
+                    .select('config_value')
+                    .eq('config_key', 'APP_URL')
+                    .single();
+                if (urlConfig && urlConfig.config_value) {
+                    appUrl = urlConfig.config_value;
+                }
+            } catch (e) {}
+            
+            const confirmationUrl = `${appUrl}/api/auth/verify-email-callback?token=${token}&type=email`;
+            
+            // Enviar email usando template
+            try {
+                const { data: template } = await supabaseAdmin
+                    .from('email_templates')
+                    .select('*')
+                    .eq('template_key', 'signup_confirmation')
+                    .eq('is_active', true)
+                    .single();
+                
+                if (template) {
+                    const variables = {
+                        user_name: authUser.user.user_metadata?.full_name || authUser.user.email.split('@')[0],
+                        confirmation_url: confirmationUrl,
+                        expiry_time: '24'
+                    };
+                    
+                    const { data: rendered } = await supabaseAdmin
+                        .rpc('render_email_template', {
+                            template_key_param: 'signup_confirmation',
+                            variables_param: variables
+                        });
+                    
+                    if (rendered && rendered.length > 0) {
+                        await sendConfirmationEmailDirectly(
+                            authUser.user.email, 
+                            rendered[0].subject, 
+                            rendered[0].body_html
+                        );
+                    }
+                } else {
+                    // Usar template padrão
+                    const userName = authUser.user.user_metadata?.full_name || authUser.user.email.split('@')[0];
+                    const subject = '✅ Confirme o seu registo no VisionKrono';
+                    const html = createDefaultConfirmationEmail(userName, confirmationUrl);
+                    await sendConfirmationEmailDirectly(authUser.user.email, subject, html);
+                }
+            } catch (emailError) {
+                console.error('Erro ao reenviar email:', emailError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Erro ao enviar email: ' + emailError.message
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Email de confirmação reenviado com sucesso'
+            });
+            
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipo inválido. Use "sms" ou "email"'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao reenviar verificação:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Sincronizar verificação de email (chamado após callback do Supabase)
+app.post('/api/auth/sync-email-verification', express.json(), async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar utilizador autenticado da sessão
+        const session = req.session;
+        if (!session || !session.userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Não autenticado'
+            });
+        }
+        
+        // Buscar dados do auth.users para verificar email_confirmed_at
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(session.userId);
+        
+        if (authError || !authData || !authData.user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilizador não encontrado'
+            });
+        }
+        
+        // Se email já está confirmado no auth.users, atualizar perfil
+        // O trigger SQL vai automaticamente atualizar status de 'pending_verification' para 'active'
+        if (authData.user.email_confirmed_at) {
+            await supabaseAdmin
+                .from('user_profiles')
+                .update({
+                    email_confirmed_at: authData.user.email_confirmed_at,
+                    last_verification_channel: 'email'
+                    // O trigger update_user_verification_status() vai mudar status para 'active' automaticamente
+                })
+                .eq('user_id', session.userId);
+            
+            // Audit log
+            await auditLogger.log('EMAIL_VERIFIED', session.userId, {
+                email: authData.user.email
+            });
+            
+            console.log(`✅ Email sincronizado para user_id: ${session.userId}`);
+            
+            res.json({
+                success: true,
+                message: 'Email confirmado com sucesso'
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: 'Email ainda não confirmado no Supabase'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar verificação de email:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Iniciar login com Google OAuth
+app.get('/api/auth/google', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({
+                success: false,
+                error: 'Supabase não configurado'
+            });
+        }
+        
+        // URL de callback - usar porta 1144 explicitamente
+        // IMPORTANTE: O Supabase pode ignorar redirectTo e usar configuração do dashboard
+        // Por isso, vamos usar uma página HTML que funciona em qualquer URL
+        const protocol = req.protocol === 'https' ? 'https' : 'http';
+        const host = req.get('host');
+        // Garantir que usa porta 1144 se não especificada
+        const callbackHost = host.includes(':1144') ? host : `${host.split(':')[0]}:1144`;
+        
+        // Usar página HTML que funciona mesmo se Supabase redirecionar para localhost:3000
+        const redirectUrl = `${protocol}://${callbackHost}/auth/google-callback.html`;
+        
+        console.log(`🔐 Iniciando Google OAuth com callback: ${redirectUrl}`);
+        
+        // Usar Supabase Auth para iniciar OAuth
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: redirectUrl,
+                skipBrowserRedirect: false,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent'
+                }
+            }
+        });
+        
+        if (error) {
+            console.error('❌ Erro ao iniciar OAuth Google:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+        
+        // Redirecionar para URL do Google OAuth
+        if (data?.url) {
+            res.redirect(data.url);
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'URL de OAuth não gerada'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro no login com Google:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Callback do Google OAuth
+app.get('/api/auth/google/callback', async (req, res) => {
+    try {
+        // O Supabase pode retornar de duas formas:
+        // 1. Query params (fluxo com código): ?code=...
+        // 2. Hash fragment (fluxo implícito): #access_token=...
+        
+        const { code, error: oauthError } = req.query;
+        const hash = req.query.hash || req.url.match(/#(.+)/)?.[1];
+        
+        if (oauthError) {
+            console.error('❌ Erro no OAuth Google:', oauthError);
+            return res.redirect(`/login.html?error=${encodeURIComponent(oauthError)}`);
+        }
+        
+        if (!supabase) {
+            return res.redirect('/login.html?error=config_error');
+        }
+        
+        let sessionData = null;
+        let session = null;
+        let user = null;
+        
+        // Se temos código, usar fluxo de autorização
+        if (code) {
+            console.log('📝 Processando OAuth com código...');
+            const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+            
+            if (sessionError || !data?.session) {
+                console.error('❌ Erro ao trocar código por sessão:', sessionError);
+                return res.redirect('/login.html?error=auth_failed');
+            }
+            
+            sessionData = data;
+            session = data.session;
+            user = data.user;
+        } 
+        // Se não temos código, o token pode estar no hash (fluxo implícito)
+        // Mas na verdade, se não temos código, devemos redirecionar para a página HTML
+        // que vai processar o hash (mesmo que venha de localhost:3000)
+        else {
+            // Redirecionar para página HTML que processa tokens do hash
+            // Esta página funciona independentemente da URL de origem
+            const protocol = req.protocol === 'https' ? 'https' : 'http';
+            const host = req.get('host');
+            const callbackHost = host.includes(':1144') ? host : `${host.split(':')[0]}:1144`;
+            const redirectUrl = `${protocol}://${callbackHost}/auth/google-callback.html`;
+            
+            // Se já estamos na URL correta com hash, deixar o browser processar
+            // Se não, redirecionar (mas manter o hash se houver)
+            if (req.url.includes('access_token') || req.url.includes('#')) {
+                // Já temos tokens no URL, redirecionar para página HTML que processa
+                return res.redirect(redirectUrl + req.url);
+            }
+            
+            return res.redirect('/login.html?error=missing_code');
+        }
+        
+        // Código abaixo só executa se temos código (fluxo PKCE)
+        if (!user) {
+            return; // Já foi redirecionado acima
+        }
+        
+        console.log(`✅ Google OAuth bem-sucedido: ${user.email}`);
+        
+        // Verificar se utilizador já existe na base de dados
+        if (!supabaseAdmin) {
+            return res.redirect('/login.html?error=config_error');
+        }
+        
+        // Buscar perfil existente
+        let profile = null;
+        const { data: existingProfile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        
+        if (existingProfile) {
+            profile = existingProfile;
+            console.log('📋 Perfil existente encontrado:', profile.email);
+        } else {
+            // Verificar se existe utilizador com mesmo email (mas diferente auth provider)
+            const { data: emailProfile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('*')
+                .eq('email', user.email)
+                .maybeSingle();
+            
+            if (emailProfile) {
+                // Utilizador existe com email mas sem Google OAuth - vincular
+                console.log('🔗 Vinculando Google OAuth a utilizador existente:', user.email);
+                
+                // Atualizar perfil para usar o user_id do Google
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({ user_id: user.id })
+                    .eq('id', emailProfile.id);
+                
+                profile = { ...emailProfile, user_id: user.id };
+            } else {
+                // Criar novo perfil
+                console.log('➕ Criando novo perfil para:', user.email);
+                
+                const { data: newProfile, error: createError } = await supabaseAdmin
+                    .from('user_profiles')
+                    .insert({
+                        user_id: user.id,
+                        email: user.email,
+                        name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador',
+                        phone: user.phone || null,
+                        role: 'user',
+                        status: 'pending_verification', // Precisa verificar contacto
+                        is_active: false
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Erro ao criar perfil:', createError);
+                    return res.redirect('/login.html?error=profile_creation_failed');
+                }
+                
+                profile = newProfile;
+            }
+        }
+        
+        // Verificar status do utilizador
+        if (profile.status === 'inactive' || profile.status === 'suspended') {
+            return res.redirect(`/login.html?error=${encodeURIComponent('Conta desativada. Contacte o administrador.')}`);
+        }
+        
+        // Criar sessão server-side
+        const sessionManager = req.app.get('sessionManager');
+        const sessionId = sessionManager.createSession(user.id, profile, {
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            loginAt: Date.now(),
+            provider: 'google'
+        });
+        
+        // Configurar cookie
+        res.cookie('sid', sessionId, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            maxAge: sessionManager.MAX_SESSION_LIFETIME,
+            path: '/'
+        });
+        
+        // Audit log
+        const auditLogger = req.app.get('auditLogger');
+        await auditLogger.log('LOGIN_SUCCESS', user.id, {
+            email: user.email,
+            provider: 'google',
+            role: profile.role,
+            ip: req.ip,
+            userAgent: req.get('user-agent')
+        });
+        
+        // Atualizar último login
+        await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                last_login: new Date().toISOString(),
+                login_count: (profile.login_count || 0) + 1
+            })
+            .eq('user_id', user.id);
+        
+        // Redirecionar baseado no status
+        if (profile.status === 'pending_verification') {
+            return res.redirect('/verify-contact.html');
+        }
+        
+        // Redirecionar para página inicial
+        return res.redirect('/index-kromi.html');
+        
+    } catch (error) {
+        console.error('❌ Erro no callback do Google OAuth:', error);
+        res.redirect(`/login.html?error=${encodeURIComponent(error.message)}`);
+    }
+});
+
+// Endpoint: Processar tokens OAuth (quando vêm no hash)
+app.post('/api/auth/google/process-tokens', express.json(), async (req, res) => {
+    try {
+        const { access_token, refresh_token } = req.body;
+        
+        if (!access_token || !supabase) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token não fornecido'
+            });
+        }
+        
+        // Definir sessão manualmente com os tokens
+        const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
+        
+        if (userError || !user) {
+            console.error('❌ Erro ao obter utilizador:', userError);
+            return res.status(401).json({
+                success: false,
+                error: 'Token inválido'
+            });
+        }
+        
+        console.log(`✅ Google OAuth bem-sucedido (hash flow): ${user.email}`);
+        
+        // Continuar com a mesma lógica do callback
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar perfil existente
+        let profile = null;
+        const { data: existingProfile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        
+        if (existingProfile) {
+            profile = existingProfile;
+            console.log('📋 Perfil existente encontrado:', profile.email);
+        } else {
+            // Verificar se existe utilizador com mesmo email
+            const { data: emailProfile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('*')
+                .eq('email', user.email)
+                .maybeSingle();
+            
+            if (emailProfile) {
+                console.log('🔗 Vinculando Google OAuth a utilizador existente:', user.email);
+                await supabaseAdmin
+                    .from('user_profiles')
+                    .update({ user_id: user.id })
+                    .eq('id', emailProfile.id);
+                profile = { ...emailProfile, user_id: user.id };
+            } else {
+                console.log('➕ Criando novo perfil para:', user.email);
+                const { data: newProfile, error: createError } = await supabaseAdmin
+                    .from('user_profiles')
+                    .insert({
+                        user_id: user.id,
+                        email: user.email,
+                        name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador',
+                        phone: user.phone || null,
+                        role: 'user',
+                        status: 'pending_verification',
+                        is_active: false
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('❌ Erro ao criar perfil:', createError);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Erro ao criar perfil'
+                    });
+                }
+                profile = newProfile;
+            }
+        }
+        
+        // Verificar status
+        if (profile.status === 'inactive' || profile.status === 'suspended') {
+            return res.json({
+                success: false,
+                error: 'Conta desativada. Contacte o administrador.',
+                redirectUrl: '/login.html?error=account_disabled'
+            });
+        }
+        
+        // Criar sessão server-side
+        const sessionManager = req.app.get('sessionManager');
+        const sessionId = sessionManager.createSession(user.id, profile, {
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            loginAt: Date.now(),
+            provider: 'google'
+        });
+        
+        // Configurar cookie
+        res.cookie('sid', sessionId, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            maxAge: sessionManager.MAX_SESSION_LIFETIME,
+            path: '/'
+        });
+        
+        // Audit log
+        const auditLogger = req.app.get('auditLogger');
+        await auditLogger.log('LOGIN_SUCCESS', user.id, {
+            email: user.email,
+            provider: 'google',
+            role: profile.role,
+            ip: req.ip,
+            userAgent: req.get('user-agent')
+        });
+        
+        // Atualizar último login
+        await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                last_login: new Date().toISOString(),
+                login_count: (profile.login_count || 0) + 1
+            })
+            .eq('user_id', user.id);
+        
+        // Retornar URL de redirecionamento
+        const redirectUrl = profile.status === 'pending_verification' 
+            ? '/verify-contact.html'
+            : '/index-kromi.html';
+        
+        res.json({
+            success: true,
+            redirectUrl: redirectUrl
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao processar tokens OAuth:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Registro apenas com telefone (sem email)
+app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
+    try {
+        const { phone, password, full_name } = req.body;
+        
+        if (!phone || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Telefone e palavra-passe são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        console.log('📱 Criando conta apenas com telefone:', phone);
+        
+        // Para telefone apenas, Supabase requer um email temporário ou usar Admin API
+        // Estratégia: criar email temporário baseado no telefone ou usar Admin API diretamente
+        // Vamos usar Admin API para criar o utilizador
+        
+        // Criar utilizador via Admin API com telefone
+        // Nota: Supabase pode não aceitar phone sem email, então criamos com email temporário
+        const tempEmail = `phone_${phone.replace(/[^0-9]/g, '')}@kromi.online`;
+        
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            phone: phone,
+            email: tempEmail, // Email temporário necessário para Supabase
+            password: password,
+            email_confirm: false,
+            phone_confirm: false,
+            user_metadata: {
+                full_name: full_name || 'Utilizador',
+                registration_method: 'phone_only',
+                temp_email: true
+            }
+        });
+        
+        if (authError) {
+            console.error('❌ Erro ao criar utilizador:', authError);
+            
+            // Se o telefone já existe, tentar fazer login em vez de criar
+            if (authError.message.includes('already exists') || authError.message.includes('already registered')) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Este telefone já está registado. Use a opção de login.',
+                    code: 'PHONE_EXISTS'
+                });
+            }
+            
+            return res.status(400).json({
+                success: false,
+                error: authError.message
+            });
+        }
+        
+        const userId = authData.user.id;
+        console.log('✅ Utilizador criado no auth:', userId);
+        
+        // Criar perfil
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .insert({
+                user_id: userId,
+                email: null, // Sem email, apenas telefone
+                phone: phone,
+                name: full_name || 'Utilizador',
+                full_name: full_name || 'Utilizador',
+                profile_type: 'participant',
+                role: 'user',
+                status: 'pending_verification',
+                is_active: false
+            })
+            .select()
+            .single();
+        
+        if (profileError) {
+            console.warn('⚠️ Erro ao criar perfil:', profileError);
+            // Não falhar o registro
+        }
+        
+        // Enviar SMS de verificação via Supabase Auth com template
+        try {
+            const templateVars = {
+                user_name: full_name || 'Utilizador',
+                expires_minutes: '10'
+            };
+            
+            const smsResult = await sendSMSViaSupabase(
+                phone,
+                supabase,
+                'phone_verification',
+                templateVars
+            );
+            
+            if (smsResult.success) {
+                console.log('📱 SMS de verificação enviado com template');
+            }
+        } catch (smsError) {
+            console.warn('⚠️ Erro ao enviar SMS:', smsError);
+        }
+        
+        // Audit log
+        await auditLogger.log('USER_REGISTERED_PHONE', userId, {
+            phone: phone,
+            method: 'phone_only',
+            registration_method: 'phone_only'
+        });
+        
+        res.json({
+            success: true,
+            message: 'Conta criada com sucesso! Verifique o seu telefone para receber o código de confirmação.',
+            user: {
+                id: userId,
+                phone: phone,
+                name: full_name || 'Utilizador'
+            },
+            requires_verification: true
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro no registo com telefone:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint: Login apenas com telefone (via Supabase Auth OTP)
+app.post('/api/auth/login-with-phone', express.json(), async (req, res) => {
+    try {
+        const { phone } = req.body;
+        
+        if (!phone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Telefone é obrigatório'
+            });
+        }
+        
+        // Usar Supabase Auth para enviar OTP SMS com template
+        const supabaseClient = supabase;
+        
+        const templateVars = {
+            expires_minutes: '10'
+        };
+        
+        try {
+            const smsResult = await sendSMSViaSupabase(
+                phone,
+                supabaseClient,
+                'login_code',
+                templateVars
+            );
+            
+            if (!smsResult.success) {
+                throw new Error('Falha ao enviar SMS');
+            }
+            
+            console.log(`📱 SMS de login enviado para ${phone} via Supabase Auth (template: login_code)`);
+        } catch (error) {
+            console.error('❌ Erro ao enviar SMS:', error);
+            return res.status(400).json({
+                success: false,
+                error: 'Erro ao enviar SMS: ' + error.message
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Código SMS enviado. Use /api/auth/verify-phone para confirmar.',
+            expires_in: 600 // 10 minutos (padrão Supabase)
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro no login com telefone:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // ==========================================
 // ROTAS DE GESTÃO DE UTILIZADORES
@@ -329,6 +1724,739 @@ async function sendWelcomeEmail(to, name, password) {
     }
 }
 
+// Rota para listar todos os utilizadores (usa Service Role Key para bypass RLS)
+app.get('/api/users/list', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        if (!supabaseAdmin) {
+            console.error('❌ Service Role Key não configurada');
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada no servidor'
+            });
+        }
+        
+        console.log('📋 Carregando todos os utilizadores (bypass RLS)...');
+        
+        // Buscar todos os utilizadores de auth.users
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (authError) {
+            console.error('❌ Erro ao carregar utilizadores do auth:', authError);
+            return res.status(500).json({
+                success: false,
+                error: authError.message
+            });
+        }
+        
+        // Buscar todos os perfis
+        const { data: profiles, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('*');
+        
+        if (profileError) {
+            console.warn('⚠️ Erro ao carregar perfis:', profileError);
+        }
+        
+        // Criar mapa de perfis por user_id
+        const profilesMap = new Map();
+        if (profiles) {
+            profiles.forEach(profile => {
+                profilesMap.set(profile.user_id, profile);
+            });
+        }
+        
+        // Criar array de utilizadores combinando auth.users com user_profiles
+        const normalizedUsers = (authUsers.users || []).map(authUser => {
+            const profile = profilesMap.get(authUser.id);
+            
+            // Se não tem perfil, criar um básico
+            if (!profile) {
+                console.log(`⚠️ Utilizador ${authUser.email} sem perfil, criando perfil básico...`);
+                
+                // Criar perfil automaticamente (em background, não bloquear resposta)
+                supabaseAdmin
+                    .from('user_profiles')
+                    .insert({
+                        user_id: authUser.id,
+                        email: authUser.email,
+                        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Utilizador',
+                        role: 'user',
+                        status: 'active',
+                        created_at: authUser.created_at,
+                        updated_at: authUser.updated_at
+                    })
+                    .then(() => {
+                        console.log(`✅ Perfil criado para ${authUser.email}`);
+                    })
+                    .catch(err => {
+                        console.error(`❌ Erro ao criar perfil para ${authUser.email}:`, err);
+                    });
+            }
+            
+            // Normalizar dados do perfil se existir
+            const name = profile?.name || profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'N/A';
+            const role = profile?.role || profile?.profile_type || 'user';
+            let status = profile?.status;
+            if (!status) {
+                if (profile?.is_active !== undefined) {
+                    status = profile.is_active ? 'active' : 'inactive';
+                } else {
+                    status = 'active'; // Default
+                }
+            }
+            
+            return {
+                id: profile?.id || null,
+                user_id: authUser.id,
+                name: name,
+                email: authUser.email || 'N/A',
+                phone: profile?.phone || authUser.phone || null,
+                organization: profile?.organization || null,
+                role: role,
+                status: status,
+                created_at: profile?.created_at || authUser.created_at,
+                updated_at: profile?.updated_at || authUser.updated_at,
+                last_login: profile?.last_login || authUser.last_sign_in_at || null,
+                login_count: profile?.login_count || 0
+            };
+        });
+        
+        // Ordenar por data de criação (mais recente primeiro)
+        normalizedUsers.sort((a, b) => {
+            const dateA = new Date(a.created_at || 0);
+            const dateB = new Date(b.created_at || 0);
+            return dateB - dateA;
+        });
+        
+        console.log(`✅ ${normalizedUsers.length} utilizadores carregados`);
+        
+        res.json({
+            success: true,
+            users: normalizedUsers,
+            count: normalizedUsers.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro inesperado ao carregar utilizadores:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para obter dados de um utilizador específico (usa Service Role Key)
+app.get('/api/users/get', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { user_id, id } = req.query;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        let authUser = null;
+        let profile = null;
+        
+        // Estratégia: tentar ambos os métodos (id de perfil e user_id)
+        // Se id é fornecido, tentar primeiro como id de perfil
+        if (id && id !== 'null') {
+            try {
+                const { data: profileData, error: profileError } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                
+                if (!profileError && profileData) {
+                    profile = profileData;
+                    
+                    // Buscar dados do auth
+                    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(profile.user_id);
+                    if (!authError && authData) {
+                        authUser = authData.user;
+                    }
+                }
+            } catch (e) {
+                console.log('⚠️ Erro ao buscar por id de perfil, tentando como user_id:', e.message);
+            }
+        }
+        
+        // Se ainda não temos authUser, tentar como user_id (pode ser que o id passado seja na verdade um user_id)
+        if (!authUser) {
+            // Se temos id mas não encontramos perfil, pode ser que id seja na verdade user_id
+            const userIdToTry = user_id && user_id !== 'null' ? user_id : (id && id !== 'null' ? id : null);
+            
+            if (userIdToTry) {
+                try {
+                    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(userIdToTry);
+                    if (!authError && authData) {
+                        authUser = authData.user;
+                        
+                        // Buscar perfil por user_id
+                        const { data: profileData, error: profileError } = await supabaseAdmin
+                            .from('user_profiles')
+                            .select('*')
+                            .eq('user_id', userIdToTry)
+                            .maybeSingle(); // maybeSingle retorna null se não encontrar, em vez de erro
+                        
+                        if (!profileError && profileData) {
+                            profile = profileData;
+                        }
+                    }
+                } catch (e) {
+                    console.error('❌ Erro ao buscar por user_id:', e);
+                }
+            }
+        }
+        
+        if (!authUser) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilizador não encontrado'
+            });
+        }
+        
+        // Normalizar dados
+        const name = profile?.name || profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'N/A';
+        const role = profile?.role || profile?.profile_type || 'user';
+        let status = profile?.status;
+        if (!status) {
+            if (profile?.is_active !== undefined) {
+                status = profile.is_active ? 'active' : 'inactive';
+            } else {
+                status = 'active';
+            }
+        }
+        
+        const normalizedUser = {
+            id: profile?.id || null,
+            user_id: authUser.id,
+            name: name,
+            email: authUser.email || 'N/A',
+            phone: profile?.phone || authUser.phone || null,
+            organization: profile?.organization || null,
+            role: role,
+            status: status,
+            created_at: profile?.created_at || authUser.created_at,
+            updated_at: profile?.updated_at || authUser.updated_at,
+            last_login: profile?.last_login || authUser.last_sign_in_at || null,
+            login_count: profile?.login_count || 0,
+            // Incluir todos os campos adicionais do perfil
+            ...profile
+        };
+        
+        res.json({
+            success: true,
+            user: normalizedUser
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para atualizar utilizador (apenas admin pode alterar role/status)
+app.put('/api/users/update', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { id, user_id, ...userData } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Determinar qual ID usar (perfil ou user_id)
+        let targetUserId = user_id;
+        let profileId = id;
+        
+        if (!targetUserId && profileId && profileId !== 'null') {
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('user_id')
+                .eq('id', profileId)
+                .single();
+            
+            if (profile) {
+                targetUserId = profile.user_id;
+            }
+        }
+        
+        if (!targetUserId && targetUserId !== 'null') {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de utilizador não fornecido'
+            });
+        }
+        
+        // Verificar se quem está editando é admin (já verificado pelo middleware)
+        // E garantir que apenas admins podem alterar role/status
+        const isAdmin = req.session.role === 'admin';
+        
+        if (!isAdmin) {
+            return res.status(403).json({
+                success: false,
+                error: 'Apenas administradores podem editar utilizadores'
+            });
+        }
+        
+        // Buscar perfil atual
+        const { data: currentProfile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .single();
+        
+        // Preparar dados de atualização
+        const updateData = {
+            name: userData.name,
+            full_name: userData.name, // Compatibilidade
+            phone: userData.phone,
+            organization: userData.organization,
+            updated_at: new Date().toISOString()
+        };
+        
+        // Apenas admin pode alterar role e status
+        if (userData.role !== undefined && isAdmin) {
+            updateData.role = userData.role;
+            updateData.profile_type = userData.role; // Compatibilidade
+        }
+        
+        if (userData.status !== undefined && isAdmin) {
+            updateData.status = userData.status;
+            if (userData.status === 'active') {
+                updateData.is_active = true;
+            } else if (userData.status === 'inactive' || userData.status === 'suspended') {
+                updateData.is_active = false;
+            }
+        }
+        
+        // Campos opcionais adicionais (sem restrições)
+        if (userData.birth_date !== undefined) updateData.birth_date = userData.birth_date || null;
+        if (userData.gender !== undefined) updateData.gender = userData.gender || null;
+        if (userData.nationality !== undefined) updateData.nationality = userData.nationality || null;
+        if (userData.tax_id !== undefined) updateData.tax_id = userData.tax_id || null;
+        if (userData.biography !== undefined) updateData.biography = userData.biography || null;
+        if (userData.phone_alt !== undefined) updateData.phone_alt = userData.phone_alt || null;
+        if (userData.email_alt !== undefined) updateData.email_alt = userData.email_alt || null;
+        if (userData.website !== undefined) updateData.website = userData.website || null;
+        if (userData.social_media !== undefined) updateData.social_media = userData.social_media || null;
+        if (userData.address_line1 !== undefined) updateData.address_line1 = userData.address_line1 || null;
+        if (userData.address_line2 !== undefined) updateData.address_line2 = userData.address_line2 || null;
+        if (userData.city !== undefined) updateData.city = userData.city || null;
+        if (userData.state_province !== undefined) updateData.state_province = userData.state_province || null;
+        if (userData.postal_code !== undefined) updateData.postal_code = userData.postal_code || null;
+        if (userData.country !== undefined) updateData.country = userData.country || null;
+        if (userData.job_title !== undefined) updateData.job_title = userData.job_title || null;
+        if (userData.department !== undefined) updateData.department = userData.department || null;
+        if (userData.hire_date !== undefined) updateData.hire_date = userData.hire_date || null;
+        if (userData.emergency_contact_name !== undefined) updateData.emergency_contact_name = userData.emergency_contact_name || null;
+        if (userData.emergency_contact_phone !== undefined) updateData.emergency_contact_phone = userData.emergency_contact_phone || null;
+        if (userData.emergency_contact_relation !== undefined) updateData.emergency_contact_relation = userData.emergency_contact_relation || null;
+        if (userData.timezone !== undefined) updateData.timezone = userData.timezone || null;
+        if (userData.language !== undefined) updateData.language = userData.language || null;
+        
+        // Equipa/Clube
+        if (userData.team_club_name !== undefined) updateData.team_club_name = userData.team_club_name || null;
+        if (userData.team_club_category !== undefined) updateData.team_club_category = userData.team_club_category || null;
+        if (userData.team_position !== undefined) updateData.team_position = userData.team_position || null;
+        if (userData.team_athlete_number !== undefined) updateData.team_athlete_number = userData.team_athlete_number || null;
+        if (userData.team_join_date !== undefined) updateData.team_join_date = userData.team_join_date || null;
+        if (userData.team_notes !== undefined) updateData.team_notes = userData.team_notes || null;
+        
+        // Dimensões de Roupa (armazenar como JSONB)
+        if (userData.clothing_tshirt !== undefined || userData.clothing_casaco !== undefined || 
+            userData.clothing_calcoes !== undefined || userData.clothing_jersey !== undefined || 
+            userData.clothing_calcas !== undefined || userData.clothing_sapatos !== undefined) {
+            
+            // Obter dimensões existentes ou criar novo objeto
+            const currentSizes = currentProfile?.clothing_sizes || {};
+            const newSizes = { ...currentSizes };
+            
+            if (userData.clothing_tshirt !== undefined) newSizes.tshirt = userData.clothing_tshirt || null;
+            if (userData.clothing_casaco !== undefined) newSizes.casaco = userData.clothing_casaco || null;
+            if (userData.clothing_calcoes !== undefined) newSizes.calcoes = userData.clothing_calcoes || null;
+            if (userData.clothing_jersey !== undefined) newSizes.jersey = userData.clothing_jersey || null;
+            if (userData.clothing_calcas !== undefined) newSizes.calcas = userData.clothing_calcas || null;
+            if (userData.clothing_sapatos !== undefined) newSizes.sapatos = userData.clothing_sapatos || null;
+            
+            // Remover chaves com valores null/vazios
+            Object.keys(newSizes).forEach(key => {
+                if (!newSizes[key]) delete newSizes[key];
+            });
+            
+            updateData.clothing_sizes = Object.keys(newSizes).length > 0 ? newSizes : null;
+        }
+        
+        // Atualizar perfil
+        const { data: updatedProfile, error: updateError } = await supabaseAdmin
+            .from('user_profiles')
+            .update(updateData)
+            .eq('user_id', targetUserId)
+            .select()
+            .single();
+        
+        if (updateError) {
+            console.error('❌ Erro ao atualizar perfil:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: updateError.message
+            });
+        }
+        
+        // Se password foi fornecida, atualizar no Supabase Auth (apenas admin)
+        if (userData.password && isAdmin) {
+            try {
+                const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+                    targetUserId,
+                    { password: userData.password }
+                );
+                
+                if (passwordError) {
+                    console.warn('⚠️ Erro ao atualizar password:', passwordError);
+                } else {
+                    console.log('✅ Password atualizada');
+                }
+            } catch (passwordError) {
+                console.warn('⚠️ Erro ao atualizar password:', passwordError);
+            }
+        }
+        
+        // Audit log
+        await auditLogger.log('USER_UPDATED', req.session.userId, {
+            target_user_id: targetUserId,
+            changes: Object.keys(updateData),
+            role_changed: userData.role !== undefined && currentProfile?.role !== userData.role,
+            status_changed: userData.status !== undefined && currentProfile?.status !== userData.status
+        });
+        
+        console.log(`✅ Utilizador atualizado: ${targetUserId}`);
+        
+        res.json({
+            success: true,
+            user: updatedProfile,
+            message: 'Utilizador atualizado com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para eliminar utilizador (usa Service Role Key)
+app.delete('/api/users/delete', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { id, user_id } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        let targetUserId = null;
+        
+        // Se tiver id (perfil), buscar user_id
+        if (id && id !== 'null') {
+            const { data: profile, error: profileError } = await supabaseAdmin
+                .from('user_profiles')
+                .select('user_id')
+                .eq('id', id)
+                .single();
+            
+            if (!profileError && profile) {
+                targetUserId = profile.user_id;
+            }
+        }
+        
+        // Se ainda não tem, usar user_id diretamente
+        if (!targetUserId && user_id && user_id !== 'null') {
+            targetUserId = user_id;
+        }
+        
+        if (!targetUserId) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de utilizador não fornecido'
+            });
+        }
+        
+        console.log(`🗑️ Eliminando utilizador completamente: ${targetUserId}`);
+        
+        // 1. Eliminar todos os registros relacionados primeiro (evita problemas de foreign key)
+        // Audit logs (manter histórico, mas remover referência pessoal)
+        await supabaseAdmin
+            .from('audit_logs')
+            .delete()
+            .eq('user_id', targetUserId);
+        
+        // User sessions
+        await supabaseAdmin
+            .from('user_sessions')
+            .delete()
+            .eq('user_id', targetUserId);
+        
+        // Verification rate limits
+        await supabaseAdmin
+            .from('verification_rate_limits')
+            .delete()
+            .eq('user_id', targetUserId);
+        
+        // Event participants (se houver)
+        await supabaseAdmin
+            .from('event_participants')
+            .delete()
+            .eq('participant_id', targetUserId);
+        
+        // User permissions
+        await supabaseAdmin
+            .from('user_permissions')
+            .delete()
+            .eq('user_id', targetUserId);
+        
+        // 2. Eliminar perfil
+        await supabaseAdmin
+            .from('user_profiles')
+            .delete()
+            .eq('user_id', targetUserId);
+        
+        // 3. Eliminar do Supabase Auth (último passo)
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+        
+        if (authError) {
+            console.error('❌ Erro ao eliminar do auth:', authError);
+            return res.status(500).json({
+                success: false,
+                error: authError.message
+            });
+        }
+        
+        // Audit log (antes de eliminar)
+        try {
+            await auditLogger.log('USER_DELETED', req.session.userId, {
+                deleted_user_id: targetUserId
+            });
+        } catch (auditError) {
+            console.warn('⚠️ Erro ao criar audit log (pode ser que audit_logs já tenha sido eliminado):', auditError);
+        }
+        
+        console.log(`✅ Utilizador eliminado completamente: ${targetUserId}`);
+        
+        res.json({
+            success: true,
+            message: 'Utilizador eliminado completamente'
+        });
+        
+        return;
+        
+    } catch (error) {
+        console.error('❌ Erro ao eliminar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para ativar utilizador (status = active, permite login)
+app.post('/api/users/activate', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { id, user_id } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        let targetUserId = null;
+        
+        // Determinar user_id
+        if (id && id !== 'null') {
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('user_id')
+                .eq('id', id)
+                .single();
+            
+            if (profile) {
+                targetUserId = profile.user_id;
+            }
+        }
+        
+        if (!targetUserId && user_id && user_id !== 'null') {
+            targetUserId = user_id;
+        }
+        
+        if (!targetUserId) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de utilizador não fornecido'
+            });
+        }
+        
+        // Atualizar status para active
+        const { data: updatedProfile, error: updateError } = await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                status: 'active',
+                is_active: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('user_id', targetUserId)
+            .select()
+            .single();
+        
+        if (updateError) {
+            // Se não existe perfil, criar um básico
+            if (updateError.code === 'PGRST116') {
+                const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+                if (authUser) {
+                    await supabaseAdmin
+                        .from('user_profiles')
+                        .insert({
+                            user_id: targetUserId,
+                            email: authUser.user.email,
+                            status: 'active',
+                            is_active: true,
+                            role: 'user'
+                        });
+                }
+            } else {
+                return res.status(500).json({
+                    success: false,
+                    error: updateError.message
+                });
+            }
+        }
+        
+        // Audit log
+        await auditLogger.log('USER_ACTIVATED', req.session.userId, {
+            activated_user_id: targetUserId
+        });
+        
+        console.log(`✅ Utilizador ativado: ${targetUserId}`);
+        
+        res.json({
+            success: true,
+            message: 'Utilizador ativado com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao ativar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para desativar utilizador (status = inactive, bloqueia login)
+app.post('/api/users/deactivate', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { id, user_id } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        let targetUserId = null;
+        
+        // Determinar user_id
+        if (id && id !== 'null') {
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('user_id')
+                .eq('id', id)
+                .single();
+            
+            if (profile) {
+                targetUserId = profile.user_id;
+            }
+        }
+        
+        if (!targetUserId && user_id && user_id !== 'null') {
+            targetUserId = user_id;
+        }
+        
+        if (!targetUserId) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de utilizador não fornecido'
+            });
+        }
+        
+        // Não permitir desativar a si mesmo
+        if (targetUserId === req.session.userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Não pode desativar a si mesmo'
+            });
+        }
+        
+        // Atualizar status para inactive
+        const { data: updatedProfile, error: updateError } = await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                status: 'inactive',
+                is_active: false,
+                updated_at: new Date().toISOString()
+            })
+            .eq('user_id', targetUserId)
+            .select()
+            .single();
+        
+        if (updateError) {
+            return res.status(500).json({
+                success: false,
+                error: updateError.message
+            });
+        }
+        
+        // Invalidar todas as sessões do utilizador
+        await supabaseAdmin
+            .from('user_sessions')
+            .update({ is_active: false })
+            .eq('user_id', targetUserId);
+        
+        // Audit log
+        await auditLogger.log('USER_DEACTIVATED', req.session.userId, {
+            deactivated_user_id: targetUserId
+        });
+        
+        console.log(`✅ Utilizador desativado: ${targetUserId}`);
+        
+        res.json({
+            success: true,
+            message: 'Utilizador desativado com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao desativar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Rota para criar utilizador com password automática
 app.post('/api/users/create', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
     try {
@@ -376,6 +2504,9 @@ app.post('/api/users/create', requireAuth, requireRole('admin'), express.json(),
         console.log('✅ Utilizador criado no auth:', authData.user.id);
         
         // Criar perfil do utilizador
+        // Admin pode especificar role ao criar, mas por padrão é 'user'
+        const defaultRole = role || 'user';
+        
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('user_profiles')
             .insert({
@@ -384,7 +2515,8 @@ app.post('/api/users/create', requireAuth, requireRole('admin'), express.json(),
                 email: email,
                 phone: phone || null,
                 organization: organization || null,
-                role: role || 'user',
+                role: defaultRole, // Apenas admin pode criar com outro role
+                profile_type: defaultRole === 'admin' ? 'admin' : (defaultRole === 'moderator' ? 'event_manager' : 'participant'),
                 status: 'active',
                 created_by: req.session.userId, // ID do admin que criou
                 must_change_password: true // Flag para obrigar troca de password
@@ -532,6 +2664,160 @@ app.delete('/api/email/schedules/:schedule_id', requireAuth, requireRole('admin'
     } catch (error) {
         console.error('❌ Erro ao cancelar agendamento:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ==========================================
+// ENDPOINTS PARA TEMPLATES SMS
+// ==========================================
+
+// Rota para testar envio de SMS de template
+app.post('/api/sms/test-template', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { template_key, phone, variables } = req.body;
+        
+        if (!template_key || !phone) {
+            return res.status(400).json({
+                success: false,
+                error: 'template_key e phone são obrigatórios'
+            });
+        }
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Buscar template
+        const { data: template, error: templateError } = await supabaseAdmin
+            .from('sms_templates')
+            .select('*')
+            .eq('template_key', template_key)
+            .single();
+        
+        if (templateError || !template) {
+            return res.status(404).json({
+                success: false,
+                error: 'Template SMS não encontrado'
+            });
+        }
+        
+        // Renderizar template com variáveis
+        const { data: renderedTemplate, error: renderError } = await supabaseAdmin
+            .rpc('render_sms_template', {
+                template_key_param: template_key,
+                variables_param: variables || {}
+            });
+        
+        if (renderError || !renderedTemplate || renderedTemplate.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao renderizar template: ' + (renderError?.message || 'Template vazio')
+            });
+        }
+        
+        const { message } = renderedTemplate[0];
+        
+        // Enviar SMS de teste via Supabase Auth (usando signInWithOtp para gerar código)
+        // Nota: Para teste real, você precisaria de um provider SMS customizado
+        // Por agora, apenas registramos no log que seria enviado
+        try {
+            const { data: smsData, error: smsError } = await supabase.auth.signInWithOtp({
+                phone: phone,
+                options: {
+                    channel: 'sms'
+                }
+            });
+            
+            if (smsError) {
+                console.warn('⚠️ Erro ao enviar SMS de teste:', smsError);
+                // Ainda assim, registrar no log que o teste foi solicitado
+            }
+            
+            // Registrar no log de SMS
+            await logSMS(template_key, phone, message, 'sent', {
+                is_test: true,
+                provider: 'supabase_auth'
+            });
+            
+            console.log(`📱 SMS de teste solicitado para ${phone} (template: ${template_key})`);
+            
+            res.json({
+                success: true,
+                message: `SMS de teste solicitado para ${phone}. Nota: O Supabase Auth gerencia a mensagem automaticamente, mas o template foi registado nos logs.`,
+                rendered_message: message
+            });
+            
+        } catch (smsError) {
+            console.error('❌ Erro ao enviar SMS de teste:', smsError);
+            
+            // Registrar falha no log
+            await logSMS(template_key, phone, message, 'failed', {
+                is_test: true,
+                error: smsError.message,
+                provider: 'supabase_auth'
+            });
+            
+            res.json({
+                success: false,
+                error: 'Erro ao enviar SMS: ' + smsError.message,
+                rendered_message: message
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao testar template SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Rota para obter logs de SMS
+app.get('/api/sms/logs', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+        const offset = parseInt(req.query.offset) || 0;
+        const template_key = req.query.template_key;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        let query = supabaseAdmin
+            .from('sms_logs')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+        
+        if (template_key) {
+            query = query.eq('template_key', template_key);
+        }
+        
+        const { data: logs, error, count } = await query;
+        
+        if (error) throw error;
+        
+        res.json({
+            success: true,
+            logs: logs || [],
+            total: count || 0,
+            limit,
+            offset
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao obter logs SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
@@ -748,10 +3034,225 @@ app.get('/api/classifications/list', async (req, res) => {
 });
 
 // ==========================================
+// ROTA DE ENVIO DE EMAIL DE CONFIRMAÇÃO DE REGISTRO
+// ==========================================
+app.post('/api/auth/send-confirmation-email', express.json(), async (req, res) => {
+    try {
+        const { email, user_name, user_id, type = 'signup' } = req.body;
+        
+        if (!email || !user_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email e user_id são obrigatórios'
+            });
+        }
+        
+        // Gerar link de confirmação usando Supabase Admin API
+        let confirmationUrl;
+        try {
+            // Gerar token de confirmação usando Admin API
+            const { data: tokenData, error: tokenError } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'signup',
+                email: email,
+                options: {
+                    redirectTo: null // Será definido depois
+                }
+            });
+            
+            if (tokenError || !tokenData) {
+                throw new Error('Erro ao gerar link de confirmação: ' + (tokenError?.message || 'Token não gerado'));
+            }
+            
+            // Extrair token da URL gerada
+            const urlObj = new URL(tokenData.properties.action_link);
+            const token = urlObj.searchParams.get('token');
+            
+            if (!token) {
+                throw new Error('Token não encontrado na URL gerada');
+            }
+            
+            // Obter URL da aplicação
+            let appUrl = 'https://192.168.1.219:1144';
+            try {
+                const { data: urlConfig } = await supabaseAdmin
+                    .from('platform_configurations')
+                    .select('config_value')
+                    .eq('config_key', 'APP_URL')
+                    .single();
+                
+                if (urlConfig && urlConfig.config_value) {
+                    appUrl = urlConfig.config_value;
+                }
+            } catch (e) {
+                appUrl = process.env.APP_URL || `https://${req.get('host')}`;
+            }
+            
+            // Construir URL de confirmação - usar callback do Supabase que redireciona para nossa API
+            // O Supabase vai processar o token e redirecionar para /api/auth/verify-email-callback
+            confirmationUrl = `${appUrl}/api/auth/verify-email-callback?token=${token}&type=${type}`;
+            
+        } catch (tokenGenError) {
+            console.error('❌ Erro ao gerar token:', tokenGenError);
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao gerar link de confirmação: ' + tokenGenError.message
+            });
+        }
+        
+        console.log(`📧 Enviando email de confirmação para: ${email}`);
+        
+        // Carregar template de confirmação
+        const { data: template, error: templateError } = await supabaseAdmin
+            .from('email_templates')
+            .select('*')
+            .eq('template_key', 'signup_confirmation')
+            .eq('is_active', true)
+            .eq('event_id', null)
+            .single();
+        
+        if (templateError || !template) {
+            console.warn('⚠️ Template de confirmação não encontrado, usando template padrão');
+            // Usar template inline se não encontrar na BD
+            const subject = '✅ Confirme o seu registo no VisionKrono';
+            const html = createDefaultConfirmationEmail(user_name || email, confirmationUrl);
+            await sendConfirmationEmailDirectly(email, subject, html);
+            
+            return res.json({
+                success: true,
+                message: 'Email de confirmação enviado (template padrão)'
+            });
+        }
+        
+        // Renderizar template com variáveis
+        const variables = {
+            user_name: user_name || email.split('@')[0],
+            confirmation_url: confirmationUrl,
+            expiry_time: '24'
+        };
+        
+        const { data: rendered, error: renderError } = await supabaseAdmin
+            .rpc('render_email_template', {
+                template_key_param: 'signup_confirmation',
+                variables_param: variables
+            });
+        
+        if (renderError || !rendered || rendered.length === 0) {
+            throw new Error('Erro ao renderizar template: ' + (renderError?.message || 'Template vazio'));
+        }
+        
+        const { subject, body_html } = rendered[0];
+        
+        // Enviar email
+        await sendConfirmationEmailDirectly(email, subject, body_html);
+        
+        console.log(`✅ Email de confirmação enviado para: ${email}`);
+        
+        res.json({
+            success: true,
+            message: 'Email de confirmação enviado com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao enviar email de confirmação:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Função helper para enviar email de confirmação
+async function sendConfirmationEmailDirectly(to, subject, html) {
+    // Carregar configurações de email
+    let emailUser, emailPassword;
+    
+    try {
+        const { data: emailConfig } = await supabaseAdmin
+            .from('platform_configurations')
+            .select('*')
+            .in('config_key', ['EMAIL_USER', 'EMAIL_PASSWORD']);
+        
+        if (emailConfig && emailConfig.length > 0) {
+            emailConfig.forEach(config => {
+                if (config.config_key === 'EMAIL_USER') emailUser = config.config_value;
+                if (config.config_key === 'EMAIL_PASSWORD') emailPassword = config.config_value;
+            });
+        }
+    } catch (error) {
+        console.warn('⚠️ Erro ao carregar configurações de email');
+    }
+    
+    emailUser = emailUser || process.env.EMAIL_USER || 'system@kromi.online';
+    emailPassword = emailPassword || process.env.EMAIL_PASSWORD || '';
+    
+    if (!emailPassword) {
+        throw new Error('EMAIL_PASSWORD não configurado');
+    }
+    
+    // Configurar transporter
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: emailUser,
+            pass: emailPassword
+        }
+    });
+    
+    // Enviar email
+    await transporter.sendMail({
+        from: `"Kromi.online System" <${emailUser}>`,
+        to: to,
+        subject: subject,
+        html: html
+    });
+}
+
+// Função para criar email padrão se template não existir
+function createDefaultConfirmationEmail(userName, confirmationUrl) {
+    return `
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de Registro</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #FC6B03 0%, #FF8800 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; }
+        .btn { display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #FC6B03 0%, #FF8800 100%); color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; background: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Confirme o seu Registo</h1>
+        </div>
+        <div class="content">
+            <p>Olá <strong>${userName}</strong>,</p>
+            <p>Para ativar a tua conta, por favor confirma o teu endereço de email clicando no botão abaixo:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${confirmationUrl}" class="btn">✅ Confirmar Email</a>
+            </div>
+            <p style="color: #666; font-size: 12px; word-break: break-all;">${confirmationUrl}</p>
+        </div>
+        <div class="footer">
+            <p>© 2025 VisionKrono. Todos os direitos reservados.</p>
+            <p>Enviado por: system@kromi.online</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+}
+
+// ==========================================
 // ROTAS DE EVENTOS (REST API)
 // ==========================================
 const setupEventsRoutes = require('./src/events-routes');
-setupEventsRoutes(app, sessionManager);
+setupEventsRoutes(app, sessionManager, supabaseAdmin, auditLogger);
 
 // Função helper para obter preços
 function getOpenAIPricing(modelId) {
@@ -1235,6 +3736,10 @@ app.get('/perfis-permissoes', (req, res) => {
 // Páginas de templates de email
 app.get('/email-templates-platform', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'email-templates-platform.html'));
+});
+
+app.get('/sms-templates-platform', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'sms-templates-platform.html'));
 });
 
 app.get('/email-templates-event', (req, res) => {

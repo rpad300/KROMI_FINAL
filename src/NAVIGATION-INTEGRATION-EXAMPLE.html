@@ -13,6 +13,7 @@
     
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
     
     <!-- Scripts Core (ordem crítica!) -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -24,6 +25,8 @@
     <!-- Sistema de Navegação (depois do auth) -->
     <script src="/navigation-config.js?v=2025102601" defer></script>
     <script src="/navigation-service.js?v=2025102601" defer></script>
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     <script src="/navigation-component.js?v=2025102601" defer></script>
     <script src="/navigation-init.js?v=2025102601" defer></script>
     

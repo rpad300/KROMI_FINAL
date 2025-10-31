@@ -19,6 +19,7 @@
     
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
     
     <style>
         /* Dashboard specific styles */
@@ -744,6 +745,8 @@
     <!-- Sistema de Navegação Unificado -->
     <script src="/navigation-config.js?v=2025102601" defer></script>
     <script src="/navigation-service.js?v=2025102601" defer></script>
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     <script src="/navigation-component.js?v=2025102601" defer></script>
     <script src="/navigation-init.js?v=2025102601" defer></script>
     
@@ -760,8 +763,9 @@
                 await window.supabaseClient.init();
                 await window.supabaseClient.ready();
 
-                // 2) Garantir autenticação (usa o helper server-side)
-                const ok = await verificarAutenticacao(['admin','moderator']);
+                // 2) Garantir autenticação (qualquer utilizador autenticado pode aceder)
+                // A página index-kromi.html é acessível a todos os utilizadores autenticados
+                const ok = await verificarAutenticacao(['admin', 'moderator', 'user']);
                 if (!ok) {
                     document.querySelector('.main')?.replaceChildren();
                     document.querySelector('.main')?.insertAdjacentHTML('afterbegin', `

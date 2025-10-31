@@ -19,6 +19,7 @@
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
     <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
     
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -346,6 +347,8 @@
     <!-- Sistema de Navegação Unificado -->
     <script src="/navigation-config.js?v=2025102601" defer></script>
     <script src="/navigation-service.js?v=2025102601" defer></script>
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     <script src="/navigation-component.js?v=2025102601" defer></script>
     <script src="/navigation-init.js?v=2025102601" defer></script>
     
@@ -380,7 +383,7 @@
                 }
                 
                 // Verificar autenticação
-                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager']);
+                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager', 'user']);
                 if (!autenticado) return;
                 
                 console.log('🚀 Inicializando página checkpoint-order...');

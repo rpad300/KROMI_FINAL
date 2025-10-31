@@ -23,9 +23,52 @@
     <!-- Capability Detection -->
     <script src="/kromi-capability-detection.js"></script>
     
+    <!-- Logo Integration Styles -->
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    
+    <!-- Logo Loader (carregar antes de usar) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
+    
+    <style>
+        /* Logo Container - Responsivo */
+        .detection-logo-container {
+            position: absolute;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .detection-logo-container img {
+            width: auto;
+            object-fit: contain;
+        }
+        
+        /* Desktop e Mobile: Centro da tela */
+        .detection-logo-container {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .detection-logo-container img {
+            max-height: 80px;
+        }
+        
+        /* Mobile: Ajustar tamanho */
+        @media (max-width: 767px) {
+            .detection-logo-container img {
+                max-height: 60px;
+            }
+        }
+    </style>
+    
     <!-- Additional inline styles kept minimal for runtime overrides -->
 </head>
 <body data-theme="dark">
+    <!-- Logo Container (Responsivo) -->
+    <div class="detection-logo-container" id="detectionLogo"></div>
+    
     <!-- Camera Container (Fullscreen) -->
     <div class="camera-container" id="cameraContainer">
         <!-- Camera Video -->
@@ -143,8 +186,52 @@
         let minMotionFrames = 5; // Número mínimo de frames com movimento para considerar detecção
         let wakeLock = null; // Para prevenir suspensão do dispositivo
         
+        // Carregar logo
+        async function loadDetectionLogo() {
+            const logoContainer = document.getElementById('detectionLogo');
+            if (!logoContainer) return;
+            
+            // Aguardar logoLoader estar disponível
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            const tryLoad = async () => {
+                if (typeof window.logoLoader !== 'undefined' && window.logoLoader && typeof window.logoLoader.renderLogo === 'function') {
+                    try {
+                        await window.logoLoader.renderLogo(logoContainer, {
+                            type: 'secondary', // Logo monocromático para fundos escuros
+                            orientation: 'horizontal',
+                            alt: 'Kromi.online',
+                            className: 'detection-logo',
+                            style: {
+                                maxHeight: window.innerWidth >= 768 ? '80px' : '60px',
+                                width: 'auto',
+                                display: 'block'
+                            },
+                            fallback: '<h2 style="color: #fc6b03; font-size: 24px; margin: 0;">Kromi.online</h2>'
+                        });
+                        console.log('[DETECTION] Logo carregado');
+                    } catch (error) {
+                        console.warn('[DETECTION] Erro ao carregar logo:', error);
+                    }
+                    return true;
+                }
+                
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(tryLoad, 100);
+                }
+            };
+            
+            // Aguardar um pouco antes de começar
+            setTimeout(tryLoad, 300);
+        }
+        
         // Initialize page
         document.addEventListener('DOMContentLoaded', async () => {
+            // Carregar logo
+            loadDetectionLogo();
+            
             // Initialize Supabase
             if (window.supabaseClient) {
                 await window.supabaseClient.init();

@@ -20,6 +20,7 @@
     <!-- Sistema de Navegação Unificado -->
     <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
     <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
     
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -279,37 +280,37 @@
         <div id="eventModal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Novo Evento</h2>
-                    <button id="closeModalBtn" class="close-btn">&times;</button>
+                    <h2 id="modalTitle" class="modal-title">Novo Evento</h2>
+                    <button id="closeModalBtn" class="modal-close">&times;</button>
                 </div>
                 
                 <div class="modal-body">
                     <form id="eventForm">
                         <div class="form-group">
-                            <label for="eventName">Nome do Evento *</label>
-                            <input type="text" id="eventName" name="name" required placeholder="Ex: Maratona do Porto 2025">
+                            <label for="eventName">Nome do Evento <span class="required">*</span></label>
+                            <input type="text" id="eventName" name="name" class="form-input" required placeholder="Ex: Maratona do Porto 2025">
                         </div>
                         
                         <div class="form-group">
                             <label for="eventDescription">Descrição</label>
-                            <textarea id="eventDescription" name="description" placeholder="Descrição do evento..."></textarea>
+                            <textarea id="eventDescription" name="description" class="form-textarea" rows="4" placeholder="Descrição do evento..."></textarea>
                         </div>
                         
-                        <div class="form-row">
+                        <div class="form-row cols-2" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-4);">
                             <div class="form-group">
                                 <label for="eventDate">Data do Evento</label>
-                                <input type="date" id="eventDate" name="event_date">
+                                <input type="date" id="eventDate" name="event_date" class="form-input">
                             </div>
                             
                             <div class="form-group">
                                 <label for="eventLocation">Localização</label>
-                                <input type="text" id="eventLocation" name="location" placeholder="Porto, Portugal">
+                                <input type="text" id="eventLocation" name="location" class="form-input" placeholder="Porto, Portugal">
                             </div>
                         </div>
                         
-                        <div class="form-actions">
-                            <button type="button" id="cancelBtn" class="btn secondary">Cancelar</button>
-                            <button type="submit" class="btn primary">Criar Evento</button>
+                        <div class="modal-footer">
+                            <button type="button" id="cancelBtn" class="btn btn-secondary">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Criar Evento</button>
                         </div>
                     </form>
                 </div>
@@ -342,6 +343,8 @@
     <!-- Sistema de Navegação Unificado -->
     <script src="/navigation-config.js?v=2025102601" defer></script>
     <script src="/navigation-service.js?v=2025102601" defer></script>
+    <!-- Logo Loader (carregar ANTES da navegação, SEM defer para garantir ordem) -->
+    <script src="/logo-loader.js?v=2025012702"></script>
     <script src="/navigation-component.js?v=2025102601" defer></script>
     <script src="/navigation-init.js?v=2025102601" defer></script>
     
@@ -444,7 +447,7 @@
                 
                 // 2. SEGUNDO: Verificar autenticação
                 console.log('🔐 Passo 2: Verificando autenticação...');
-                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager']);
+                const autenticado = await verificarAutenticacao(['admin', 'moderator', 'event_manager', 'user']);
                 console.log('🔐 Resultado autenticação:', autenticado);
                 
                 if (!autenticado) {
@@ -697,14 +700,22 @@ ${error.stack || 'Sem stack trace disponível'}
             if (!eventsGrid) return;
             
             if (events.length === 0) {
-                eventsGrid.innerHTML = `
-                    <div style="text-align: center; padding: var(--spacing-8); color: var(--text-secondary);">
-                        Nenhum evento encontrado.<br>
-                        <button class="btn btn-primary" onclick="showNewEventModal()" style="margin-top: var(--spacing-3);">
-                            <i>➕</i> Criar Primeiro Evento
-                        </button>
-                    </div>
+                eventsGrid.innerHTML = '';
+                const emptyState = document.createElement('div');
+                emptyState.style.cssText = 'text-align: center; padding: var(--spacing-8); color: var(--text-secondary);';
+                emptyState.innerHTML = `
+                    Nenhum evento encontrado.<br>
+                    <button class="btn btn-primary" id="createFirstEventBtn" style="margin-top: var(--spacing-3);">
+                        <i>➕</i> Criar Primeiro Evento
+                    </button>
                 `;
+                eventsGrid.appendChild(emptyState);
+                
+                // Adicionar event listener ao botão criado dinamicamente
+                const createFirstEventBtn = document.getElementById('createFirstEventBtn');
+                if (createFirstEventBtn) {
+                    createFirstEventBtn.addEventListener('click', showNewEventModal);
+                }
                 return;
             }
             
@@ -784,19 +795,45 @@ ${error.stack || 'Sem stack trace disponível'}
         }
         
         function showNewEventModal() {
+            console.log('🔵 [showNewEventModal] Função chamada');
             const modal = document.getElementById('eventModal');
             const modalTitle = document.getElementById('modalTitle');
             const eventForm = document.getElementById('eventForm');
             
+            console.log('🔵 [showNewEventModal] Modal encontrado:', !!modal);
+            console.log('🔵 [showNewEventModal] Modal title encontrado:', !!modalTitle);
+            console.log('🔵 [showNewEventModal] Form encontrado:', !!eventForm);
+            
+            if (!modal) {
+                console.error('❌ [showNewEventModal] Modal não encontrado!');
+                alert('Erro: Modal não encontrado. Por favor, recarregue a página.');
+                return;
+            }
+            
             if (modalTitle) modalTitle.textContent = 'Novo Evento';
             if (eventForm) eventForm.reset();
-            if (modal) modal.style.display = 'block';
+            
+            // Usar a classe 'show' ou 'active' do design system + display block como fallback
+            modal.classList.add('show', 'active');
+            modal.style.display = 'flex'; // O design system usa display: flex no modal
+            modal.style.visibility = 'visible';
+            console.log('✅ [showNewEventModal] Modal exibido');
         }
+        
+        // Expor no escopo global para onclick inline
+        window.showNewEventModal = showNewEventModal;
         
         function hideEventModal() {
             const modal = document.getElementById('eventModal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.remove('show', 'active');
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            }
         }
+        
+        // Expor no escopo global
+        window.hideEventModal = hideEventModal;
         
         function showEventDetails(eventId) {
             const event = events.find(e => e.id === eventId);
@@ -826,12 +863,20 @@ ${error.stack || 'Sem stack trace disponível'}
                     </div>
                 `;
             }
-            if (modal) modal.style.display = 'block';
+            if (modal) {
+                modal.classList.add('show', 'active');
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+            }
         }
         
         function hideEventDetailsModal() {
             const modal = document.getElementById('eventDetailsModal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.remove('show', 'active');
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            }
         }
         
         function openEvent(eventId) {

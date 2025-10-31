@@ -50,7 +50,17 @@ class AuthClient {
             
             const response = await fetch('/api/auth/session', {
                 credentials: 'include' // Incluir cookies
+            }).catch(() => {
+                // Erro de rede - não é sessão inválida
+                console.log('⚠️ Erro de rede ao verificar sessão');
+                this.currentUser = null;
+                this.userProfile = null;
+                return null;
             });
+
+            if (!response) {
+                return false;
+            }
 
             if (response.ok) {
                 const data = await response.json();
@@ -72,18 +82,34 @@ class AuthClient {
                     
                     console.log('👤 Perfil carregado:', this.userProfile.role);
                     
+                    // Verificar se precisa verificar contacto (mas não redirecionar em páginas públicas)
+                    if (data.user.status === 'pending_verification' && 
+                        !window.location.pathname.includes('verify-contact.html') &&
+                        !window.location.pathname.includes('login.html') &&
+                        !window.location.pathname.includes('register.html')) {
+                        console.log('⚠️ Conta pendente de verificação. Redirecionando...');
+                        window.location.href = '/verify-contact.html';
+                        return true; // Retornar true mas redirecionar
+                    }
+                    
                     // Renovar sessão automaticamente a cada 5 minutos
                     this.startSessionRenewal();
                     
                     return true;
                 } else {
-                    console.log('❌ Sem sessão ativa');
+                    console.log('ℹ️ Sem sessão ativa (comportamento esperado em páginas públicas)');
                     this.currentUser = null;
                     this.userProfile = null;
                     return false;
                 }
+            } else if (response.status === 401) {
+                // 401 é esperado em páginas públicas - não é um erro
+                console.log('ℹ️ Sem sessão válida (comportamento esperado em páginas públicas)');
+                this.currentUser = null;
+                this.userProfile = null;
+                return false;
             } else {
-                console.log('❌ Sem sessão válida');
+                console.log('❌ Erro ao verificar sessão:', response.status);
                 this.currentUser = null;
                 this.userProfile = null;
                 return false;
@@ -133,6 +159,13 @@ class AuthClient {
                 };
                 
                 console.log('✅ Login bem-sucedido:', this.userProfile.email);
+                
+                // Verificar se precisa verificar contacto
+                if (data.user.status === 'pending_verification') {
+                    console.log('⚠️ Conta pendente de verificação. Redirecionando...');
+                    window.location.href = '/verify-contact.html';
+                    return;
+                }
                 
                 // Iniciar renovação automática
                 this.startSessionRenewal();
@@ -420,10 +453,221 @@ class AuthClient {
     }
 
     /**
-     * Login com Google (a implementar)
+     * Registro de novo utilizador (dinâmico: email, telefone, ambos, ou Google)
+     * @param {string|null} email - Email do utilizador (pode ser null se só telefone)
+     * @param {string} password - Palavra-passe
+     * @param {string} fullName - Nome completo
+     * @param {string|null} phone - Telefone do utilizador (pode ser null se só email)
+     * @param {string} method - Método escolhido: 'email', 'phone', 'both'
+     */
+    async signUp(email, password, fullName, phone = null, method = 'email') {
+        try {
+            console.log(`📝 Registro método: ${method}`, { email: email || 'N/A', phone: phone || 'N/A' });
+            
+            // Validação: pelo menos email ou telefone deve estar presente
+            if (!email && !phone) {
+                throw new Error('Email ou telefone é obrigatório');
+            }
+
+            // Inicializar Supabase se necessário
+            if (!this.supabase && window.supabaseClient) {
+                const initialized = await window.supabaseClient.init();
+                if (initialized && window.supabaseClient.supabase) {
+                    this.supabase = window.supabaseClient.supabase;
+                }
+            }
+            
+            // Se ainda não tem Supabase, tentar usar diretamente
+            if (!this.supabase) {
+                // Tentar buscar configuração do servidor
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                const supabaseUrl = config.SUPABASE_URL;
+                const supabaseKey = config.SUPABASE_ANON_KEY || config.SUPABASE_PUBLISHABLE_KEY;
+                
+                if (!supabaseUrl || !supabaseKey) {
+                    throw new Error('Supabase não configurado');
+                }
+                
+                const { createClient } = await import('https://unpkg.com/@supabase/supabase-js@2');
+                this.supabase = createClient(supabaseUrl, supabaseKey);
+            }
+            
+            // Obter URL da aplicação para redirect
+            let appUrl = 'https://192.168.1.219:1144';
+            try {
+                const configResponse = await fetch('/api/config');
+                const config = await configResponse.json();
+                appUrl = config.APP_URL || `https://${window.location.hostname}:${window.location.port}`;
+            } catch (e) {
+                appUrl = `https://${window.location.hostname}:${window.location.port}`;
+            }
+            
+            const redirectTo = `${appUrl}/auth/callback`;
+            
+            let userData = null;
+            
+            // Caso 1: Apenas telefone (sem email)
+            if (method === 'phone' && !email && phone) {
+                console.log('📱 Registo apenas com telefone via servidor...');
+                
+                // Para telefone apenas, usar endpoint server-side que cria via Admin API
+                const response = await fetch('/api/auth/signup-phone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: phone,
+                        password: password,
+                        full_name: fullName
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Erro ao criar conta com telefone');
+                }
+                
+                const result = await response.json();
+                userData = result;
+                
+                // Se foi criado com sucesso, já foi enviado SMS
+                console.log('✅ Conta criada com telefone, SMS enviado');
+                return result;
+            }
+            
+            // Caso 2: Email (com ou sem telefone) ou Ambos
+            // Supabase requer email para signUp, então usamos email como principal
+            if (email) {
+                console.log('📧 Registo com email...');
+                
+                // Criar utilizador no Supabase com email
+                const { data, error } = await this.supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            phone: phone || null
+                        },
+                        emailRedirectTo: email ? redirectTo : undefined
+                    }
+                });
+
+                if (error) {
+                    throw error;
+                }
+                
+                userData = data;
+
+                // Criar perfil como participante por padrão (status pending_verification)
+                if (data.user) {
+                    try {
+                        const { error: profileError } = await this.supabase
+                            .from('user_profiles')
+                            .insert({
+                                user_id: data.user.id,
+                                email: email,
+                                name: fullName,
+                                full_name: fullName,
+                                phone: phone,
+                                profile_type: 'participant',
+                                role: 'user', // SEMPRE user por padrão - apenas admin pode alterar
+                                status: 'pending_verification', // Aguardando verificação
+                                is_active: false // Inativo até confirmar contacto
+                            });
+
+                        if (profileError) {
+                            console.warn('⚠️ Erro ao criar perfil:', profileError);
+                            // Não falhar o registro se o perfil não for criado
+                        } else {
+                            // Se tem telefone E método é 'both', enviar SMS via Supabase Auth
+                            if (phone && method === 'both' && this.supabase) {
+                                try {
+                                    const { data: smsData, error: smsError } = await this.supabase.auth.signInWithOtp({
+                                        phone: phone,
+                                        options: {
+                                            channel: 'sms'
+                                        }
+                                    });
+                                    
+                                    if (!smsError) {
+                                        console.log('📱 SMS de verificação enviado via Supabase Auth');
+                                    } else {
+                                        console.warn('⚠️ Erro ao enviar SMS:', smsError);
+                                    }
+                                } catch (smsError) {
+                                    console.warn('⚠️ Erro ao enviar SMS:', smsError);
+                                }
+                            }
+                        }
+                    } catch (profileError) {
+                        console.warn('⚠️ Erro ao criar perfil:', profileError);
+                        // Não falhar o registro se o perfil não for criado
+                    }
+                }
+
+                // Se o registro foi bem-sucedido, enviar email de confirmação usando sistema da plataforma
+                if (data.user && !data.session && email) {
+                    // Usuário criado mas precisa confirmar email
+                    try {
+                        console.log('📧 Solicitando envio de email de confirmação...');
+                        
+                        // Chamar rota do servidor para enviar email customizado
+                        const emailResponse = await fetch('/api/auth/send-confirmation-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                email: email,
+                                user_name: fullName,
+                                user_id: data.user.id,
+                                type: 'signup'
+                            })
+                        });
+                        
+                        if (emailResponse.ok) {
+                            const emailResult = await emailResponse.json();
+                            console.log('✅ Email de confirmação solicitado:', emailResult.message);
+                        } else {
+                            console.warn('⚠️ Não foi possível enviar email de confirmação customizado');
+                        }
+                    } catch (emailError) {
+                        console.warn('⚠️ Erro ao solicitar envio de email:', emailError);
+                        // Não falhar o registro se o email falhar
+                    }
+                }
+                
+                console.log('✅ Registro bem-sucedido:', email);
+                return data;
+            }
+            
+            throw new Error('Método de registo inválido');
+        } catch (error) {
+            console.error('❌ Erro no registro:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Login com Google OAuth
      */
     async signInWithGoogle() {
-        throw new Error('Google OAuth não implementado no sistema server-side ainda');
+        try {
+            console.log('🔐 Iniciando login com Google...');
+            
+            // Redirecionar para endpoint server-side que inicia OAuth
+            window.location.href = '/api/auth/google';
+            
+        } catch (error) {
+            console.error('❌ Erro no login com Google:', error);
+            throw error;
+        }
     }
 }
 
