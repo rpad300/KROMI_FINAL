@@ -265,6 +265,42 @@
             color: var(--primary-dark);
         }
 
+        .helper-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-1);
+        }
+
+        .btn-send-sms {
+            background: var(--bg-primary);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: var(--spacing-3);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            margin-top: var(--spacing-2);
+            width: 100%;
+        }
+
+        .btn-send-sms:hover {
+            background: var(--primary);
+            color: var(--text-dark);
+        }
+
+        .btn-send-sms:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .countdown-timer {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            margin-top: var(--spacing-2);
+        }
+
         @media (max-width: 480px) {
             .login-container {
                 margin: var(--spacing-3);
@@ -301,10 +337,16 @@
 
             <div class="form-group phone-login" id="phoneGroup">
                 <label for="phone">Telefone</label>
-                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+351 123 456 789">
+                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+351 912 345 678">
             </div>
 
-            <div class="form-group">
+            <div class="form-group phone-login" id="smsCodeGroup" style="display: none;">
+                <label for="smsCode">Código SMS</label>
+                <input type="text" id="smsCode" name="smsCode" placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+                <span class="helper-text">Introduza o código que recebeu por SMS</span>
+            </div>
+
+            <div class="form-group" id="passwordGroup">
                 <label for="password">Palavra-passe</label>
                 <input type="password" id="password" name="password" autocomplete="current-password" required>
             </div>
@@ -353,30 +395,50 @@
             const emailInput = document.getElementById('email');
             const phoneInput = document.getElementById('phone');
             const passwordInput = document.getElementById('password');
+            const smsCodeInput = document.getElementById('smsCode');
             const loginBtn = document.getElementById('loginBtn');
             const googleBtn = document.getElementById('googleBtn');
             const togglePhoneBtn = document.getElementById('togglePhone');
             const phoneGroup = document.getElementById('phoneGroup');
+            const smsCodeGroup = document.getElementById('smsCodeGroup');
+            const passwordGroup = document.getElementById('passwordGroup');
             const errorMessage = document.getElementById('errorMessage');
             const successMessage = document.getElementById('successMessage');
             const loading = document.getElementById('loading');
 
             let isPhoneLogin = false;
+            let smsCodeSent = false;
+            let countdownInterval = null;
 
             // Toggle entre email e telefone
             togglePhoneBtn.addEventListener('click', function() {
                 isPhoneLogin = !isPhoneLogin;
+                smsCodeSent = false;
                 
                 if (isPhoneLogin) {
                     phoneGroup.classList.add('active');
+                    passwordGroup.style.display = 'none';
+                    smsCodeGroup.style.display = 'none';
                     emailInput.required = false;
+                    passwordInput.required = false;
                     phoneInput.required = true;
+                    loginBtn.textContent = 'Enviar código SMS';
                     togglePhoneBtn.textContent = 'Entrar com email';
+                    hideMessages();
                 } else {
                     phoneGroup.classList.remove('active');
+                    passwordGroup.style.display = 'block';
+                    smsCodeGroup.style.display = 'none';
                     emailInput.required = true;
+                    passwordInput.required = true;
                     phoneInput.required = false;
+                    loginBtn.textContent = 'Entrar';
                     togglePhoneBtn.textContent = 'Entrar com telefone';
+                    hideMessages();
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
                 }
             });
 
@@ -384,40 +446,132 @@
             loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
-                const email = emailInput.value.trim();
-                const phone = phoneInput.value.trim();
-                const password = passwordInput.value;
-
-                if (!password) {
-                    showError('Por favor, introduza a palavra-passe');
-                    return;
-                }
-
-                if (!isPhoneLogin && !email) {
-                    showError('Por favor, introduza o email');
-                    return;
-                }
-
-                if (isPhoneLogin && !phone) {
-                    showError('Por favor, introduza o telefone');
-                    return;
-                }
-
                 setLoading(true);
                 hideMessages();
 
                 try {
-                    let result;
-                    
+                    // Login com telefone via SMS
                     if (isPhoneLogin) {
-                        result = await window.authSystem.signInWithPhone(phone, password);
-                    } else {
-                        result = await window.authSystem.signInWithEmail(email, password);
-                    }
+                        const phone = phoneInput.value.trim();
+                        
+                        if (!phone) {
+                            showError('Por favor, introduza o telefone');
+                            setLoading(false);
+                            return;
+                        }
 
-                    showSuccess('Login realizado com sucesso!');
-                    
-                    // O redirecionamento será feito automaticamente pelo authSystem
+                        // Se ainda não enviou código SMS
+                        if (!smsCodeSent) {
+                            // Enviar código SMS
+                            const response = await fetch('/api/auth/send-sms-code', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ phone: phone })
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.error || 'Erro ao enviar código SMS');
+                            }
+
+                            // Código enviado com sucesso
+                            smsCodeSent = true;
+                            smsCodeGroup.style.display = 'block';
+                            loginBtn.textContent = 'Verificar código';
+                            phoneInput.disabled = true;
+                            showSuccess('Código SMS enviado! Verifique o seu telemóvel.');
+                            
+                            // Iniciar countdown de 60 segundos
+                            startCountdown(60);
+                        } else {
+                            // Verificar código SMS
+                            const code = smsCodeInput.value.trim();
+                            
+                            if (!code || code.length !== 6) {
+                                showError('Por favor, introduza o código de 6 dígitos');
+                                setLoading(false);
+                                return;
+                            }
+
+                            // Verificar código
+                            const response = await fetch('/api/auth/verify-phone', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    phone: phone,
+                                    code: code
+                                })
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.error || 'Código inválido ou expirado');
+                            }
+
+                            // Login bem-sucedido - atualizar authSystem
+                            showSuccess('Login realizado com sucesso!');
+                            
+                            // Atualizar authSystem com dados do usuário
+                            if (window.authSystem && data.user) {
+                                window.authSystem.currentUser = data.user;
+                                
+                                // Carregar perfil do utilizador
+                                try {
+                                    if (window.supabaseClient && window.supabaseClient.supabase) {
+                                        const { data: profile } = await window.supabaseClient.supabase
+                                            .from('user_profiles')
+                                            .select('*')
+                                            .eq('user_id', data.user.id)
+                                            .single();
+                                        
+                                        if (profile) {
+                                            window.authSystem.userProfile = profile;
+                                        }
+                                    }
+                                } catch (profileError) {
+                                    console.warn('Erro ao carregar perfil:', profileError);
+                                }
+                            }
+                            
+                            // Aguardar um momento e redirecionar
+                            setTimeout(() => {
+                                if (window.authSystem) {
+                                    window.authSystem.redirectBasedOnProfile();
+                                } else if (window.universalProtection) {
+                                    window.universalProtection.handlePublicPage();
+                                } else {
+                                    window.location.href = './index-kromi.html';
+                                }
+                            }, 1000);
+                        }
+                    } else {
+                        // Login com email e senha
+                        const email = emailInput.value.trim();
+                        const password = passwordInput.value;
+
+                        if (!email) {
+                            showError('Por favor, introduza o email');
+                            setLoading(false);
+                            return;
+                        }
+
+                        if (!password) {
+                            showError('Por favor, introduza a palavra-passe');
+                            setLoading(false);
+                            return;
+                        }
+
+                        const result = await window.authSystem.signInWithEmail(email, password);
+                        showSuccess('Login realizado com sucesso!');
+                        
+                        // O redirecionamento será feito automaticamente pelo authSystem
+                    }
                     
                 } catch (error) {
                     console.error('Erro no login:', error);
@@ -425,11 +579,15 @@
                     let errorMsg = 'Erro ao fazer login';
                     
                     if (error.message.includes('Invalid login credentials')) {
-                        errorMsg = 'Email/telefone ou palavra-passe incorretos';
+                        errorMsg = 'Email ou palavra-passe incorretos';
                     } else if (error.message.includes('Email not confirmed')) {
                         errorMsg = 'Por favor, confirme o seu email antes de fazer login';
-                    } else if (error.message.includes('Too many requests')) {
+                    } else if (error.message.includes('Too many requests') || error.message.includes('429')) {
                         errorMsg = 'Muitas tentativas. Tente novamente mais tarde';
+                    } else if (error.message.includes('Código inválido')) {
+                        errorMsg = 'Código inválido ou expirado. Pode solicitar um novo código.';
+                        // Permitir reenviar código se inválido
+                        smsCodeInput.value = '';
                     } else if (error.message) {
                         errorMsg = error.message;
                     }
@@ -439,6 +597,54 @@
                     setLoading(false);
                 }
             });
+
+            // Função para countdown de reenvio
+            function startCountdown(seconds) {
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+                
+                const countdownEl = document.createElement('div');
+                countdownEl.className = 'countdown-timer';
+                countdownEl.id = 'countdownTimer';
+                phoneGroup.appendChild(countdownEl);
+                
+                let remaining = seconds;
+                
+                const updateCountdown = () => {
+                    if (remaining > 0) {
+                        countdownEl.textContent = `Pode solicitar novo código em ${remaining}s`;
+                        remaining--;
+                    } else {
+                        clearInterval(countdownInterval);
+                        countdownEl.remove();
+                        phoneInput.disabled = false;
+                        // Adicionar botão para reenviar
+                        const resendBtn = document.createElement('button');
+                        resendBtn.type = 'button';
+                        resendBtn.className = 'btn-send-sms';
+                        resendBtn.textContent = 'Reenviar código SMS';
+                        resendBtn.onclick = () => {
+                            smsCodeSent = false;
+                            smsCodeGroup.style.display = 'none';
+                            smsCodeInput.value = '';
+                            loginBtn.textContent = 'Enviar código SMS';
+                            resendBtn.remove();
+                            loginForm.dispatchEvent(new Event('submit'));
+                        };
+                        phoneGroup.appendChild(resendBtn);
+                    }
+                };
+                
+                updateCountdown();
+                countdownInterval = setInterval(() => {
+                    updateCountdown();
+                    if (remaining <= 0) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                }, 1000);
+            }
 
             // Login com Google
             googleBtn.addEventListener('click', async function() {
