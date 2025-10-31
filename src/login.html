@@ -330,12 +330,12 @@
         </div>
 
         <form class="login-form" id="loginForm">
-            <div class="form-group">
+            <div class="form-group" id="emailGroup">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" autocomplete="email" required>
             </div>
 
-            <div class="form-group phone-login" id="phoneGroup">
+            <div class="form-group phone-login" id="phoneGroup" style="display: none;">
                 <label for="phone">Telefone</label>
                 <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+351 912 345 678">
             </div>
@@ -415,8 +415,13 @@
                 isPhoneLogin = !isPhoneLogin;
                 smsCodeSent = false;
                 
+                const emailGroup = document.getElementById('emailGroup');
+                
                 if (isPhoneLogin) {
+                    // Modo telefone: ocultar email e password, mostrar telefone
+                    emailGroup.style.display = 'none';
                     phoneGroup.classList.add('active');
+                    phoneGroup.style.display = 'block';
                     passwordGroup.style.display = 'none';
                     smsCodeGroup.style.display = 'none';
                     emailInput.required = false;
@@ -426,7 +431,10 @@
                     togglePhoneBtn.textContent = 'Entrar com email';
                     hideMessages();
                 } else {
+                    // Modo email: mostrar email e password, ocultar telefone
+                    emailGroup.style.display = 'block';
                     phoneGroup.classList.remove('active');
+                    phoneGroup.style.display = 'none';
                     passwordGroup.style.display = 'block';
                     smsCodeGroup.style.display = 'none';
                     emailInput.required = true;
@@ -474,7 +482,12 @@
                             const data = await response.json();
 
                             if (!response.ok) {
-                                throw new Error(data.error || 'Erro ao enviar código SMS');
+                                let errorMsg = data.error || 'Erro ao enviar código SMS';
+                                // Verificar se telefone não existe
+                                if (data.code === 'PHONE_NOT_FOUND' || data.message?.includes('não está registado') || data.message?.includes('não encontrado')) {
+                                    errorMsg = 'Este telefone não está registado. Por favor, registe-se primeiro. <a href="register.html" style="color: var(--primary); text-decoration: underline;">Registar aqui</a>';
+                                }
+                                throw new Error(errorMsg);
                             }
 
                             // Código enviado com sucesso
@@ -577,8 +590,19 @@
                     console.error('Erro no login:', error);
                     
                     let errorMsg = 'Erro ao fazer login';
+                    let showRegisterLink = false;
                     
-                    if (error.message.includes('Invalid login credentials')) {
+                    // Verificar se é erro de utilizador não encontrado
+                    if (error.code === 'USER_NOT_FOUND' || 
+                        error.message.includes('não está registado') || 
+                        error.message.includes('não encontrado') ||
+                        error.message.includes('não está registado')) {
+                        errorMsg = error.message || 'Este email não está registado. Por favor, registe-se primeiro.';
+                        showRegisterLink = true;
+                    } else if (error.code === 'PHONE_NOT_FOUND') {
+                        errorMsg = 'Este telefone não está registado. Por favor, registe-se primeiro.';
+                        showRegisterLink = true;
+                    } else if (error.message.includes('Invalid login credentials')) {
                         errorMsg = 'Email ou palavra-passe incorretos';
                     } else if (error.message.includes('Email not confirmed')) {
                         errorMsg = 'Por favor, confirme o seu email antes de fazer login';
@@ -590,6 +614,11 @@
                         smsCodeInput.value = '';
                     } else if (error.message) {
                         errorMsg = error.message;
+                    }
+                    
+                    // Adicionar link para registo se necessário
+                    if (showRegisterLink) {
+                        errorMsg += ' <a href="register.html" style="color: var(--primary); text-decoration: underline; font-weight: 600;">Registar aqui</a>';
                     }
                     
                     showError(errorMsg);
@@ -668,7 +697,8 @@
             }
 
             function showError(message) {
-                errorMessage.textContent = message;
+                // Permitir HTML na mensagem de erro (para links)
+                errorMessage.innerHTML = message;
                 errorMessage.style.display = 'block';
                 successMessage.style.display = 'none';
             }

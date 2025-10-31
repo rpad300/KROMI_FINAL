@@ -486,6 +486,19 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
             expires_minutes: '10'
         };
         
+        // Verificar se telefone existe antes de enviar SMS
+        const duplicateCheck = await checkDuplicateContact(null, phone);
+        if (!duplicateCheck.exists) {
+            console.log(`ℹ️ Telefone não encontrado: ${phone} - Sugerindo registo`);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
+                code: 'PHONE_NOT_FOUND',
+                suggestion: 'register'
+            });
+        }
+        
         // Usar Supabase Auth para enviar OTP SMS (usa Twilio configurado no Supabase)
         // Criar cliente Supabase temporário com chave anon (necessário para OTP)
         const supabaseClient = supabase; // Usar cliente anon existente
@@ -499,6 +512,16 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
         
         if (error) {
             console.error('❌ Erro ao enviar SMS via Supabase:', error);
+            
+            // Verificar se é porque telefone não existe
+            if (error.message.includes('not found') || error.message.includes('does not exist')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
+                    code: 'PHONE_NOT_FOUND',
+                    suggestion: 'register'
+                });
+            }
             
             // Registrar falha no log
             await logSMS('phone_verification', phone, 'Falha no envio', 'failed', {
@@ -1399,6 +1422,72 @@ app.post('/api/auth/google/process-tokens', express.json(), async (req, res) => 
     }
 });
 
+// Função helper para verificar duplicados
+async function checkDuplicateContact(email = null, phone = null) {
+    try {
+        if (!supabaseAdmin) {
+            return { exists: false, type: null };
+        }
+        
+        const checks = [];
+        
+        // Verificar email no auth.users e user_profiles
+        if (email) {
+            // Verificar em auth.users
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const emailExistsAuth = authUsers.users.some(u => u.email?.toLowerCase() === email.toLowerCase());
+            
+            // Verificar em user_profiles
+            const { data: emailProfile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('id, email')
+                .eq('email', email)
+                .maybeSingle();
+            
+            if (emailExistsAuth || emailProfile) {
+                return { exists: true, type: 'email', value: email };
+            }
+        }
+        
+        // Verificar telefone no auth.users e user_profiles
+        if (phone) {
+            // Normalizar telefone (remover espaços, hífens, parênteses, pontos)
+            // Também remover + no início para comparação (guardamos original)
+            const normalizedPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+            
+            // Verificar em auth.users
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const phoneExistsAuth = authUsers.users.some(u => {
+                if (!u.phone) return false;
+                const userPhone = u.phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+                return userPhone === normalizedPhone || userPhone.endsWith(normalizedPhone) || normalizedPhone.endsWith(userPhone);
+            });
+            
+            // Verificar em user_profiles (mais eficiente - buscar apenas telefones não nulos)
+            const { data: phoneProfiles } = await supabaseAdmin
+                .from('user_profiles')
+                .select('id, phone')
+                .not('phone', 'is', null);
+            
+            const phoneExistsProfile = phoneProfiles?.some(p => {
+                if (!p.phone) return false;
+                const profilePhone = p.phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, '');
+                return profilePhone === normalizedPhone || profilePhone.endsWith(normalizedPhone) || normalizedPhone.endsWith(profilePhone);
+            });
+            
+            if (phoneExistsAuth || phoneExistsProfile) {
+                return { exists: true, type: 'phone', value: phone };
+            }
+        }
+        
+        return { exists: false, type: null };
+    } catch (error) {
+        console.error('❌ Erro ao verificar duplicados:', error);
+        // Em caso de erro, permitir o registo (melhor evitar bloqueios por erro técnico)
+        return { exists: false, type: null };
+    }
+}
+
 // Endpoint: Registro apenas com telefone (sem email)
 app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
     try {
@@ -1415,6 +1504,17 @@ app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
             return res.status(500).json({
                 success: false,
                 error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Verificar se telefone já existe
+        const duplicateCheck = await checkDuplicateContact(null, phone);
+        if (duplicateCheck.exists) {
+            return res.status(400).json({
+                success: false,
+                error: 'Este telefone já está registado. Por favor, faça login.',
+                code: 'PHONE_EXISTS',
+                suggestion: 'login'
             });
         }
         
@@ -1445,11 +1545,12 @@ app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
             console.error('❌ Erro ao criar utilizador:', authError);
             
             // Se o telefone já existe, tentar fazer login em vez de criar
-            if (authError.message.includes('already exists') || authError.message.includes('already registered')) {
+            if (authError.message.includes('already exists') || authError.message.includes('already registered') || authError.message.includes('User already registered')) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Este telefone já está registado. Use a opção de login.',
-                    code: 'PHONE_EXISTS'
+                    error: 'Este telefone já está registado. Por favor, faça login.',
+                    code: 'PHONE_EXISTS',
+                    suggestion: 'login'
                 });
             }
             
@@ -1532,6 +1633,41 @@ app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
     }
 });
 
+// Endpoint para verificar duplicados antes do registo
+app.post('/api/auth/check-duplicate', express.json(), async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+        
+        if (!supabaseAdmin) {
+            return res.status(500).json({
+                success: false,
+                error: 'Service Role Key não configurada'
+            });
+        }
+        
+        const duplicateCheck = await checkDuplicateContact(email, phone);
+        
+        res.json({
+            success: true,
+            exists: duplicateCheck.exists,
+            type: duplicateCheck.type,
+            value: duplicateCheck.value,
+            message: duplicateCheck.exists 
+                ? (duplicateCheck.type === 'email' 
+                    ? 'Este email já está registado. Por favor, faça login.'
+                    : 'Este telefone já está registado. Por favor, faça login.')
+                : 'Email/telefone disponível'
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar duplicados:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Endpoint: Login apenas com telefone (via Supabase Auth OTP)
 app.post('/api/auth/login-with-phone', express.json(), async (req, res) => {
     try {
@@ -1541,6 +1677,19 @@ app.post('/api/auth/login-with-phone', express.json(), async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Telefone é obrigatório'
+            });
+        }
+        
+        // Verificar se telefone existe antes de enviar SMS
+        const duplicateCheck = await checkDuplicateContact(null, phone);
+        if (!duplicateCheck.exists) {
+            console.log(`ℹ️ Telefone não encontrado para login: ${phone} - Sugerindo registo`);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
+                code: 'PHONE_NOT_FOUND',
+                suggestion: 'register'
             });
         }
         
@@ -1566,6 +1715,17 @@ app.post('/api/auth/login-with-phone', express.json(), async (req, res) => {
             console.log(`📱 SMS de login enviado para ${phone} via Supabase Auth (template: login_code)`);
         } catch (error) {
             console.error('❌ Erro ao enviar SMS:', error);
+            
+            // Verificar se é porque telefone não existe
+            if (error.message.includes('not found') || error.message.includes('does not exist')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
+                    code: 'PHONE_NOT_FOUND',
+                    suggestion: 'register'
+                });
+            }
+            
             return res.status(400).json({
                 success: false,
                 error: 'Erro ao enviar SMS: ' + error.message

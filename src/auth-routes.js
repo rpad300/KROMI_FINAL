@@ -28,6 +28,49 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
             
             console.log(`🔐 Tentativa de login: ${email}`);
             
+            // Verificar se o email existe antes de tentar login
+            if (!supabaseAdmin) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Service Role Key não configurada',
+                    message: 'Erro de configuração do servidor'
+                });
+            }
+            
+            // Buscar utilizador no auth.users
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const userExists = authUsers.users.some(u => u.email?.toLowerCase() === email.toLowerCase());
+            
+            // Também verificar em user_profiles
+            const { data: profileCheck } = await supabaseAdmin
+                .from('user_profiles')
+                .select('id, email')
+                .eq('email', email)
+                .maybeSingle();
+            
+            const emailExistsInProfile = !!profileCheck;
+            
+            // Se não existe em nenhum lugar, informar que precisa registar
+            if (!userExists && !emailExistsInProfile) {
+                console.log(`ℹ️ Email não encontrado: ${email} - Sugerindo registo`);
+                
+                // Auditar tentativa de login com email não existente
+                auditLogger.log('LOGIN_USER_NOT_FOUND', null, {
+                    email,
+                    reason: 'Email não registado',
+                    ip: req.ip,
+                    userAgent: req.get('user-agent')
+                });
+                
+                return res.status(404).json({
+                    success: false,
+                    error: 'Utilizador não encontrado',
+                    message: 'Este email não está registado. Por favor, registe-se primeiro.',
+                    code: 'USER_NOT_FOUND',
+                    suggestion: 'register'
+                });
+            }
+            
             // Validar com Supabase Auth
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
@@ -37,8 +80,20 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
             if (error) {
                 console.error(`❌ Login falhou: ${email} - ${error.message}`);
                 
+                // Melhorar mensagens de erro
+                let errorMessage = error.message;
+                let errorCode = 'INVALID_CREDENTIALS';
+                
+                // Se é erro de password, manter mensagem genérica por segurança
+                if (error.message.includes('Invalid login credentials') || error.message.includes('Wrong password')) {
+                    errorMessage = 'Email ou palavra-passe incorretos';
+                } else if (error.message.includes('Email not confirmed')) {
+                    errorMessage = 'Email não confirmado. Verifique a sua caixa de correio.';
+                    errorCode = 'EMAIL_NOT_CONFIRMED';
+                }
+                
                 // Auditar falha
-                auditLogger.log('LOGIN_FAILED', null, {
+                auditLogger.log('LOGIN_FAILED', userExists ? authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())?.id : null, {
                     email,
                     reason: error.message,
                     ip: req.ip,
@@ -46,8 +101,10 @@ function setupAuthRoutes(app, sessionManager, supabase, auditLogger, supabaseAdm
                 });
                 
                 return res.status(401).json({
-                    error: 'Credenciais inválidas',
-                    message: error.message
+                    success: false,
+                    error: errorMessage,
+                    message: errorMessage,
+                    code: errorCode
                 });
             }
             

@@ -141,7 +141,11 @@ class AuthClient {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Erro ao fazer login');
+                // Melhorar tratamento de erros
+                const error = new Error(data.message || 'Erro ao fazer login');
+                error.code = data.code;
+                error.suggestion = data.suggestion;
+                throw error;
             }
 
             if (data.success) {
@@ -528,7 +532,12 @@ class AuthClient {
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || 'Erro ao criar conta com telefone');
+                    const error = new Error(errorData.error || 'Erro ao criar conta com telefone');
+                    if (errorData.code === 'PHONE_EXISTS') {
+                        error.code = 'DUPLICATE_PHONE';
+                        error.suggestion = 'login';
+                    }
+                    throw error;
                 }
                 
                 const result = await response.json();
@@ -544,6 +553,47 @@ class AuthClient {
             if (email) {
                 console.log('📧 Registo com email...');
                 
+                // Verificar duplicados ANTES de tentar criar
+                try {
+                    const checkResponse = await fetch('/api/auth/check-duplicate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            email: email,
+                            phone: phone || null
+                        })
+                    });
+                    
+                    if (checkResponse.ok) {
+                        const checkResult = await checkResponse.json();
+                        if (checkResult.exists) {
+                            let errorMsg = '';
+                            if (checkResult.type === 'email') {
+                                errorMsg = 'Este email já está registado. Por favor, faça login.';
+                            } else if (checkResult.type === 'phone') {
+                                errorMsg = 'Este telefone já está registado. Por favor, faça login.';
+                            } else {
+                                errorMsg = 'Este email ou telefone já está registado. Por favor, faça login.';
+                            }
+                            
+                            const duplicateError = new Error(errorMsg);
+                            duplicateError.code = 'DUPLICATE_CONTACT';
+                            duplicateError.suggestion = 'login';
+                            throw duplicateError;
+                        }
+                    }
+                } catch (checkError) {
+                    // Se é erro de duplicado, propagar
+                    if (checkError.code === 'DUPLICATE_CONTACT') {
+                        throw checkError;
+                    }
+                    // Outros erros na verificação são ignorados (permite registo)
+                    console.warn('⚠️ Erro ao verificar duplicados (continuando):', checkError);
+                }
+                
                 // Criar utilizador no Supabase com email
                 const { data, error } = await this.supabase.auth.signUp({
                     email: email,
@@ -558,6 +608,13 @@ class AuthClient {
                 });
 
                 if (error) {
+                    // Melhorar mensagens de erro do Supabase
+                    if (error.message.includes('already registered') || error.message.includes('User already registered') || error.message.includes('already exists')) {
+                        const duplicateError = new Error('Este email já está registado. Por favor, faça login.');
+                        duplicateError.code = 'DUPLICATE_EMAIL';
+                        duplicateError.suggestion = 'login';
+                        throw duplicateError;
+                    }
                     throw error;
                 }
                 

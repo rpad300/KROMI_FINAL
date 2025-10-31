@@ -676,9 +676,14 @@
                     console.error('Erro no registo:', error);
                     
                     let errorMsg = 'Erro ao criar conta';
+                    let showLoginLink = false;
                     
-                    if (error.message.includes('User already registered') || error.message.includes('already exists')) {
-                        errorMsg = 'Este email ou telefone já está registado';
+                    // Verificar se é erro de duplicado
+                    if (error.code === 'DUPLICATE_EMAIL' || error.code === 'DUPLICATE_PHONE' || error.code === 'DUPLICATE_CONTACT' || 
+                        error.message.includes('User already registered') || error.message.includes('already exists') || 
+                        error.message.includes('já está registado')) {
+                        errorMsg = error.message || 'Este email ou telefone já está registado. Por favor, faça login.';
+                        showLoginLink = true;
                     } else if (error.message.includes('Invalid email')) {
                         errorMsg = 'Email inválido';
                     } else if (error.message.includes('Invalid phone')) {
@@ -689,7 +694,7 @@
                         errorMsg = error.message;
                     }
                     
-                    showError(errorMsg);
+                    showError(errorMsg + (showLoginLink ? ' <a href="login.html" style="color: var(--primary); text-decoration: underline;">Fazer login aqui</a>' : ''));
                 } finally {
                     setLoading(false);
                 }
