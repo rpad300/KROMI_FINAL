@@ -24,15 +24,35 @@ class AuditLogger {
     }
 
     /**
+     * Validar se é um IP válido
+     */
+    isValidIP(ip) {
+        if (!ip || ip === 'unknown' || ip === 'undefined') {
+            return false;
+        }
+        // Regex para IPv4 e IPv6 básico
+        const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+        const ipv6CompressedRegex = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
+        return ipv4Regex.test(ip) || ipv6Regex.test(ip) || ipv6CompressedRegex.test(ip);
+    }
+
+    /**
      * Registar evento de auditoria
      */
     async log(action, userId, details = {}) {
+        // Validar e normalizar IP
+        let ipAddress = details.ip;
+        if (!ipAddress || !this.isValidIP(ipAddress)) {
+            ipAddress = null; // Usar null em vez de 'unknown' para tipos INET
+        }
+        
         const logEntry = {
             action,
             user_id: userId,
             details: JSON.stringify(details),
-            ip_address: details.ip || 'unknown',
-            user_agent: details.userAgent || 'unknown',
+            ip_address: ipAddress,
+            user_agent: details.userAgent || null,
             created_at: new Date().toISOString()
         };
         

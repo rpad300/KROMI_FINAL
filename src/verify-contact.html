@@ -518,7 +518,19 @@
                     }
                     
                     await loadUserProfile();
-                    updateUI();
+                    
+                    // Verificar se agora está ativo e redirecionar
+                    if (userProfile && (userProfile.phone_confirmed_at || userProfile.email_confirmed_at)) {
+                        // Aguardar um momento e redirecionar para index-kromi
+                        setTimeout(() => {
+                            showMessage('Conta ativada com sucesso! Redirecionando...', 'success');
+                            setTimeout(() => {
+                                window.location.href = '/index-kromi.html';
+                            }, 1500);
+                        }, 500);
+                    } else {
+                        updateUI();
+                    }
                 } else {
                     showMessage('❌ ' + (result.error || 'Código inválido'), 'error');
                 }

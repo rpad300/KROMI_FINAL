@@ -486,6 +486,10 @@
                                 // Verificar se telefone não existe
                                 if (data.code === 'PHONE_NOT_FOUND' || data.message?.includes('não está registado') || data.message?.includes('não encontrado')) {
                                     errorMsg = 'Este telefone não está registado. Por favor, registe-se primeiro. <a href="register.html" style="color: var(--primary); text-decoration: underline;">Registar aqui</a>';
+                                } else if (data.code === 'TWILIO_CONFIG_ERROR') {
+                                    // Erro de configuração do Twilio - mostrar mensagem técnica mas útil
+                                    errorMsg = '⚠️ Erro de configuração do sistema: O serviço de SMS não está configurado corretamente. Contacte o administrador do sistema para resolver este problema.';
+                                    console.error('Erro de configuração Twilio:', data.details);
                                 }
                                 throw new Error(errorMsg);
                             }
@@ -554,14 +558,9 @@
                             
                             // Aguardar um momento e redirecionar
                             setTimeout(() => {
-                                if (window.authSystem) {
-                                    window.authSystem.redirectBasedOnProfile();
-                                } else if (window.universalProtection) {
-                                    window.universalProtection.handlePublicPage();
-                                } else {
-                                    window.location.href = './index-kromi.html';
-                                }
-                            }, 1000);
+                                // Redirecionar diretamente para index-kromi após login bem-sucedido
+                                window.location.href = '/index-kromi.html';
+                            }, 500);
                         }
                     } else {
                         // Login com email e senha

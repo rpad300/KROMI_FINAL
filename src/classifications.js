@@ -1,4 +1,4 @@
-class Kromi.onlineClassifications {
+class KromiClassifications {
     constructor() {
         this.supabaseClient = new SupabaseClient();
         this.selectedEvent = null;
@@ -884,5 +884,5 @@ class Kromi.onlineClassifications {
 
 // Inicializar quando página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    window.classificationsApp = new Kromi.onlineClassifications();
+    window.classificationsApp = new KromiClassifications();
 });

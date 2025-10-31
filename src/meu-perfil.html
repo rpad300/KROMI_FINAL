@@ -101,7 +101,7 @@
                     <!-- Sessões Ativas -->
                     <div class="profile-sessions">
                         <h3>🔒 Sessões Ativas</h3>
-                        <div id="sessionslist"></div>
+                        <div id="sessionsList"></div>
                         <button type="button" class="btn-secondary" onclick="logoutOthers()">
                             🗑️ Terminar Outras Sessões
                         </button>
@@ -153,80 +153,223 @@
             }
         });
         
-        function loadProfileData() {
-            if (!window.authSystem || !window.authSystem.userProfile) return;
+        async function loadProfileData() {
+            if (!window.authSystem) {
+                // Aguardar authSystem estar pronto
+                setTimeout(loadProfileData, 100);
+                return;
+            }
+            
+            // Aguardar perfil estar carregado
+            if (!window.authSystem.userProfile) {
+                // Aguardar mais um pouco
+                setTimeout(loadProfileData, 100);
+                return;
+            }
             
             const profile = window.authSystem.userProfile;
-            const user = window.authSystem.currentUser;
+            const user = window.authSystem.currentUser || { email: profile.email };
             
-            document.getElementById('profileName').textContent = profile.name || user.email;
-            document.getElementById('profileEmail').textContent = user.email;
+            // Atualizar header do perfil
+            const displayName = profile.name || user.email || 'Utilizador';
+            document.getElementById('profileName').textContent = displayName;
+            document.getElementById('profileEmail').textContent = user.email || profile.email || '';
             document.getElementById('profileRole').textContent = profile.role || 'user';
             
+            // Atualizar formulário
             document.getElementById('profileEditName').value = profile.name || '';
-            document.getElementById('profileEditEmail').value = user.email;
+            document.getElementById('profileEditEmail').value = user.email || profile.email || '';
             document.getElementById('profileEditPhone').value = profile.phone || '';
             document.getElementById('profileEditOrganization').value = profile.organization || '';
             
+            // Atualizar avatar
             const avatar = document.getElementById('profileAvatar');
-            const name = profile.name || user.email;
-            avatar.textContent = name.charAt(0).toUpperCase();
+            avatar.textContent = displayName.charAt(0).toUpperCase();
         }
         
         async function loadActiveSessions() {
-            if (!window.authSystem) return;
+            if (!window.authSystem) {
+                setTimeout(loadActiveSessions, 100);
+                return;
+            }
             
             try {
-                const sessions = await window.authSystem.getUserSessions();
-                const container = document.getElementById('sessionsList');
+                const response = await fetch('/api/auth/sessions', {
+                    credentials: 'include'
+                });
                 
+                if (!response.ok) {
+                    console.error('Erro ao carregar sessões:', response.status);
+                    return;
+                }
+                
+                const data = await response.json();
+                const sessions = data.sessions || [];
+                const currentSessionId = data.currentSession || '';
+                
+                const container = document.getElementById('sessionsList');
                 if (!container) return;
                 
                 if (sessions.length === 0) {
-                    container.innerHTML = '<p>Apenas esta sessão ativa</p>';
+                    container.innerHTML = '<p style="color: var(--text-secondary); padding: var(--spacing-4);">Apenas esta sessão ativa</p>';
                 } else {
-                    container.innerHTML = sessions.map(session => `
-                        <div class="session-item">
-                            <div>
-                                <strong>Sessão:</strong> ${session.id}<br>
-                                <small>Criada: ${new Date(session.createdAt).toLocaleString('pt-PT')}</small><br>
-                                <small>Última atividade: ${new Date(session.lastActivity).toLocaleString('pt-PT')}</small>
+                    container.innerHTML = sessions.map(session => {
+                        const isCurrent = session.id && currentSessionId && session.id.includes(currentSessionId.substring(0, 8));
+                        const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString('pt-PT') : 'N/A';
+                        const lastActivity = session.lastActivity ? new Date(session.lastActivity).toLocaleString('pt-PT') : 'N/A';
+                        const sessionId = session.id ? session.id.substring(0, 16) + '...' : 'N/A';
+                        
+                        return `
+                            <div class="session-item" style="background: var(--bg-secondary); padding: var(--spacing-4); border-radius: var(--radius-md); margin-bottom: var(--spacing-2); border-left: 4px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'};">
+                                <div>
+                                    <strong>Sessão:</strong> ${sessionId} ${isCurrent ? '<span style="color: var(--primary);">(Atual)</span>' : ''}<br>
+                                    <small style="color: var(--text-secondary);">Criada: ${createdAt}</small><br>
+                                    <small style="color: var(--text-secondary);">Última atividade: ${lastActivity}</small>
+                                </div>
                             </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 }
             } catch (error) {
                 console.error('Erro ao carregar sessões:', error);
+                const container = document.getElementById('sessionsList');
+                if (container) {
+                    container.innerHTML = '<p style="color: var(--error);">Erro ao carregar sessões</p>';
+                }
             }
         }
         
         async function handleProfileUpdate(event) {
             event.preventDefault();
             
-            const formData = new FormData(event.target);
-            const changePassword = document.getElementById('changeMyPassword').checked;
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
             
-            // TODO: Implementar atualização de perfil
-            console.log('Atualizar perfil:', {
-                name: formData.get('name'),
-                phone: formData.get('phone'),
-                organization: formData.get('organization'),
-                changePassword: changePassword
-            });
-            
-            alert('Funcionalidade em desenvolvimento');
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '💾 A guardar...';
+                
+                const formData = new FormData(event.target);
+                const changePassword = document.getElementById('changeMyPassword').checked;
+                
+                // Preparar dados do perfil
+                const profileData = {
+                    name: formData.get('name'),
+                    phone: formData.get('phone') || null,
+                    organization: formData.get('organization') || null
+                };
+                
+                // Validação básica
+                if (!profileData.name || profileData.name.trim() === '') {
+                    throw new Error('O nome é obrigatório');
+                }
+                
+                // Se quer alterar password, validar campos de password
+                if (changePassword) {
+                    const currentPassword = document.getElementById('currentPassword').value;
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    
+                    if (!currentPassword || !newPassword || !confirmPassword) {
+                        throw new Error('Preencha todos os campos de palavra-passe');
+                    }
+                    
+                    if (newPassword.length < 8) {
+                        throw new Error('A nova palavra-passe deve ter pelo menos 8 caracteres');
+                    }
+                    
+                    if (newPassword !== confirmPassword) {
+                        throw new Error('As palavras-passe não coincidem');
+                    }
+                }
+                
+                // Atualizar perfil
+                const profileResponse = await fetch('/api/profile/update', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(profileData)
+                });
+                
+                const profileResult = await profileResponse.json();
+                
+                if (!profileResponse.ok) {
+                    throw new Error(profileResult.error || 'Erro ao atualizar perfil');
+                }
+                
+                // Se quer alterar password, fazer isso também
+                if (changePassword) {
+                    const passwordResponse = await fetch('/api/auth/password/change', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            currentPassword: document.getElementById('currentPassword').value,
+                            newPassword: document.getElementById('newPassword').value,
+                            confirmPassword: document.getElementById('confirmPassword').value
+                        })
+                    });
+                    
+                    const passwordResult = await passwordResponse.json();
+                    
+                    if (!passwordResponse.ok) {
+                        throw new Error(passwordResult.error || 'Erro ao alterar palavra-passe');
+                    }
+                    
+                    // Limpar campos de password
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    document.getElementById('changeMyPassword').checked = false;
+                    document.getElementById('myPasswordFields').style.display = 'none';
+                }
+                
+                // Atualizar dados na página
+                if (window.authSystem && profileResult.user) {
+                    window.authSystem.userProfile = profileResult.user;
+                    loadProfileData();
+                }
+                
+                // Mostrar mensagem de sucesso
+                alert('Perfil atualizado com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro ao atualizar perfil:', error);
+                alert('Erro: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
         
         async function logoutOthers() {
             if (!window.authSystem) return;
             
-            if (confirm('Tem certeza que deseja terminar todas as outras sessões?')) {
-                const success = await window.authSystem.logoutOthers();
+            if (!confirm('Tem certeza que deseja terminar todas as outras sessões? Você será desconectado de outros dispositivos, mas permanecerá conectado neste.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/logout-others', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
                 
-                if (success) {
-                    alert('Outras sessões terminadas com sucesso!');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert(data.message || 'Outras sessões terminadas com sucesso!');
                     await loadActiveSessions();
+                } else {
+                    throw new Error(data.error || 'Erro ao terminar outras sessões');
                 }
+            } catch (error) {
+                console.error('Erro ao terminar outras sessões:', error);
+                alert('Erro: ' + error.message);
             }
         }
         

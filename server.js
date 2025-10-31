@@ -22,8 +22,8 @@ const setupAuthRoutes = require('./src/auth-routes');
 const AuditLogger = require('./src/audit-logger');
 const CSRFProtection = require('./src/csrf-protection');
 
-// Supabase Auth já tem integração Twilio configurada
-// Usaremos supabase.auth.signInWithOtp() e verifyOtp() para SMS
+// Integração direta Twilio para SMS (sem depender do Supabase Auth SMS)
+// Geramos códigos OTP localmente e enviamos via Twilio API direta
 
 const app = express();
 const PORT = 1144;
@@ -97,6 +97,16 @@ const imageProcessor = new BackgroundImageProcessor();
 app.use(cookieParser()); // Parser de cookies
 app.use(express.json()); // Parser de JSON
 app.use(express.urlencoded({ extended: true })); // Parser de form data
+
+// Helper para obter IP real do cliente (suporta proxies)
+function getClientIP(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+           req.headers['x-real-ip'] ||
+           req.connection?.remoteAddress ||
+           req.socket?.remoteAddress ||
+           req.ip ||
+           null;
+}
 
 // Expor serviços no app para acesso via req.app.get()
 app.set('sessionManager', sessionManager);
@@ -372,43 +382,353 @@ async function logSMS(templateKey, phone, message, status = 'sent', metadata = {
     }
 }
 
-// Função para enviar SMS via Supabase Auth OTP (com template logging)
-async function sendSMSViaSupabase(phone, supabaseClient, templateKey = 'phone_verification', templateVars = {}) {
+// ==========================================
+// FUNÇÕES TWILIO DIRETO
+// ==========================================
+
+// Função para gerar código OTP (6 dígitos)
+function generateOTPCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Função para enviar SMS diretamente via Twilio API
+async function sendSMSViaTwilioDirect(phone, message) {
     try {
-        // Renderizar template para logging (mesmo que Supabase use mensagem padrão)
-        const renderedMessage = await renderSMSTemplate(templateKey, templateVars);
+        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+        let twilioFromNumber = process.env.TWILIO_FROM_NUMBER;
         
-        // Usar signInWithOtp do Supabase (usa Twilio configurado no Supabase)
-        // Nota: Supabase Auth gerencia a mensagem automaticamente, mas registramos nosso template
-        const { data, error } = await supabaseClient.auth.signInWithOtp({
-            phone: phone,
-            options: {
-                channel: 'sms'
-            }
-        });
-        
-        if (error) {
-            // Registrar falha no log
-            await logSMS(templateKey, phone, renderedMessage, 'failed', {
-                error: error.message,
-                provider: 'supabase_auth'
-            });
-            throw error;
+        if (!twilioAuthToken) {
+            throw new Error('TWILIO_AUTH_TOKEN não configurado nas variáveis de ambiente');
         }
         
-        // Registrar sucesso no log
-        await logSMS(templateKey, phone, renderedMessage, 'sent', {
-            provider: 'supabase_auth',
-            message_id: data?.messageId || null
+        // Se não tem número From configurado, tentar buscar da base de dados ou usar padrão
+        if (!twilioFromNumber) {
+            // Tentar buscar da base de dados (platform_configurations)
+            try {
+                if (supabaseAdmin) {
+                    const { data: config } = await supabaseAdmin
+                        .from('platform_configurations')
+                        .select('config_value')
+                        .eq('config_key', 'TWILIO_FROM_NUMBER')
+                        .maybeSingle();
+                    
+                    if (config && config.config_value) {
+                        twilioFromNumber = config.config_value;
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao buscar TWILIO_FROM_NUMBER da base de dados:', e);
+            }
+            
+            // Fallback: usar padrão (número correto da conta)
+            if (!twilioFromNumber) {
+                twilioFromNumber = '+13188893212';
+                console.warn('⚠️ TWILIO_FROM_NUMBER não configurado. Usando padrão:', twilioFromNumber);
+            }
+        }
+        
+        console.log(`📱 Enviando SMS via Twilio: From=${twilioFromNumber}, To=${phone}, Account=${twilioAccountSid}`);
+        
+        // Usar biblioteca Twilio se disponível, senão usar HTTPS
+        let twilio;
+        try {
+            twilio = require('twilio');
+        } catch (e) {
+            // Se não tiver biblioteca, usar HTTPS nativo
+            const https = require('https');
+            const querystring = require('querystring');
+            
+            const postData = querystring.stringify({
+                To: phone,
+                From: twilioFromNumber,
+                Body: message
+            });
+            
+            const options = {
+                hostname: 'api.twilio.com',
+                port: 443,
+                path: `/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Basic ' + Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64')
+                }
+            };
+            
+            return new Promise((resolve, reject) => {
+                const req = https.request(options, (res) => {
+                    let data = '';
+                    
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
+                    
+                    res.on('end', () => {
+                        try {
+                            const response = JSON.parse(data);
+                            
+                            if (res.statusCode >= 200 && res.statusCode < 300) {
+                                console.log(`✅ SMS enviado via Twilio direto: ${response.sid}`);
+                                resolve({
+                                    success: true,
+                                    sid: response.sid,
+                                    status: response.status
+                                });
+                            } else {
+                                reject(new Error(response.message || `Erro HTTP ${res.statusCode}: ${data}`));
+                            }
+                        } catch (parseError) {
+                            reject(new Error('Erro ao processar resposta: ' + parseError.message));
+                        }
+                    });
+                });
+                
+                req.on('error', (error) => {
+                    reject(error);
+                });
+                
+                req.write(postData);
+                req.end();
+            });
+        }
+        
+        // Se tiver biblioteca Twilio instalada, usar ela
+        const client = twilio(twilioAccountSid, twilioAuthToken);
+        
+        const result = await client.messages.create({
+            to: phone,
+            from: twilioFromNumber,
+            body: message
         });
         
-        return { success: true, messageId: data?.messageId, renderedMessage: renderedMessage };
+        console.log(`✅ SMS enviado via Twilio direto: ${result.sid}`);
+        
+        return {
+            success: true,
+            sid: result.sid,
+            status: result.status
+        };
+        
     } catch (error) {
+        console.error('❌ Erro ao enviar SMS via Twilio:', error);
+        
+        // Verificar se é erro de número não pertencer à conta
+        if (error.message && (error.message.includes('Mismatch') || error.message.includes('does not belong'))) {
+            const configError = new Error(`O número "From" (${twilioFromNumber}) não pertence à conta Twilio configurada. Verifique se o número está correto e pertence à conta ${twilioAccountSid}`);
+            configError.code = 'TWILIO_NUMBER_MISMATCH';
+            throw configError;
+        }
+        
         throw new Error('Erro ao enviar SMS: ' + error.message);
     }
 }
 
-// Endpoint: Enviar código SMS para verificação (via Supabase Auth OTP)
+// Função para armazenar código OTP no user_profiles
+async function storeOTPCode(userId, phone, code, expiresInMinutes = 10) {
+    try {
+        if (!supabaseAdmin) {
+            throw new Error('Service Role Key não configurada');
+        }
+        
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes);
+        
+        // Buscar perfil por user_id ou phone
+        let profileQuery = supabaseAdmin
+            .from('user_profiles')
+            .select('id, user_id');
+        
+        if (userId) {
+            profileQuery = profileQuery.eq('user_id', userId);
+        } else {
+            profileQuery = profileQuery.eq('phone', phone);
+        }
+        
+        const { data: profile, error: profileError } = await profileQuery.maybeSingle();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+            throw profileError;
+        }
+        
+        if (!profile && !userId) {
+            // Se não existe perfil e não temos userId, não podemos armazenar
+            console.warn('⚠️ Não foi possível armazenar código OTP: perfil não encontrado');
+            return false;
+        }
+        
+        // Atualizar ou criar perfil com código OTP
+        const updateData = {
+            sms_verification_code: code,
+            sms_code_expires_at: expiresAt.toISOString(),
+            sms_code_attempts: 0,
+            updated_at: new Date().toISOString()
+        };
+        
+        if (profile) {
+            const { error: updateError } = await supabaseAdmin
+                .from('user_profiles')
+                .update(updateData)
+                .eq('id', profile.id);
+            
+            if (updateError) throw updateError;
+        } else if (userId) {
+            // Criar perfil básico se não existe
+            const { error: insertError } = await supabaseAdmin
+                .from('user_profiles')
+                .upsert({
+                    user_id: userId,
+                    phone: phone,
+                    ...updateData,
+                    status: 'pending_verification',
+                    role: 'user'
+                }, {
+                    onConflict: 'user_id'
+                });
+            
+            if (insertError) throw insertError;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Erro ao armazenar código OTP:', error);
+        return false;
+    }
+}
+
+// Função para verificar código OTP armazenado
+async function verifyOTPCode(phone, code, userId = null) {
+    try {
+        if (!supabaseAdmin) {
+            throw new Error('Service Role Key não configurada');
+        }
+        
+        // Buscar perfil por phone ou user_id
+        let profileQuery = supabaseAdmin
+            .from('user_profiles')
+            .select('id, user_id, sms_verification_code, sms_code_expires_at, sms_code_attempts, phone');
+        
+        if (userId) {
+            profileQuery = profileQuery.eq('user_id', userId);
+        } else {
+            profileQuery = profileQuery.eq('phone', phone);
+        }
+        
+        const { data: profile, error: profileError } = await profileQuery.maybeSingle();
+        
+        if (profileError) {
+            throw profileError;
+        }
+        
+        if (!profile) {
+            return {
+                valid: false,
+                error: 'Perfil não encontrado'
+            };
+        }
+        
+        // Verificar se código existe e não expirou
+        if (!profile.sms_verification_code) {
+            return {
+                valid: false,
+                error: 'Nenhum código OTP gerado para este telefone'
+            };
+        }
+        
+        // Verificar expiração
+        const expiresAt = new Date(profile.sms_code_expires_at);
+        if (expiresAt < new Date()) {
+            return {
+                valid: false,
+                error: 'Código OTP expirado'
+            };
+        }
+        
+        // Verificar tentativas (máximo 5)
+        if (profile.sms_code_attempts >= 5) {
+            return {
+                valid: false,
+                error: 'Muitas tentativas inválidas. Solicite um novo código.'
+            };
+        }
+        
+        // Verificar código
+        if (profile.sms_verification_code !== code) {
+            // Incrementar tentativas
+            await supabaseAdmin
+                .from('user_profiles')
+                .update({
+                    sms_code_attempts: (profile.sms_code_attempts || 0) + 1
+                })
+                .eq('id', profile.id);
+            
+            return {
+                valid: false,
+                error: 'Código inválido'
+            };
+        }
+        
+        // Código válido! Limpar código e atualizar telefone confirmado
+        const now = new Date().toISOString();
+        await supabaseAdmin
+            .from('user_profiles')
+            .update({
+                sms_verification_code: null,
+                sms_code_expires_at: null,
+                sms_code_attempts: 0,
+                phone_confirmed_at: now,
+                phone: phone, // Garantir que telefone está atualizado
+                updated_at: now
+            })
+            .eq('id', profile.id);
+        
+        return {
+            valid: true,
+            userId: profile.user_id
+        };
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar código OTP:', error);
+        return {
+            valid: false,
+            error: error.message
+        };
+    }
+}
+
+// Função para sincronizar verificação de telefone com Supabase Auth
+async function syncPhoneVerificationWithSupabase(userId, phone) {
+    try {
+        if (!supabaseAdmin) {
+            console.warn('⚠️ Service Role Key não configurada - não é possível sincronizar com Supabase Auth');
+            return false;
+        }
+        
+        // Atualizar telefone e confirmação no Supabase Auth usando Admin API
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            userId,
+            {
+                phone: phone,
+                phone_confirmed: true
+            }
+        );
+        
+        if (updateError) {
+            console.warn('⚠️ Erro ao sincronizar telefone com Supabase Auth:', updateError);
+            return false;
+        }
+        
+        console.log(`✅ Telefone sincronizado com Supabase Auth: ${userId}`);
+        return true;
+        
+    } catch (error) {
+        console.warn('⚠️ Erro ao sincronizar telefone com Supabase:', error);
+        return false;
+    }
+}
+
+// Endpoint: Enviar código SMS para verificação (via Twilio Direto)
 app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
     try {
         const { phone, user_id, email } = req.body;
@@ -424,6 +744,15 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
             return res.status(500).json({
                 success: false,
                 error: 'Service Role Key não configurada'
+            });
+        }
+        
+        // Verificar se Twilio está configurado
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+        if (!twilioAuthToken) {
+            return res.status(500).json({
+                success: false,
+                error: 'TWILIO_AUTH_TOKEN não configurado nas variáveis de ambiente'
             });
         }
         
@@ -478,14 +807,6 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
             }
         }
         
-        // Preparar variáveis para template (código será gerado pelo Supabase)
-        // Nota: O Supabase gera o código automaticamente, então não temos acesso a ele antes do envio
-        // Mas podemos usar o template para logging e futuras customizações
-        const templateVars = {
-            user_name: userName || 'Utilizador',
-            expires_minutes: '10'
-        };
-        
         // Verificar se telefone existe antes de enviar SMS
         const duplicateCheck = await checkDuplicateContact(null, phone);
         if (!duplicateCheck.exists) {
@@ -499,84 +820,101 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
             });
         }
         
-        // Usar Supabase Auth para enviar OTP SMS (usa Twilio configurado no Supabase)
-        // Criar cliente Supabase temporário com chave anon (necessário para OTP)
-        const supabaseClient = supabase; // Usar cliente anon existente
+        // Gerar código OTP localmente
+        const otpCode = generateOTPCode();
+        console.log(`📱 Gerando código OTP para: ${phone} (código: ${otpCode})`);
         
-        const { data, error } = await supabaseClient.auth.signInWithOtp({
-            phone: phone,
-            options: {
-                channel: 'sms'
-            }
-        });
+        // Armazenar código OTP no user_profiles
+        const stored = await storeOTPCode(userId, phone, otpCode, 10);
+        if (!stored) {
+            console.warn('⚠️ Não foi possível armazenar código OTP, mas continuando...');
+        }
         
-        if (error) {
-            console.error('❌ Erro ao enviar SMS via Supabase:', error);
+        // Preparar variáveis para template SMS
+        const templateVars = {
+            code: otpCode,
+            user_name: userName || 'Utilizador',
+            expires_minutes: '10'
+        };
+        
+        // Renderizar template SMS com código real
+        const renderedMessage = await renderSMSTemplate('phone_verification', templateVars);
+        
+        // Enviar SMS via Twilio direto
+        console.log(`📱 Enviando SMS via Twilio direto para: ${phone}`);
+        
+        try {
+            const smsResult = await sendSMSViaTwilioDirect(phone, renderedMessage);
             
-            // Verificar se é porque telefone não existe
-            if (error.message.includes('not found') || error.message.includes('does not exist')) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
-                    code: 'PHONE_NOT_FOUND',
-                    suggestion: 'register'
+            // Registrar sucesso no log
+            await logSMS('phone_verification', phone, renderedMessage, 'sent', {
+                provider: 'twilio_direct',
+                user_id: userId || null,
+                email: email || null,
+                message_sid: smsResult.sid || null,
+                otp_code: otpCode // Para debugging (remover em produção se necessário)
+            });
+            
+            console.log(`✅ SMS enviado para ${phone} via Twilio direto (template: phone_verification, SID: ${smsResult.sid})`);
+            
+            // Se temos user_id, atualizar perfil e fazer audit log
+            if (userId) {
+                // Atualizar telefone no perfil se necessário
+                const { data: profile } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('phone')
+                    .eq('user_id', userId)
+                    .single();
+                
+                if (profile && profile.phone !== phone) {
+                    await supabaseAdmin
+                        .from('user_profiles')
+                        .update({ phone: phone })
+                        .eq('user_id', userId);
+                }
+                
+                // Audit log
+                await auditLogger.log('SMS_CODE_SENT', userId, {
+                    phone: phone,
+                    method: 'twilio_direct',
+                    message_sid: smsResult.sid
                 });
             }
             
+            res.json({
+                success: true,
+                message: 'Código SMS enviado com sucesso',
+                expires_in: 600 // 10 minutos
+            });
+            
+        } catch (smsError) {
+            console.error('❌ Erro ao enviar SMS via Twilio:', smsError);
+            
             // Registrar falha no log
-            await logSMS('phone_verification', phone, 'Falha no envio', 'failed', {
-                error: error.message,
-                provider: 'supabase_auth'
+            await logSMS('phone_verification', phone, renderedMessage, 'failed', {
+                error: smsError.message || 'Erro desconhecido',
+                provider: 'twilio_direct',
+                user_id: userId || null,
+                email: email || null,
+                error_code: smsError.code
             });
             
-            return res.status(400).json({
-                success: false,
-                error: 'Erro ao enviar SMS: ' + error.message
-            });
-        }
-        
-        // Registrar sucesso no log com template
-        const renderedMessage = await renderSMSTemplate('phone_verification', {
-            ...templateVars,
-            code: 'XXXXXX' // Placeholder - código real gerado pelo Supabase
-        });
-        
-        await logSMS('phone_verification', phone, renderedMessage, 'sent', {
-            provider: 'supabase_auth',
-            user_id: userId || null,
-            email: email || null
-        });
-        
-        console.log(`📱 SMS enviado para ${phone} via Supabase Auth (template: phone_verification)`);
-        
-        // Se temos user_id, atualizar perfil e fazer audit log
-        if (userId) {
-            // Atualizar telefone no perfil se necessário
-            const { data: profile } = await supabaseAdmin
-                .from('user_profiles')
-                .select('phone')
-                .eq('user_id', userId)
-                .single();
-            
-            if (profile && profile.phone !== phone) {
-                await supabaseAdmin
-                    .from('user_profiles')
-                    .update({ phone: phone })
-                    .eq('user_id', userId);
+            // Verificar se é erro de número não pertencer à conta
+            if (smsError.code === 'TWILIO_NUMBER_MISMATCH' || (smsError.message && smsError.message.includes('Mismatch'))) {
+                return res.status(500).json({
+                    success: false,
+                    error: smsError.message || 'O número "From" não pertence à conta Twilio configurada. Verifique a configuração.',
+                    code: 'TWILIO_NUMBER_MISMATCH',
+                    details: 'O número Twilio configurado não pertence à conta. Verifique no Console Twilio quais números pertencem à sua conta e configure TWILIO_FROM_NUMBER corretamente.'
+                });
             }
             
-            // Audit log
-            await auditLogger.log('SMS_CODE_SENT', userId, {
-                phone: phone,
-                method: 'supabase_auth_otp'
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao enviar SMS: ' + (smsError.message || 'Erro desconhecido'),
+                code: 'SMS_SEND_ERROR'
             });
         }
-        
-        res.json({
-            success: true,
-            message: 'Código SMS enviado com sucesso',
-            expires_in: 600 // 10 minutos (padrão Supabase)
-        });
         
     } catch (error) {
         console.error('❌ Erro ao enviar código SMS:', error);
@@ -587,7 +925,7 @@ app.post('/api/auth/send-sms-code', express.json(), async (req, res) => {
     }
 });
 
-// Endpoint: Verificar código SMS (via Supabase Auth OTP)
+// Endpoint: Verificar código SMS (via OTP local + sincronização Supabase)
 app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
     try {
         const { code, phone, user_id } = req.body;
@@ -606,17 +944,13 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             });
         }
         
-        // Verificar OTP via Supabase Auth
-        const supabaseClient = supabase; // Usar cliente anon
+        console.log(`🔍 Verificando código OTP para: ${phone}`);
         
-        const { data: verifyData, error: verifyError } = await supabaseClient.auth.verifyOtp({
-            phone: phone,
-            token: code,
-            type: 'sms'
-        });
+        // Verificar código OTP armazenado localmente
+        const verifyResult = await verifyOTPCode(phone, code, user_id);
         
-        if (verifyError || !verifyData || !verifyData.user) {
-            console.error('❌ Erro ao verificar OTP:', verifyError);
+        if (!verifyResult.valid) {
+            console.error('❌ Código OTP inválido:', verifyResult.error);
             
             // Se temos user_id, incrementar tentativas de rate limiting
             if (user_id) {
@@ -625,13 +959,24 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             
             return res.status(400).json({
                 success: false,
-                error: verifyError?.message || 'Código inválido ou expirado'
+                error: verifyResult.error || 'Código inválido ou expirado'
             });
         }
         
-        const userId = verifyData.user.id;
+        const userId = verifyResult.userId || user_id;
         
-        // Buscar perfil ou criar se necessário
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Utilizador não encontrado. Por favor, registe-se primeiro.'
+            });
+        }
+        
+        // Sincronizar verificação de telefone com Supabase Auth
+        console.log(`🔄 Sincronizando telefone confirmado com Supabase Auth para: ${userId}`);
+        await syncPhoneVerificationWithSupabase(userId, phone);
+        
+        // Buscar perfil
         let profile = null;
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('user_profiles')
@@ -640,14 +985,19 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             .single();
         
         if (profileError && profileError.code === 'PGRST116') {
-            // Criar perfil básico
+            // Criar perfil básico se não existe
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const authUser = authUsers.users.find(u => u.id === userId);
+            
             const { data: newProfile, error: createError } = await supabaseAdmin
                 .from('user_profiles')
                 .insert({
                     user_id: userId,
-                    email: verifyData.user.email || null,
+                    email: authUser?.email || null,
                     phone: phone,
-                    status: 'pending_verification'
+                    status: 'active', // Já confirmou telefone
+                    phone_confirmed_at: new Date().toISOString(),
+                    last_verification_channel: 'phone'
                 })
                 .select()
                 .single();
@@ -659,24 +1009,27 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             profile = profileData;
         }
         
-        // Confirmar telefone no perfil
-        await supabaseAdmin
-            .from('user_profiles')
-            .update({
-                phone: phone,
-                phone_confirmed_at: new Date().toISOString(),
-                last_verification_channel: 'phone'
-            })
-            .eq('user_id', userId);
-        
+        // O telefone já foi confirmado na função verifyOTPCode
         // O trigger SQL vai atualizar o status para 'active' automaticamente
         
         console.log(`✅ Telefone confirmado para user_id: ${userId}`);
         
+        // Buscar email do utilizador no Supabase Auth
+        let userEmail = null;
+        try {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const authUser = authUsers.users.find(u => u.id === userId);
+            if (authUser) {
+                userEmail = authUser.email;
+            }
+        } catch (e) {
+            console.warn('⚠️ Erro ao buscar email do utilizador:', e);
+        }
+        
         // Audit log
         await auditLogger.log('PHONE_VERIFIED', userId, {
             phone: phone,
-            method: 'supabase_auth_otp'
+            method: 'twilio_direct_otp'
         });
         
         // Criar sessão se necessário
@@ -685,10 +1038,10 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             if (profile) {
                 const sessionId = sessionManager.createSession(userId, {
                     user_id: userId,
-                    email: profile.email || verifyData.user.email,
+                    email: profile.email || userEmail,
                     name: profile.name,
                     role: profile.role || 'user',
-                    status: profile.status
+                    status: profile.status || 'active'
                 }, {
                     ip: req.ip,
                     userAgent: req.get('user-agent'),
@@ -718,7 +1071,7 @@ app.post('/api/auth/verify-phone', express.json(), async (req, res) => {
             message: 'Telefone confirmado com sucesso',
             user: {
                 id: userId,
-                email: verifyData.user.email,
+                email: profile?.email || userEmail,
                 phone: phone
             },
             session: sessionData
@@ -824,30 +1177,81 @@ app.post('/api/auth/resend-verification', express.json(), async (req, res) => {
                 });
             }
             
-            // Enviar SMS via Supabase Auth com template
-            const supabaseClient = supabase;
+            // Buscar telefone do perfil se não fornecido
+            if (!phone) {
+                try {
+                    const { data: profile } = await supabaseAdmin
+                        .from('user_profiles')
+                        .select('phone')
+                        .eq('user_id', userId)
+                        .single();
+                    
+                    if (profile && profile.phone) {
+                        phone = profile.phone;
+                    } else {
+                        // Buscar em auth.users
+                        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+                        if (authUser?.user?.phone) {
+                            phone = authUser.user.phone;
+                        }
+                    }
+                } catch (e) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Telefone não encontrado para este utilizador'
+                    });
+                }
+            }
+            
+            if (!phone) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Telefone não encontrado para este utilizador'
+                });
+            }
+            
+            // Gerar novo código OTP
+            const otpCode = generateOTPCode();
+            
+            // Armazenar código OTP
+            await storeOTPCode(userId, phone, otpCode, 10);
+            
+            // Renderizar template
             const templateVars = {
+                code: otpCode,
                 user_name: userName || 'Utilizador',
                 expires_minutes: '10'
             };
             
+            const renderedMessage = await renderSMSTemplate('phone_verification', templateVars);
+            
             try {
-                const smsResult = await sendSMSViaSupabase(
-                    phone,
-                    supabaseClient,
-                    'phone_verification',
-                    templateVars
-                );
+                // Enviar via Twilio direto
+                const smsResult = await sendSMSViaTwilioDirect(phone, renderedMessage);
                 
-                if (!smsResult.success) {
-                    throw new Error('Falha ao enviar SMS');
-                }
+                // Log
+                await logSMS('phone_verification', phone, renderedMessage, 'sent', {
+                    provider: 'twilio_direct',
+                    user_id: userId,
+                    message_sid: smsResult.sid,
+                    resend: true
+                });
                 
                 res.json({
                     success: true,
                     message: 'SMS reenviado com sucesso'
                 });
             } catch (smsError) {
+                console.error('❌ Erro ao reenviar SMS:', smsError);
+                
+                // Log erro
+                await logSMS('phone_verification', phone, renderedMessage, 'failed', {
+                    error: smsError.message,
+                    provider: 'twilio_direct',
+                    user_id: userId,
+                    resend: true
+                });
+                
                 return res.status(400).json({
                     success: false,
                     error: 'Erro ao enviar SMS: ' + smsError.message
@@ -1585,22 +1989,35 @@ app.post('/api/auth/signup-phone', express.json(), async (req, res) => {
             // Não falhar o registro
         }
         
-        // Enviar SMS de verificação via Supabase Auth com template
+        // Enviar SMS de verificação via Twilio direto
         try {
+            // Gerar código OTP
+            const otpCode = generateOTPCode();
+            
+            // Armazenar código OTP
+            await storeOTPCode(userId, phone, otpCode, 10);
+            
+            // Renderizar template
             const templateVars = {
+                code: otpCode,
                 user_name: full_name || 'Utilizador',
                 expires_minutes: '10'
             };
             
-            const smsResult = await sendSMSViaSupabase(
-                phone,
-                supabase,
-                'phone_verification',
-                templateVars
-            );
+            const renderedMessage = await renderSMSTemplate('phone_verification', templateVars);
+            
+            // Enviar via Twilio
+            const smsResult = await sendSMSViaTwilioDirect(phone, renderedMessage);
             
             if (smsResult.success) {
-                console.log('📱 SMS de verificação enviado com template');
+                console.log('📱 SMS de verificação enviado via Twilio direto');
+                
+                // Log
+                await logSMS('phone_verification', phone, renderedMessage, 'sent', {
+                    provider: 'twilio_direct',
+                    user_id: userId,
+                    message_sid: smsResult.sid
+                });
             }
         } catch (smsError) {
             console.warn('⚠️ Erro ao enviar SMS:', smsError);
@@ -1693,42 +2110,71 @@ app.post('/api/auth/login-with-phone', express.json(), async (req, res) => {
             });
         }
         
-        // Usar Supabase Auth para enviar OTP SMS com template
-        const supabaseClient = supabase;
+        // Buscar user_id do telefone
+        let userId = null;
+        try {
+            // Buscar em user_profiles
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('user_id')
+                .eq('phone', phone)
+                .maybeSingle();
+            
+            if (profile) {
+                userId = profile.user_id;
+            } else {
+                // Buscar em auth.users
+                const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+                const authUser = authUsers.users.find(u => u.phone === phone);
+                if (authUser) {
+                    userId = authUser.id;
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Erro ao buscar user_id:', e);
+        }
         
+        // Gerar código OTP localmente
+        const otpCode = generateOTPCode();
+        console.log(`📱 Gerando código OTP para login: ${phone} (código: ${otpCode})`);
+        
+        // Armazenar código OTP
+        await storeOTPCode(userId, phone, otpCode, 10);
+        
+        // Renderizar template SMS
         const templateVars = {
+            code: otpCode,
             expires_minutes: '10'
         };
         
+        const renderedMessage = await renderSMSTemplate('login_code', templateVars);
+        
+        // Enviar SMS via Twilio direto
         try {
-            const smsResult = await sendSMSViaSupabase(
-                phone,
-                supabaseClient,
-                'login_code',
-                templateVars
-            );
+            const smsResult = await sendSMSViaTwilioDirect(phone, renderedMessage);
             
-            if (!smsResult.success) {
-                throw new Error('Falha ao enviar SMS');
-            }
+            // Log
+            await logSMS('login_code', phone, renderedMessage, 'sent', {
+                provider: 'twilio_direct',
+                user_id: userId,
+                message_sid: smsResult.sid
+            });
             
-            console.log(`📱 SMS de login enviado para ${phone} via Supabase Auth (template: login_code)`);
+            console.log(`📱 SMS de login enviado para ${phone} via Twilio direto (template: login_code, SID: ${smsResult.sid})`);
         } catch (error) {
             console.error('❌ Erro ao enviar SMS:', error);
             
-            // Verificar se é porque telefone não existe
-            if (error.message.includes('not found') || error.message.includes('does not exist')) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Este telefone não está registado. Por favor, registe-se primeiro.',
-                    code: 'PHONE_NOT_FOUND',
-                    suggestion: 'register'
-                });
-            }
+            // Log erro
+            await logSMS('login_code', phone, renderedMessage, 'failed', {
+                error: error.message,
+                provider: 'twilio_direct',
+                user_id: userId
+            });
             
-            return res.status(400).json({
+            return res.status(500).json({
                 success: false,
-                error: 'Erro ao enviar SMS: ' + error.message
+                error: 'Erro ao enviar SMS: ' + error.message,
+                code: 'SMS_SEND_ERROR'
             });
         }
         
@@ -2728,6 +3174,182 @@ app.post('/api/users/create', requireAuth, requireRole('admin'), express.json(),
         
     } catch (error) {
         console.error('❌ Erro inesperado ao criar utilizador:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==========================================
+// ROTAS DE PERFIL DO PRÓPRIO UTILIZADOR
+// ==========================================
+
+// Atualizar perfil do próprio utilizador (qualquer utilizador autenticado)
+app.put('/api/profile/update', requireAuth, express.json(), async (req, res) => {
+    try {
+        const sessionId = req.cookies?.sid;
+        if (!sessionId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Não autenticado'
+            });
+        }
+
+        const session = sessionManager.getSession(sessionId);
+        if (!session) {
+            return res.status(401).json({
+                success: false,
+                error: 'Sessão inválida'
+            });
+        }
+
+        const userId = session.userId;
+        const { name, phone, organization } = req.body;
+
+        // Preparar dados para atualizar
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (phone !== undefined) updateData.phone = phone || null;
+        if (organization !== undefined) updateData.organization = organization || null;
+        
+        updateData.updated_at = new Date().toISOString();
+
+        // Atualizar perfil usando Service Role Key para bypass RLS
+        const { data: updatedProfile, error: updateError } = await supabaseAdmin
+            .from('user_profiles')
+            .update(updateData)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+        if (updateError) {
+            console.error('❌ Erro ao atualizar perfil:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: updateError.message
+            });
+        }
+
+        // Atualizar sessão com novos dados
+        if (updatedProfile) {
+            session.userProfile = {
+                ...session.userProfile,
+                name: updatedProfile.name,
+                phone: updatedProfile.phone,
+                organization: updatedProfile.organization
+            };
+        }
+
+        // Audit log
+        await auditLogger.log('PROFILE_UPDATED', userId, {
+            changes: Object.keys(updateData).filter(k => k !== 'updated_at'),
+            ip: req.ip
+        });
+
+        console.log(`✅ Perfil atualizado para utilizador: ${userId}`);
+
+        res.json({
+            success: true,
+            user: updatedProfile,
+            message: 'Perfil atualizado com sucesso'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao atualizar perfil:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Alterar password do próprio utilizador
+app.post('/api/auth/password/change', requireAuth, express.json(), async (req, res) => {
+    try {
+        const sessionId = req.cookies?.sid;
+        if (!sessionId) {
+            return res.status(401).json({
+                success: false,
+                error: 'Não autenticado'
+            });
+        }
+
+        const session = sessionManager.getSession(sessionId);
+        if (!session) {
+            return res.status(401).json({
+                success: false,
+                error: 'Sessão inválida'
+            });
+        }
+
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        // Validações
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'Todos os campos são obrigatórios'
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                error: 'A nova palavra-passe deve ter pelo menos 8 caracteres'
+            });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'As palavras-passe não coincidem'
+            });
+        }
+
+        // Verificar password atual usando Supabase Auth
+        const { data: authData, error: verifyError } = await supabase.auth.signInWithPassword({
+            email: session.userProfile.email,
+            password: currentPassword
+        });
+
+        if (verifyError) {
+            console.error('❌ Password atual incorreta:', verifyError);
+            return res.status(401).json({
+                success: false,
+                error: 'Palavra-passe atual incorreta'
+            });
+        }
+
+        // Atualizar password usando Service Role Key
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            session.userId,
+            { password: newPassword }
+        );
+
+        if (updateError) {
+            console.error('❌ Erro ao atualizar password:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: updateError.message || 'Erro ao atualizar palavra-passe'
+            });
+        }
+
+        // Audit log
+        await auditLogger.log('PASSWORD_CHANGED', session.userId, {
+            email: session.userProfile.email,
+            ip: req.ip
+        });
+
+        console.log(`✅ Password alterada para utilizador: ${session.userId}`);
+
+        res.json({
+            success: true,
+            message: 'Palavra-passe alterada com sucesso'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao alterar password:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -4035,6 +4657,224 @@ app.get('/live-stream', (req, res) => {
 // Página de teste do Supabase
 app.get('/test-supabase', (req, res) => {
     res.sendFile(path.join(__dirname, 'test-supabase.html'));
+});
+
+// ==========================================
+// ENDPOINT PARA LISTAR NÚMEROS TWILIO DA CONTA
+// ==========================================
+app.get('/api/twilio/phone-numbers', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+        
+        if (!twilioAuthToken) {
+            return res.status(500).json({
+                success: false,
+                error: 'TWILIO_AUTH_TOKEN não configurado nas variáveis de ambiente'
+            });
+        }
+        
+        // Listar números via API Twilio
+        const https = require('https');
+        
+        const options = {
+            hostname: 'api.twilio.com',
+            port: 443,
+            path: `/2010-04-01/Accounts/${twilioAccountSid}/IncomingPhoneNumbers.json`,
+            method: 'GET',
+            headers: {
+                'Authorization': 'Basic ' + Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64')
+            }
+        };
+        
+        return new Promise((resolve, reject) => {
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                res.on('end', () => {
+                    try {
+                        const response = JSON.parse(data);
+                        
+                        if (res.statusCode >= 200 && res.statusCode < 300) {
+                            const phoneNumbers = (response.incoming_phone_numbers || []).map(p => ({
+                                phone_number: p.phone_number,
+                                friendly_name: p.friendly_name,
+                                sid: p.sid,
+                                capabilities: p.capabilities
+                            }));
+                            
+                            res.json({
+                                success: true,
+                                phone_numbers: phoneNumbers,
+                                account_sid: twilioAccountSid,
+                                message: phoneNumbers.length > 0 
+                                    ? `Encontrados ${phoneNumbers.length} número(s). Use um deles como TWILIO_FROM_NUMBER.`
+                                    : 'Nenhum número encontrado nesta conta. Compre um número no Console Twilio.'
+                            });
+                            resolve();
+                        } else {
+                            reject(new Error(response.message || `Erro HTTP ${res.statusCode}: ${data}`));
+                        }
+                    } catch (parseError) {
+                        reject(new Error('Erro ao processar resposta: ' + parseError.message));
+                    }
+                });
+            });
+            
+            req.on('error', (error) => {
+                reject(error);
+            });
+            
+            req.end();
+        }).catch((error) => {
+            console.error('❌ Erro ao listar números Twilio:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Erro ao listar números Twilio',
+                details: error.message
+            });
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao listar números Twilio:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Erro ao listar números Twilio',
+            details: error.message
+        });
+    }
+});
+
+// ==========================================
+// ENDPOINT DE TESTE TWILIO (Apenas para desenvolvimento)
+// ==========================================
+app.post('/api/twilio/test-sms', requireAuth, requireRole('admin'), express.json(), async (req, res) => {
+    try {
+        const { to, from, message } = req.body;
+        
+        if (!to || !from || !message) {
+            return res.status(400).json({
+                success: false,
+                error: 'Parâmetros obrigatórios: to, from, message'
+            });
+        }
+        
+        // Usar variáveis de ambiente ou configuração do Supabase
+        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+        
+        if (!twilioAuthToken) {
+            return res.status(500).json({
+                success: false,
+                error: 'TWILIO_AUTH_TOKEN não configurado nas variáveis de ambiente'
+            });
+        }
+        
+        // Usar biblioteca Twilio se disponível, senão usar fetch
+        let twilio;
+        try {
+            twilio = require('twilio');
+        } catch (e) {
+            // Se não tiver a biblioteca, usar fetch
+            const https = require('https');
+            const querystring = require('querystring');
+            
+            const postData = querystring.stringify({
+                To: to,
+                From: from,
+                Body: message
+            });
+            
+            const options = {
+                hostname: 'api.twilio.com',
+                port: 443,
+                path: `/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Basic ' + Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64')
+                }
+            };
+            
+            return new Promise((resolve, reject) => {
+                const req = https.request(options, (res) => {
+                    let data = '';
+                    
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
+                    
+                    res.on('end', () => {
+                        try {
+                            const response = JSON.parse(data);
+                            
+                            if (res.statusCode >= 200 && res.statusCode < 300) {
+                                console.log(`✅ SMS enviado via Twilio: ${response.sid}`);
+                                resolve(response);
+                            } else {
+                                console.error(`❌ Erro ao enviar SMS: ${response.message || data}`);
+                                reject(new Error(response.message || 'Erro ao enviar SMS'));
+                            }
+                        } catch (parseError) {
+                            reject(new Error('Erro ao processar resposta: ' + parseError.message));
+                        }
+                    });
+                });
+                
+                req.on('error', (error) => {
+                    reject(error);
+                });
+                
+                req.write(postData);
+                req.end();
+            }).then((result) => {
+                res.json({
+                    success: true,
+                    message: 'SMS enviado com sucesso',
+                    sid: result.sid,
+                    status: result.status
+                });
+            }).catch((error) => {
+                console.error('❌ Erro ao enviar SMS via Twilio:', error);
+                res.status(400).json({
+                    success: false,
+                    error: error.message || 'Erro ao enviar SMS',
+                    details: error.message
+                });
+            });
+        }
+        
+        // Se tiver biblioteca Twilio instalada, usar ela
+        const client = twilio(twilioAccountSid, twilioAuthToken);
+        
+        const result = await client.messages.create({
+            to: to,
+            from: from,
+            body: message
+        });
+        
+        console.log(`✅ SMS enviado via Twilio: ${result.sid}`);
+        
+        res.json({
+            success: true,
+            message: 'SMS enviado com sucesso',
+            sid: result.sid,
+            status: result.status
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao testar SMS via Twilio:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Erro ao enviar SMS',
+            details: error.message
+        });
+    }
 });
 
 // Verificar se os certificados existem
