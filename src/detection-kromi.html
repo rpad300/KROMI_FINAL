@@ -129,17 +129,24 @@
         <div class="permission-content">
             <h3>🔐 PIN de Segurança</h3>
             <p>Digite o PIN do dispositivo para acessar a detecção.</p>
-            <div style="margin: var(--spacing-5) 0;">
-                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinInput" 
-                    placeholder="Digite o PIN"
-                    style="width: 100%; padding: var(--spacing-4); font-size: var(--font-size-2xl); text-align: center; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-primary); font-weight: 700; letter-spacing: 8px;">
-                <div id="pinError" style="color: var(--danger); margin-top: var(--spacing-2); font-size: var(--font-size-sm); text-align: center; display: none;"></div>
-            </div>
-            <div class="permission-actions">
-                <button class="btn btn-primary" id="validatePin">
-                    <i>🔓</i> Validar PIN
-                </button>
-            </div>
+            <form id="pinForm" onsubmit="event.preventDefault(); document.getElementById('validatePin').click();">
+                <!-- Campo username oculto para acessibilidade (recomendação do Chrome) -->
+                <input type="text" name="username" autocomplete="username" value="device-pin" style="position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
+                
+                <div style="margin: var(--spacing-5) 0;">
+                    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinInput" 
+                        placeholder="Digite o PIN"
+                        autocomplete="current-password"
+                        name="password"
+                        style="width: 100%; padding: var(--spacing-4); font-size: var(--font-size-2xl); text-align: center; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-primary); font-weight: 700; letter-spacing: 8px;">
+                    <div id="pinError" style="color: var(--danger); margin-top: var(--spacing-2); font-size: var(--font-size-sm); text-align: center; display: none;"></div>
+                </div>
+                <div class="permission-actions">
+                    <button type="submit" class="btn btn-primary" id="validatePin">
+                        <i>🔓</i> Validar PIN
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -294,8 +301,8 @@
                 await registerDevice(eventId, deviceId);
             }
             
-            // Get current location
-            await getCurrentLocation();
+            // NÃO chamar getCurrentLocation() aqui - será chamado após interação do usuário
+            // Isso evita violação de política do navegador
             
             // Setup event listeners
             setupEventListeners();
@@ -559,43 +566,51 @@
                             </p>
                         </div>
                         
-                        <div style="margin: 0 0 var(--spacing-4) 0;">
-                            <input 
-                                type="password" 
-                                id="conflictPinInput"
-                                placeholder="Digite o PIN do dispositivo"
-                                autocomplete="off"
-                                style="
-                                    width: 100%;
-                                    padding: var(--spacing-3);
-                                    font-size: var(--font-size-lg);
-                                    text-align: center;
-                                    letter-spacing: 0.5em;
-                                    border: 2px solid var(--border-color);
-                                    border-radius: var(--radius-base);
-                                    background: var(--bg-primary);
-                                    color: var(--text-primary);
-                                "
-                            />
-                            <div id="conflictPinError" style="color: var(--danger); margin-top: var(--spacing-2); display: none;"></div>
-                        </div>
-                        
-                        <div style="display: flex; gap: var(--spacing-3);">
-                            <button 
-                                id="confirmReleaseBtn"
-                                class="btn btn-primary"
-                                style="flex: 1;"
-                            >
-                                🔓 Libertar e Assumir
-                            </button>
-                            <button 
-                                id="cancelReleaseBtn"
-                                class="btn btn-secondary"
-                                style="flex: 1;"
-                            >
-                                ❌ Cancelar
-                            </button>
-                        </div>
+                        <form id="conflictPinForm" onsubmit="event.preventDefault(); document.getElementById('confirmReleaseBtn').click();">
+                            <!-- Campo username oculto para acessibilidade (recomendação do Chrome) -->
+                            <input type="text" name="username" autocomplete="username" value="device-pin" style="position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
+                            
+                            <div style="margin: 0 0 var(--spacing-4) 0;">
+                                <input 
+                                    type="password" 
+                                    id="conflictPinInput"
+                                    name="password"
+                                    placeholder="Digite o PIN do dispositivo"
+                                    autocomplete="current-password"
+                                    style="
+                                        width: 100%;
+                                        padding: var(--spacing-3);
+                                        font-size: var(--font-size-lg);
+                                        text-align: center;
+                                        letter-spacing: 0.5em;
+                                        border: 2px solid var(--border-color);
+                                        border-radius: var(--radius-base);
+                                        background: var(--bg-primary);
+                                        color: var(--text-primary);
+                                    "
+                                />
+                                <div id="conflictPinError" style="color: var(--danger); margin-top: var(--spacing-2); display: none;"></div>
+                            </div>
+                            
+                            <div style="display: flex; gap: var(--spacing-3);">
+                                <button 
+                                    type="submit"
+                                    id="confirmReleaseBtn"
+                                    class="btn btn-primary"
+                                    style="flex: 1;"
+                                >
+                                    🔓 Libertar e Assumir
+                                </button>
+                                <button 
+                                    type="button"
+                                    id="cancelReleaseBtn"
+                                    class="btn btn-secondary"
+                                    style="flex: 1;"
+                                >
+                                    ❌ Cancelar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 `;
                 
@@ -751,6 +766,11 @@
                 // PIN correto! Tentar iniciar sessão
                 console.log('✅ PIN validado com sucesso');
                 pinValidated = true;
+                
+                // Obter localização GPS após gesto do usuário (validar PIN)
+                if (!currentPosition) {
+                    await getCurrentLocation();
+                }
                 
                 // Criar sessão no Supabase
                 const sessionCreated = await createDeviceSession();
@@ -1161,13 +1181,18 @@
             overlay.appendChild(detectionArea);
         }
         
-        function startDetection() {
+        async function startDetection() {
             console.log('🎯 startDetection() chamada');
             
             if (!cameraStream) {
                 console.error('❌ Câmera não iniciada');
                 showError('Câmera não iniciada');
                 return;
+            }
+            
+            // Obter localização GPS após gesto do usuário (iniciar detecção)
+            if (!currentPosition) {
+                await getCurrentLocation();
             }
             
             isDetecting = true;

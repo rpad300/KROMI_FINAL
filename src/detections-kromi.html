@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#fc6b03">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <title>Kromi.online - Scanner de Dispositivo</title>
@@ -332,6 +333,8 @@
         // Variáveis globais
         let qrStream = null;
         let scanningInterval = null;
+        let scanningAnimationFrame = null;
+        let lastScanTime = 0;
         let currentEvent = null;
         let currentDevice = null;
         
@@ -442,23 +445,58 @@
                     }, { once: true });
                 });
                 
-                // Iniciar loop de escaneamento
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                const ctx = canvas.getContext('2d');
+                // Iniciar loop de escaneamento otimizado
+                // Reduzir resolução para processamento mais rápido (melhor performance)
+                const scanWidth = Math.min(video.videoWidth || 640, 640);
+                const scanHeight = Math.min(video.videoHeight || 480, 480);
+                canvas.width = scanWidth;
+                canvas.height = scanHeight;
                 
-                scanningInterval = setInterval(() => {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                // Usar willReadFrequently para melhor performance com getImageData
+                const ctx = canvas.getContext('2d', { 
+                    willReadFrequently: true 
+                });
+                
+                // Throttle: processar no máximo a cada 200ms
+                const SCAN_INTERVAL = 200;
+                lastScanTime = 0;
+                
+                // Usar requestAnimationFrame em vez de setInterval para melhor sincronização
+                function scanQRCode() {
+                    const now = Date.now();
+                    
+                    if (video.readyState === video.HAVE_ENOUGH_DATA && (now - lastScanTime >= SCAN_INTERVAL)) {
+                        lastScanTime = now;
                         
-                        if (code) {
-                            console.log('✅ QR Code detectado:', code.data);
-                            handleQRCodeScanned(code.data);
+                        try {
+                            // Desenhar frame do vídeo no canvas
+                            ctx.drawImage(video, 0, 0, scanWidth, scanHeight);
+                            
+                            // Ler dados da imagem (otimizado com willReadFrequently)
+                            const imageData = ctx.getImageData(0, 0, scanWidth, scanHeight);
+                            
+                            // Processar QR Code
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('✅ QR Code detectado:', code.data);
+                                handleQRCodeScanned(code.data);
+                                return; // Parar escaneamento após detectar
+                            }
+                        } catch (error) {
+                            // Ignorar erros silenciosamente durante escaneamento
+                            // (podem ocorrer quando video ainda não está pronto)
                         }
                     }
-                }, 300);
+                    
+                    // Continuar escaneamento
+                    if (scanningAnimationFrame !== null) {
+                        scanningAnimationFrame = requestAnimationFrame(scanQRCode);
+                    }
+                }
+                
+                // Iniciar loop de escaneamento
+                scanningAnimationFrame = requestAnimationFrame(scanQRCode);
                 
                 console.log('✅ Scanner QR Code iniciado automaticamente');
                 
@@ -479,9 +517,16 @@
         
         // Parar scanner QR Code
         function stopQRScanner() {
+            // Parar interval se existir (compatibilidade)
             if (scanningInterval) {
                 clearInterval(scanningInterval);
                 scanningInterval = null;
+            }
+            
+            // Cancelar animation frame
+            if (scanningAnimationFrame !== null) {
+                cancelAnimationFrame(scanningAnimationFrame);
+                scanningAnimationFrame = null;
             }
             
             if (qrStream) {
