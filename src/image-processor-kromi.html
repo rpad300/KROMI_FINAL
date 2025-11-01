@@ -1225,10 +1225,17 @@
                 
                 if (queueSection) queueSection.style.display = 'block';
                 
+                // Helper para adicionar prefixo data:image se necessário
+                const addImagePrefix = (base64) => {
+                    if (!base64) return '';
+                    if (base64.startsWith('data:image')) return base64;
+                    return `data:image/jpeg;base64,${base64}`;
+                };
+
                 queueContainer.innerHTML = combinedImages.map((img, index) => `
                     <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: ${img.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-secondary)'}; border: 1px solid ${img.status === 'error' ? 'var(--danger)' : 'var(--border-color)'}; border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
                         <div style="font-weight: 600; color: var(--primary);">#${index + 1}</div>
-                        <img src="${img.display_image || img.image_data}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-base);">
+                        <img src="${addImagePrefix(img.display_image || img.image_data)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-base);">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: var(--spacing-2); flex-wrap: wrap;">
                                 <span style="font-weight: 600; color: var(--text-primary);">Capturada às ${new Date(img.captured_at).toLocaleTimeString('pt-PT')}</span>

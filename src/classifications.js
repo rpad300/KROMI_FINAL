@@ -832,7 +832,7 @@ class KromiClassifications {
         }
     }
     
-    openImageInNewWindow(imageData, title = 'Foto da Detecção') {
+    async openImageInNewWindow(imageData, title = 'Foto da Detecção') {
         // Remover prefixo data: se existir
         let cleanImageData = imageData;
         if (imageData.startsWith('data:image/')) {
@@ -841,7 +841,7 @@ class KromiClassifications {
             cleanImageData = `data:image/jpeg;base64,${imageData}`;
         }
         
-        // Abrir nova janela com a imagem
+        // Abrir nova janela com a imagem (carregamento inicial)
         const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
         newWindow.document.write(`
             <html>
@@ -870,15 +870,154 @@ class KromiClassifications {
                             border: 2px solid #00ff88;
                             border-radius: 8px;
                         }
+                        .loading {
+                            color: #00ff88;
+                            text-align: center;
+                            padding: 20px;
+                        }
                     </style>
                 </head>
                 <body>
                     <h1>${title}</h1>
-                    <img src="${cleanImageData}" alt="${title}" />
+                    <div class="loading">A carregar imagem...</div>
                 </body>
             </html>
         `);
         newWindow.document.close();
+        
+        try {
+            // Processar imagem com overlay do logo
+            const imageWithLogo = await this.addLogoOverlay(cleanImageData);
+            
+            // Atualizar janela com imagem processada
+            newWindow.document.body.innerHTML = `
+                <h1>${title}</h1>
+                <img src="${imageWithLogo}" alt="${title}" />
+            `;
+        } catch (error) {
+            console.error('Erro ao adicionar logo:', error);
+            // Se falhar, mostrar imagem original sem logo
+            newWindow.document.body.innerHTML = `
+                <h1>${title}</h1>
+                <img src="${cleanImageData}" alt="${title}" />
+            `;
+        }
+    }
+    
+    async addLogoOverlay(imageData) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Carregar logo da Kromi (usar logo primário horizontal)
+                const logoResponse = await fetch('/api/branding/logo/primary/horizontal', {
+                    credentials: 'include'
+                });
+                
+                let logoUrl = null;
+                if (logoResponse.ok) {
+                    const logoData = await logoResponse.json();
+                    if (logoData.success && logoData.data && logoData.data.url) {
+                        logoUrl = logoData.data.url;
+                    }
+                }
+                
+                // Se não conseguir logo, retornar imagem original
+                if (!logoUrl) {
+                    console.warn('Logo não encontrado, mostrando imagem sem overlay');
+                    resolve(imageData);
+                    return;
+                }
+                
+                // Criar canvas para processar imagem
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Carregar imagem original
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = async () => {
+                    try {
+                        // Definir tamanho do canvas igual à imagem
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        // Desenhar imagem original
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Carregar logo
+                        const logo = new Image();
+                        logo.crossOrigin = 'anonymous';
+                        
+                        logo.onload = () => {
+                            try {
+                                // Calcular tamanho do logo adaptativo conforme orientação
+                                // Para imagens horizontais: usa 25% da largura
+                                // Para imagens verticais: usa 25% da largura (menor dimensão)
+                                // Isso garante que o logo seja proporcional em ambas orientações
+                                const isVertical = img.height > img.width;
+                                const logoWidth = img.width * 0.25;
+                                const logoHeight = (logo.height / logo.width) * logoWidth;
+                                
+                                // Posição: centro no topo com margem de 3% da altura
+                                const marginTop = img.height * 0.03;
+                                const marginBottom = img.height * 0.03; // Margem inferior igual à superior
+                                const logoX = (img.width - logoWidth) / 2;
+                                const logoY = marginTop;
+                                
+                                // Desenhar tira branca semi-transparente atrás do logo
+                                // A tira vai do topo da imagem até a parte inferior do logo com margem
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Branco com 70% de opacidade
+                                ctx.fillRect(0, 0, img.width, logoY + logoHeight + marginBottom);
+                                
+                                // Adicionar sombra sutil ao logo para melhor visibilidade
+                                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                                ctx.shadowBlur = 10;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 2;
+                                
+                                // Desenhar logo com opacidade (90% para manter visibilidade)
+                                ctx.globalAlpha = 0.9;
+                                ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+                                ctx.globalAlpha = 1.0;
+                                
+                                // Converter canvas para data URL
+                                const resultDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                                resolve(resultDataUrl);
+                            } catch (error) {
+                                console.error('Erro ao desenhar logo:', error);
+                                // Se falhar ao desenhar logo, retornar imagem original
+                                const originalDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                                resolve(originalDataUrl);
+                            }
+                        };
+                        
+                        logo.onerror = (error) => {
+                            console.error('Erro ao carregar logo:', error);
+                            // Se falhar ao carregar logo, retornar imagem original
+                            const originalDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                            resolve(originalDataUrl);
+                        };
+                        
+                        logo.src = logoUrl;
+                        
+                    } catch (error) {
+                        console.error('Erro ao processar imagem:', error);
+                        reject(error);
+                    }
+                };
+                
+                img.onerror = (error) => {
+                    console.error('Erro ao carregar imagem:', error);
+                    reject(error);
+                };
+                
+                img.src = imageData;
+                
+            } catch (error) {
+                console.error('Erro em addLogoOverlay:', error);
+                reject(error);
+            }
+        });
     }
 }
 

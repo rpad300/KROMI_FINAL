@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Gestão de Rotas GPS</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .toolbar {
+            padding: 1.5rem 2rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .routes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .route-card {
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .route-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .route-card.inactive {
+            opacity: 0.6;
+            background: var(--gray-100);
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .route-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-gray {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .route-description {
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat {
+            font-size: 0.875rem;
+        }
+
+        .stat-label {
+            color: var(--gray-700);
+            display: block;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .route-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-700);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Gestão de Rotas GPS</h1>
+            <p>Crie e gerencie rotas de tracking para o seu evento</p>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                ➕ Nova Rota
+            </button>
+            <button class="btn" onclick="loadRoutes()">
+                🔄 Recarregar
+            </button>
+        </div>
+
+        <div class="content">
+            <div id="routes-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Carregando rotas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Criar/Editar Rota -->
+    <div id="route-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Nova Rota</h2>
+            </div>
+            <div class="modal-body">
+                <form id="route-form">
+                    <input type="hidden" id="route-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome da Rota *</label>
+                        <input type="text" id="route-name" class="form-input" required placeholder="Ex: 10K - Percurso Urbano">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="route-description" class="form-textarea" placeholder="Descrição do percurso..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Distância (km) *</label>
+                            <input type="number" id="route-distance" class="form-input" step="0.1" required placeholder="10.0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Elevação ↗ (m)</label>
+                            <input type="number" id="route-elev-gain" class="form-input" step="0.1" placeholder="150">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Elevação ↘ (m)</label>
+                            <input type="number" id="route-elev-loss" class="form-input" step="0.1" placeholder="150">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Zoom do Mapa</label>
+                            <input type="number" id="route-zoom" class="form-input" value="13" min="1" max="20">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Centro Lat</label>
+                            <input type="number" id="route-lat" class="form-input" step="0.000001" placeholder="38.7223">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Centro Lng</label>
+                            <input type="number" id="route-lng" class="form-input" step="0.000001" placeholder="-9.1393">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">URL do GPX</label>
+                        <input type="url" id="route-gpx-url" class="form-input" placeholder="https://...">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Velocidade Máx (km/h)</label>
+                            <input type="number" id="route-max-speed" class="form-input" value="50" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Precisão Máx (m)</label>
+                            <input type="number" id="route-max-accuracy" class="form-input" value="50" step="0.1">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveRoute()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase - SUBSTITUIR com suas credenciais
+        const SUPABASE_URL = 'https://mdrvgbztadnluhrrnlob.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnZnYnp0YWRubHVocnJubG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTQ1MDUsImV4cCI6MjA3NjU3MDUwNX0.x2po57tZOQ443NLVURBWDIYQnYbJ4D6O45FlZ5qwmp4';
+        const EVENT_ID = 'YOUR_EVENT_ID'; // ID do evento atual
+
+        let supabase;
+
+        // Inicializar Supabase (assumindo que já está carregado globalmente)
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Se usar via CDN: supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            await loadRoutes();
+        });
+
+        async function loadRoutes() {
+            const container = document.getElementById('routes-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando rotas...</p></div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('track_routes')
+                    .select('*')
+                    .eq('event_id', EVENT_ID)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                            </svg>
+                            <h3>Nenhuma rota criada</h3>
+                            <p>Clique em "Nova Rota" para começar</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                renderRoutes(data);
+            } catch (error) {
+                console.error('Erro ao carregar rotas:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--danger)">❌ Erro ao carregar rotas</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderRoutes(routes) {
+            const container = document.getElementById('routes-container');
+            container.innerHTML = `
+                <div class="routes-grid">
+                    ${routes.map(route => `
+                        <div class="route-card ${route.is_active ? '' : 'inactive'}">
+                            <div class="route-header">
+                                <div class="route-name">${route.name}</div>
+                                <span class="badge ${route.is_active ? 'badge-success' : 'badge-gray'}">
+                                    ${route.is_active ? 'Ativa' : 'Inativa'}
+                                </span>
+                            </div>
+                            ${route.description ? `<p class="route-description">${route.description}</p>` : ''}
+                            <div class="route-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Distância</span>
+                                    <span class="stat-value">${route.distance_km || '-'} km</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Elevação ↗</span>
+                                    <span class="stat-value">${route.elev_gain_m || '-'} m</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Vel. Máx</span>
+                                    <span class="stat-value">${route.max_speed_kmh || '-'} km/h</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Precisão</span>
+                                    <span class="stat-value">${route.max_accuracy_m || '-'} m</span>
+                                </div>
+                            </div>
+                            <div class="route-actions">
+                                <button class="btn btn-sm" onclick="editRoute('${route.id}')">Editar</button>
+                                ${route.is_active 
+                                    ? `<button class="btn btn-sm btn-danger" onclick="toggleRoute('${route.id}', false)">Desativar</button>`
+                                    : `<button class="btn btn-sm btn-success" onclick="toggleRoute('${route.id}', true)">Ativar</button>`
+                                }
+                                ${route.gpx_url ? `<a href="${route.gpx_url}" class="btn btn-sm" target="_blank">Ver GPX</a>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function openCreateModal() {
+            document.getElementById('modal-title').textContent = 'Nova Rota';
+            document.getElementById('route-form').reset();
+            document.getElementById('route-id').value = '';
+            document.getElementById('route-modal').classList.add('active');
+        }
+
+        async function editRoute(routeId) {
+            try {
+                const { data, error } = await supabase
+                    .from('track_routes')
+                    .select('*')
+                    .eq('id', routeId)
+                    .single();
+
+                if (error) throw error;
+
+                document.getElementById('modal-title').textContent = 'Editar Rota';
+                document.getElementById('route-id').value = data.id;
+                document.getElementById('route-name').value = data.name || '';
+                document.getElementById('route-description').value = data.description || '';
+                document.getElementById('route-distance').value = data.distance_km || '';
+                document.getElementById('route-elev-gain').value = data.elev_gain_m || '';
+                document.getElementById('route-elev-loss').value = data.elev_loss_m || '';
+                document.getElementById('route-lat').value = data.map_center_lat || '';
+                document.getElementById('route-lng').value = data.map_center_lng || '';
+                document.getElementById('route-zoom').value = data.map_zoom || 13;
+                document.getElementById('route-gpx-url').value = data.gpx_url || '';
+                document.getElementById('route-max-speed').value = data.max_speed_kmh || 50;
+                document.getElementById('route-max-accuracy').value = data.max_accuracy_m || 50;
+
+                document.getElementById('route-modal').classList.add('active');
+            } catch (error) {
+                alert('Erro ao carregar rota: ' + error.message);
+            }
+        }
+
+        async function saveRoute() {
+            const routeId = document.getElementById('route-id').value;
+            const data = {
+                event_id: EVENT_ID,
+                name: document.getElementById('route-name').value,
+                description: document.getElementById('route-description').value || null,
+                distance_km: parseFloat(document.getElementById('route-distance').value) || null,
+                elev_gain_m: parseFloat(document.getElementById('route-elev-gain').value) || null,
+                elev_loss_m: parseFloat(document.getElementById('route-elev-loss').value) || null,
+                map_center_lat: parseFloat(document.getElementById('route-lat').value) || null,
+                map_center_lng: parseFloat(document.getElementById('route-lng').value) || null,
+                map_zoom: parseInt(document.getElementById('route-zoom').value) || 13,
+                gpx_url: document.getElementById('route-gpx-url').value || null,
+                max_speed_kmh: parseFloat(document.getElementById('route-max-speed').value) || 50,
+                max_accuracy_m: parseFloat(document.getElementById('route-max-accuracy').value) || 50
+            };
+
+            try {
+                let result;
+                if (routeId) {
+                    // Update
+                    result = await supabase
+                        .from('track_routes')
+                        .update(data)
+                        .eq('id', routeId);
+                } else {
+                    // Insert
+                    result = await supabase
+                        .from('track_routes')
+                        .insert([data]);
+                }
+
+                if (result.error) throw result.error;
+
+                closeModal();
+                await loadRoutes();
+            } catch (error) {
+                alert('Erro ao salvar rota: ' + error.message);
+            }
+        }
+
+        async function toggleRoute(routeId, isActive) {
+            if (!confirm(`Tem certeza que deseja ${isActive ? 'ativar' : 'desativar'} esta rota?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('track_routes')
+                    .update({ is_active: isActive })
+                    .eq('id', routeId);
+
+                if (error) throw error;
+
+                await loadRoutes();
+            } catch (error) {
+                alert('Erro ao atualizar rota: ' + error.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('route-modal').classList.remove('active');
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('route-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'route-modal') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
+

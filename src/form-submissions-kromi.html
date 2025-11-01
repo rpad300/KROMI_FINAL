@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kromi.online - Submissões do Formulário</title>
+    
+    <meta name="theme-color" content="#fc6b03">
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        .layout-with-sidebar { display: flex; min-height: 100vh; background: var(--bg-primary); }
+        .layout-with-sidebar .main { margin-left: 280px; margin-top: 60px; width: calc(100% - 280px); }
+        @media (max-width: 1024px) { .layout-with-sidebar .main { margin-left: 0 !important; width: 100% !important; } }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 32px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+        .stat-label { font-size: 14px; color: var(--text-secondary); }
+        
+        .submissions-table { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+        .table-header { background: var(--bg-primary); padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: var(--bg-primary); padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border-color); font-weight: 600; }
+        .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+        .data-table tr:hover { background: rgba(252, 107, 3, 0.05); }
+        
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-confirmed { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .badge-pending { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+        .badge-paid { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    </style>
+</head>
+<body>
+    <div class="layout-with-sidebar">
+        <nav id="sidebar" class="sidebar"></nav>
+        
+        <main class="main">
+            <div style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h1 style="margin: 0;">📊 Submissões do Formulário</h1>
+                        <p style="margin: 4px 0 0 0; color: var(--text-secondary);" id="formTitle">Carregando...</p>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="goBack()">◀️ Voltar</button>
+                        <button class="btn btn-success" onclick="exportCSV()">📥 Exportar CSV</button>
+                        <button class="btn btn-success" onclick="exportExcel()">📥 Exportar Excel</button>
+                    </div>
+                </div>
+                
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalSubmissions">0</div>
+                        <div class="stat-label">Total Submissões</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="confirmedSubmissions">0</div>
+                        <div class="stat-label">Confirmadas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="paidSubmissions">0</div>
+                        <div class="stat-label">Pagas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todaySubmissions">0</div>
+                        <div class="stat-label">Hoje</div>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0;">🔍 Filtros</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div>
+                            <label class="form-label">Estado:</label>
+                            <select id="filterStatus" class="form-select" onchange="applyFilters()">
+                                <option value="">Todos</option>
+                                <option value="confirmed">Confirmadas</option>
+                                <option value="pending">Pendentes</option>
+                                <option value="cancelled">Canceladas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Pagamento:</label>
+                            <select id="filterPayment" class="form-select" onchange="applyFilters()">
+                                <option value="">Todos</option>
+                                <option value="paid">Pagos</option>
+                                <option value="pending">Pendentes</option>
+                                <option value="failed">Falhados</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Pesquisar:</label>
+                            <input type="text" id="searchSubmissions" class="form-input" placeholder="Nome, email..." onkeyup="applyFilters()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table -->
+                <div class="submissions-table">
+                    <div class="table-header">
+                        <h3 style="margin: 0;">📋 Lista de Submissões</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="loadSubmissions()">🔄 Atualizar</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Telefone</th>
+                                    <th>Estado</th>
+                                    <th>Pagamento</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="submissionsBody">
+                                <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modal: View Submission -->
+    <div id="submissionModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-secondary); border-radius: 16px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
+                <h2 style="margin: 0;" id="submissionModalTitle">Detalhes da Submissão</h2>
+                <button class="btn btn-sm btn-secondary" onclick="closeSubmissionModal()">✕</button>
+            </div>
+            <div id="submissionDetails"></div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="/supabase.js?v=2025102605" defer></script>
+    <script src="/auth-client.js?v=2025102616" defer></script>
+    <script src="/auth-helper.js?v=2025102620" defer></script>
+    <script src="/navigation-config.js?v=2025102701" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/logo-loader.js?v=2025012702"></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    <script src="/universal-route-protection.js?v=2025102618" defer></script>
+    
+    <script>
+        let currentFormId, currentEventId;
+        let submissions = [];
+        let filteredSubmissions = [];
+        
+        async function waitForAuth() {
+            while (!window.authSystem?.userProfile) await new Promise(r => setTimeout(r, 100));
+        }
+        
+        async function waitForNav() {
+            let attempts = 0;
+            while (!window.NavigationUtils && attempts++ < 50) await new Promise(r => setTimeout(r, 100));
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForAuth();
+            await waitForNav();
+            
+            const params = new URLSearchParams(window.location.search);
+            currentFormId = params.get('form');
+            currentEventId = params.get('event');
+            
+            if (!currentFormId) {
+                alert('Form ID inválido');
+                history.back();
+                return;
+            }
+            
+            if (window.navigationService && currentEventId) {
+                window.navigationService.setEventContext(currentEventId);
+            }
+            
+            await loadForm();
+            await loadSubmissions();
+        });
+        
+        async function loadForm() {
+            try {
+                const res = await fetch(`/api/forms/${currentFormId}`, { credentials: 'include' });
+                const { success, form } = await res.json();
+                if (success && form) {
+                    document.getElementById('formTitle').textContent = form.form_title_translations?.pt || 'Sem título';
+                }
+            } catch (e) {
+                console.error('Erro:', e);
+            }
+        }
+        
+        async function loadSubmissions() {
+            try {
+                const res = await fetch(`/api/forms/${currentFormId}/submissions`, { credentials: 'include' });
+                const { success, submissions: data } = await res.json();
+                
+                if (success) {
+                    submissions = data || [];
+                    filteredSubmissions = submissions;
+                    renderSubmissions();
+                    updateStats();
+                }
+            } catch (e) {
+                console.error('Erro:', e);
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('totalSubmissions').textContent = submissions.length;
+            document.getElementById('confirmedSubmissions').textContent = submissions.filter(s => s.is_confirmed).length;
+            document.getElementById('paidSubmissions').textContent = submissions.filter(s => s.payment_status === 'paid').length;
+            
+            const today = new Date().toDateString();
+            document.getElementById('todaySubmissions').textContent = submissions.filter(s => 
+                new Date(s.created_at).toDateString() === today
+            ).length;
+        }
+        
+        function renderSubmissions() {
+            const tbody = document.getElementById('submissionsBody');
+            
+            if (filteredSubmissions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">Nenhuma submissão encontrada</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredSubmissions.map(s => {
+                const data = s.submission_data || {};
+                const name = data.full_name || data.name || '--';
+                const email = data.email || '--';
+                const phone = data.phone || data.telefone || '--';
+                
+                return `
+                    <tr>
+                        <td style="white-space: nowrap; font-size: 12px;">${new Date(s.created_at).toLocaleString('pt-PT')}</td>
+                        <td>${name}</td>
+                        <td>${email}</td>
+                        <td>${phone}</td>
+                        <td><span class="badge badge-${s.is_confirmed ? 'confirmed' : 'pending'}">${s.is_confirmed ? 'Confirmada' : 'Pendente'}</span></td>
+                        <td><span class="badge badge-${s.payment_status}">${s.payment_status === 'paid' ? 'Pago' : s.payment_status === 'pending' ? 'Pendente' : s.payment_status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick='viewSubmission(${JSON.stringify(s).replace(/'/g, "&apos;")})'>Ver</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function applyFilters() {
+            const status = document.getElementById('filterStatus').value;
+            const payment = document.getElementById('filterPayment').value;
+            const search = document.getElementById('searchSubmissions').value.toLowerCase();
+            
+            filteredSubmissions = submissions.filter(s => {
+                if (status && s.status !== status && !(status === 'confirmed' && s.is_confirmed)) return false;
+                if (payment && s.payment_status !== payment) return false;
+                
+                if (search) {
+                    const data = s.submission_data || {};
+                    const searchStr = JSON.stringify(data).toLowerCase();
+                    if (!searchStr.includes(search)) return false;
+                }
+                
+                return true;
+            });
+            
+            renderSubmissions();
+        }
+        
+        function viewSubmission(submission) {
+            const data = submission.submission_data || {};
+            let html = '<div style="display: grid; gap: 12px;">';
+            
+            for (const [key, value] of Object.entries(data)) {
+                html += `
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">${key}:</strong>
+                        <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px;">${value || '--'}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            html += `<div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color);">`;
+            html += `<strong>ID:</strong> ${submission.id}<br>`;
+            html += `<strong>Criado:</strong> ${new Date(submission.created_at).toLocaleString('pt-PT')}<br>`;
+            html += `<strong>IP:</strong> ${submission.ip_address || '--'}<br>`;
+            html += `<strong>Status:</strong> ${submission.status}<br>`;
+            html += `<strong>Pagamento:</strong> ${submission.payment_status}`;
+            html += `</div>`;
+            
+            document.getElementById('submissionDetails').innerHTML = html;
+            document.getElementById('submissionModal').style.display = 'flex';
+        }
+        
+        function closeSubmissionModal() {
+            document.getElementById('submissionModal').style.display = 'none';
+        }
+        
+        function exportCSV() {
+            if (filteredSubmissions.length === 0) {
+                alert('Nenhuma submissão para exportar');
+                return;
+            }
+            
+            const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Estado', 'Pagamento'];
+            const rows = filteredSubmissions.map(s => {
+                const data = s.submission_data || {};
+                return [
+                    new Date(s.created_at).toLocaleString('pt-PT'),
+                    data.full_name || data.name || '--',
+                    data.email || '--',
+                    data.phone || data.telefone || '--',
+                    s.is_confirmed ? 'Confirmada' : 'Pendente',
+                    s.payment_status
+                ];
+            });
+            
+            let csv = headers.join(',') + '\n';
+            csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `submissions_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+        
+        function exportExcel() {
+            if (filteredSubmissions.length === 0) {
+                alert('Nenhuma submissão para exportar');
+                return;
+            }
+            
+            const data = filteredSubmissions.map(s => {
+                const sd = s.submission_data || {};
+                return {
+                    'Data': new Date(s.created_at).toLocaleString('pt-PT'),
+                    'Nome': sd.full_name || sd.name || '--',
+                    'Email': sd.email || '--',
+                    'Telefone': sd.phone || sd.telefone || '--',
+                    'Estado': s.is_confirmed ? 'Confirmada' : 'Pendente',
+                    'Pagamento': s.payment_status,
+                    'ID': s.id
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Submissões');
+            XLSX.writeFile(wb, `submissions_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+        
+        function goBack() {
+            window.location.href = `/form-builder-kromi.html?event=${currentEventId}`;
+        }
+    </script>
+</body>
+</html>
+

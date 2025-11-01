@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Gestão de QR Codes</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .toolbar {
+            padding: 1.5rem 2rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 0.625rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--gray-100);
+            padding: 1.25rem;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--gray-100);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+        }
+
+        tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-danger {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .badge-warning {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .qr-code-display {
+            font-family: monospace;
+            background: var(--gray-100);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        .qr-code-display:hover {
+            background: var(--gray-200);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .qr-display {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .qr-display canvas {
+            margin: 0 auto 1rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+        }
+
+        .qr-code-text {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--gray-700);
+            word-break: break-all;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-700);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Gestão de QR Codes</h1>
+            <p>Emissão e controlo de QR codes para tracking GPS</p>
+        </div>
+
+        <div class="toolbar">
+            <input type="text" class="search-box" id="search" placeholder="Buscar por nome, dorsal ou email...">
+            <button class="btn btn-primary" onclick="issueAllQRs()">
+                🎫 Emitir QRs em Massa
+            </button>
+            <button class="btn" onclick="loadQRs()">
+                🔄 Recarregar
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Total de Participantes</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">QRs Ativos</div>
+                    <div class="stat-value" id="stat-active">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">QRs Revogados</div>
+                    <div class="stat-value" id="stat-revoked">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Sem QR</div>
+                    <div class="stat-value" id="stat-missing">0</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="qr-table">
+                    <thead>
+                        <tr>
+                            <th>Dorsal</th>
+                            <th>Participante</th>
+                            <th>Email</th>
+                            <th>QR Code</th>
+                            <th>Status</th>
+                            <th>Emitido em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qr-tbody">
+                        <tr>
+                            <td colspan="7">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Carregando...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QR Code -->
+    <div id="qr-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">QR Code</h2>
+            </div>
+            <div class="modal-body">
+                <div class="qr-display">
+                    <canvas id="qr-canvas"></canvas>
+                    <p class="qr-code-text" id="qr-code-text"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="downloadQR()">⬇️ Download</button>
+                <button class="btn" onclick="printQR()">🖨️ Imprimir</button>
+                <button class="btn btn-primary" onclick="closeQRModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incluir QRCode.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://mdrvgbztadnluhrrnlob.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnZnYnp0YWRubHVocnJubG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTQ1MDUsImV4cCI6MjA3NjU3MDUwNX0.x2po57tZOQ443NLVURBWDIYQnYbJ4D6O45FlZ5qwmp4';
+        const EVENT_ID = 'YOUR_EVENT_ID';
+
+        let supabase;
+        let allData = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            await loadQRs();
+
+            // Search
+            document.getElementById('search').addEventListener('input', (e) => {
+                filterData(e.target.value);
+            });
+        });
+
+        async function loadQRs() {
+            const tbody = document.getElementById('qr-tbody');
+            tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></td></tr>';
+
+            try {
+                // Buscar participantes e seus QRs
+                const { data, error } = await supabase
+                    .from('participants')
+                    .select(`
+                        id,
+                        full_name,
+                        email,
+                        bib_number,
+                        track_participant_qr (
+                            id,
+                            qr_code,
+                            status,
+                            issued_at
+                        )
+                    `)
+                    .eq('event_id', EVENT_ID)
+                    .order('bib_number', { ascending: true });
+
+                if (error) throw error;
+
+                allData = data;
+                renderTable(allData);
+                updateStats(allData);
+            } catch (error) {
+                console.error('Erro ao carregar QRs:', error);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger)">Erro: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('qr-tbody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 3rem">Nenhum participante encontrado</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(participant => {
+                const qr = participant.track_participant_qr?.find(q => q.status === 'active') || participant.track_participant_qr?.[0];
+                const hasActiveQR = qr && qr.status === 'active';
+
+                return `
+                    <tr>
+                        <td><strong>#${participant.bib_number || '-'}</strong></td>
+                        <td>${participant.full_name}</td>
+                        <td>${participant.email || '-'}</td>
+                        <td>
+                            ${qr ? `
+                                <span class="qr-code-display" onclick="showQR('${qr.qr_code}', '${participant.full_name}')" title="Clique para ver QR">
+                                    ${qr.qr_code.substring(0, 20)}...
+                                </span>
+                            ` : '<span style="color: var(--gray-700)">-</span>'}
+                        </td>
+                        <td>
+                            ${!qr ? '<span class="badge badge-warning">Sem QR</span>' : ''}
+                            ${qr && qr.status === 'active' ? '<span class="badge badge-success">Ativo</span>' : ''}
+                            ${qr && qr.status === 'revoked' ? '<span class="badge badge-danger">Revogado</span>' : ''}
+                        </td>
+                        <td>${qr ? new Date(qr.issued_at).toLocaleString('pt-PT') : '-'}</td>
+                        <td>
+                            ${!hasActiveQR ? `
+                                <button class="btn btn-sm btn-primary" onclick="issueQR('${participant.id}', '${participant.full_name}')">
+                                    Emitir QR
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm" onclick="showQR('${qr.qr_code}', '${participant.full_name}')">
+                                    Ver QR
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="reissueQR('${participant.id}', '${participant.full_name}')">
+                                    Reemitir
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats(data) {
+            const total = data.length;
+            const active = data.filter(p => p.track_participant_qr?.some(q => q.status === 'active')).length;
+            const revoked = data.filter(p => 
+                p.track_participant_qr?.some(q => q.status === 'revoked') && 
+                !p.track_participant_qr?.some(q => q.status === 'active')
+            ).length;
+            const missing = total - active - revoked;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-active').textContent = active;
+            document.getElementById('stat-revoked').textContent = revoked;
+            document.getElementById('stat-missing').textContent = missing;
+        }
+
+        function filterData(search) {
+            if (!search) {
+                renderTable(allData);
+                return;
+            }
+
+            const filtered = allData.filter(p => 
+                p.full_name.toLowerCase().includes(search.toLowerCase()) ||
+                p.email?.toLowerCase().includes(search.toLowerCase()) ||
+                p.bib_number?.toString().includes(search)
+            );
+
+            renderTable(filtered);
+        }
+
+        async function issueQR(participantId, participantName) {
+            if (!confirm(`Emitir QR para ${participantName}?`)) return;
+
+            try {
+                const { data, error } = await supabase.rpc('track_issue_qr', {
+                    p_event_id: EVENT_ID,
+                    p_participant_id: participantId,
+                    p_notes: 'Emitido via backoffice'
+                });
+
+                if (error) throw error;
+
+                alert('QR emitido com sucesso!');
+                showQR(data.qr_code, participantName);
+                await loadQRs();
+            } catch (error) {
+                alert('Erro ao emitir QR: ' + error.message);
+            }
+        }
+
+        async function reissueQR(participantId, participantName) {
+            if (!confirm(`Reemitir QR para ${participantName}?\n\nO QR anterior será revogado.`)) return;
+
+            await issueQR(participantId, participantName);
+        }
+
+        async function issueAllQRs() {
+            const missing = allData.filter(p => !p.track_participant_qr?.some(q => q.status === 'active'));
+            
+            if (missing.length === 0) {
+                alert('Todos os participantes já possuem QR ativo!');
+                return;
+            }
+
+            if (!confirm(`Emitir QRs para ${missing.length} participantes?`)) return;
+
+            let success = 0;
+            let failed = 0;
+
+            for (const participant of missing) {
+                try {
+                    await supabase.rpc('track_issue_qr', {
+                        p_event_id: EVENT_ID,
+                        p_participant_id: participant.id,
+                        p_notes: 'Emissão em massa via backoffice'
+                    });
+                    success++;
+                } catch (error) {
+                    console.error(`Erro ao emitir QR para ${participant.full_name}:`, error);
+                    failed++;
+                }
+            }
+
+            alert(`Concluído!\n✅ Sucesso: ${success}\n❌ Falhas: ${failed}`);
+            await loadQRs();
+        }
+
+        function showQR(qrCode, participantName) {
+            const canvas = document.getElementById('qr-canvas');
+            document.getElementById('qr-code-text').textContent = qrCode;
+            document.getElementById('qr-modal').dataset.qrCode = qrCode;
+            document.getElementById('qr-modal').dataset.participantName = participantName;
+
+            QRCode.toCanvas(canvas, qrCode, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (error) => {
+                if (error) console.error(error);
+            });
+
+            document.getElementById('qr-modal').classList.add('active');
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').classList.remove('active');
+        }
+
+        function downloadQR() {
+            const canvas = document.getElementById('qr-canvas');
+            const link = document.createElement('a');
+            link.download = `QR_${document.getElementById('qr-modal').dataset.participantName}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function printQR() {
+            const canvas = document.getElementById('qr-canvas');
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html>
+                <head>
+                    <title>QR Code - ${document.getElementById('qr-modal').dataset.participantName}</title>
+                    <style>
+                        body { text-align: center; font-family: Arial; }
+                        img { margin: 2rem auto; }
+                        h2 { margin-top: 1rem; }
+                    </style>
+                </head>
+                <body>
+                    <h1>VisionKrono - QR Code</h1>
+                    <h2>${document.getElementById('qr-modal').dataset.participantName}</h2>
+                    <img src="${canvas.toDataURL()}" />
+                    <p>${document.getElementById('qr-code-text').textContent}</p>
+                </body>
+                </html>
+            `);
+            win.document.close();
+            win.print();
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('qr-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'qr-modal') {
+                closeQRModal();
+            }
+        });
+    </script>
+</body>
+</html>
+

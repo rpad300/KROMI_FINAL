@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kromi.online - Editor de Formulários</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Sortable.js for Drag & Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        .layout-with-sidebar { display: flex; min-height: 100vh; background: var(--bg-primary); }
+        .layout-with-sidebar .main { margin-left: 280px; margin-top: 60px; width: calc(100% - 280px); min-height: calc(100vh - 60px); }
+        @media (max-width: 1024px) { .layout-with-sidebar .main { margin-left: 0 !important; margin-top: 60px !important; width: 100% !important; } }
+        
+        .editor-layout { display: grid; grid-template-columns: 280px 1fr 380px; gap: 20px; margin: 20px 0; }
+        @media (max-width: 1400px) { .editor-layout { grid-template-columns: 250px 1fr; } .preview-panel { display: none !important; } }
+        
+        .panel { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+        .panel-title { font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        
+        .catalog-field { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: grab; transition: all 0.2s; }
+        .catalog-field:hover { border-color: var(--primary); transform: translateX(4px); }
+        .catalog-field:active { cursor: grabbing; }
+        
+        .drop-zone { min-height: 400px; border: 2px dashed var(--border-color); border-radius: 12px; padding: 16px; }
+        .drop-zone.drag-over { border-color: var(--primary); background: rgba(252, 107, 3, 0.05); }
+        .drop-zone.empty::before { content: "↓ Arraste campos aqui"; display: flex; align-items: center; justify-content: center; min-height: 360px; color: var(--text-secondary); font-size: 16px; }
+        
+        .form-field { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: move; }
+        .form-field:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .field-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .field-actions { display: flex; gap: 4px; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-secondary); border-radius: 16px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 20px; }
+        .tab { padding: 12px 20px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); }
+        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: var(--primary); }
+        
+        .checkbox-group { display: flex; align-items: center; gap: 8px; }
+        .checkbox-group input[type="checkbox"] { width: auto; }
+        
+        .alert { padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+        .alert-success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; }
+        .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <div class="layout-with-sidebar">
+        <nav id="sidebar" class="sidebar"></nav>
+        
+        <main class="main">
+            <div style="padding: 20px;">
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <h1 style="margin: 0;">✏️ Editor de Formulário</h1>
+                        <p style="margin: 4px 0 0 0; color: var(--text-secondary);" id="formTitle">Carregando...</p>
+                        <div id="publicUrlContainer" style="display: none; margin-top: 12px;">
+                            <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 12px; display: inline-flex; align-items: center; gap: 12px;">
+                                <div>
+                                    <div style="font-size: 11px; color: #22c55e; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">🔗 Link Público</div>
+                                    <a href="" id="publicUrl" target="_blank" style="color: #22c55e; font-weight: 600; text-decoration: none; font-size: 14px; font-family: monospace;"></a>
+                                </div>
+                                <button class="btn btn-sm btn-success" onclick="copyPublicUrl()" title="Copiar link">
+                                    📋
+                                </button>
+                            </div>
+                        </div>
+                        <div id="draftMessage" style="display: none; margin-top: 12px;">
+                            <div style="background: rgba(251, 146, 60, 0.1); border: 1px solid rgba(251, 146, 60, 0.3); border-radius: 8px; padding: 12px; display: inline-block;">
+                                <span style="color: #fb923c; font-size: 13px;">⚠️ Rascunho - Publique para ativar o link público</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="goBack()">◀️ Voltar</button>
+                        <button class="btn btn-primary" onclick="saveForm()">💾 Guardar</button>
+                        <button class="btn btn-success" onclick="publishForm()" id="btnPublish">🚀 Publicar</button>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('basic')">📋 Básico</button>
+                    <button class="tab" onclick="switchTab('fields')">✏️ Campos</button>
+                    <button class="tab" onclick="switchTab('settings')">⚙️ Configurações</button>
+                </div>
+                
+                <!-- Tab: Basic -->
+                <div id="tab-basic" class="tab-content active">
+                    <div class="panel">
+                        <div class="form-group">
+                            <label class="form-label">Título (PT):</label>
+                            <input type="text" id="titlePt" class="form-input" placeholder="Ex: Inscrição Marathon Lisboa">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Título (EN):</label>
+                            <input type="text" id="titleEn" class="form-input" placeholder="Ex: Lisbon Marathon Registration">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Descrição (PT):</label>
+                            <textarea id="descPt" class="form-textarea" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Descrição (EN):</label>
+                            <textarea id="descEn" class="form-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab: Fields -->
+                <div id="tab-fields" class="tab-content">
+                    <div class="editor-layout">
+                        <!-- Catalog -->
+                        <div class="panel" style="max-height: 800px; overflow-y: auto;">
+                            <div class="panel-title">📚 Catálogo de Campos</div>
+                            <button class="btn btn-sm btn-primary" onclick="createCustomField()" style="width: 100%; margin-bottom: 12px;">
+                                ➕ Campo Custom
+                            </button>
+                            <div id="fieldCatalog">Carregando...</div>
+                        </div>
+                        
+                        <!-- Builder -->
+                        <div class="panel">
+                            <div class="panel-title">🔨 Construtor do Formulário</div>
+                            <div id="formBuilder" class="drop-zone empty"></div>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="panel preview-panel" style="max-height: 800px; overflow-y: auto;">
+                            <div class="panel-title">👁️ Pré-visualização</div>
+                            <div id="formPreview" style="background: var(--bg-primary); padding: 20px; border-radius: 8px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab: Settings -->
+                <div id="tab-settings" class="tab-content">
+                    <div class="panel">
+                        <h3>⚙️ Configurações Avançadas</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Máximo de Submissões:</label>
+                            <input type="number" id="maxSubmissions" class="form-input" placeholder="Ex: 1000" value="10000">
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="captchaEnabled">
+                            <label for="captchaEnabled">Ativar CAPTCHA</label>
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="allowEdits">
+                            <label for="allowEdits">Permitir edição após submissão</label>
+                        </div>
+                        
+                        <h3 style="margin-top: 32px;">💰 Pagamento</h3>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="paymentEnabled" onchange="togglePaymentFields()">
+                            <label for="paymentEnabled">Ativar Pagamento</label>
+                        </div>
+                        
+                        <div id="paymentFields" style="display: none;">
+                            <div class="form-group">
+                                <label class="form-label">Valor (€):</label>
+                                <input type="number" id="paymentAmount" class="form-input" placeholder="Ex: 25.00" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Moeda:</label>
+                                <select id="paymentCurrency" class="form-select">
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modal: Create Custom Field -->
+    <div id="customFieldModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;">➕ Criar Campo Custom</h2>
+                <button class="btn btn-sm btn-secondary" onclick="closeCustomFieldModal()">✕</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Chave do Campo:</label>
+                <input type="text" id="customFieldKey" class="form-input" placeholder="Ex: empresa, departamento, autorizacao">
+                <small style="color: var(--text-secondary); font-size: 12px;">Apenas letras minúsculas, números e underscore</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Tipo de Campo:</label>
+                <select id="customFieldType" class="form-select" onchange="updateCustomFieldTypeOptions()">
+                    <optgroup label="📝 Texto">
+                        <option value="text">Texto Curto</option>
+                        <option value="textarea">Texto Longo</option>
+                        <option value="wysiwyg">Texto Formatado (WYSIWYG)</option>
+                        <option value="password">Password</option>
+                        <option value="tags">Tags (múltiplos chips)</option>
+                    </optgroup>
+                    <optgroup label="✉️ Contacto">
+                        <option value="email">Email</option>
+                        <option value="phone">Telefone</option>
+                        <option value="full_name">Nome Completo (estruturado)</option>
+                        <option value="address">Morada Estruturada</option>
+                    </optgroup>
+                    <optgroup label="🔢 Numérico">
+                        <option value="number">Número</option>
+                        <option value="currency">Moeda</option>
+                        <option value="percentage">Percentagem</option>
+                        <option value="range">Intervalo Numérico</option>
+                        <option value="slider">Slider</option>
+                        <option value="rating">Classificação (estrelas)</option>
+                        <option value="nps">NPS (0-10)</option>
+                    </optgroup>
+                    <optgroup label="📅 Data/Tempo">
+                        <option value="date">Data</option>
+                        <option value="time">Hora</option>
+                        <option value="datetime">Data e Hora</option>
+                        <option value="date_range">Intervalo de Datas</option>
+                        <option value="month">Mês</option>
+                        <option value="week">Semana</option>
+                        <option value="duration">Duração (hh:mm)</option>
+                    </optgroup>
+                    <optgroup label="📋 Seleção">
+                        <option value="select">Lista Simples (dropdown)</option>
+                        <option value="multi_select">Multi-Select</option>
+                        <option value="radio">Opção Única (radio)</option>
+                        <option value="checkbox">Checkbox Único</option>
+                        <option value="multiple_choice">Múltipla Escolha</option>
+                        <option value="autocomplete">Autocomplete</option>
+                        <option value="country">País</option>
+                        <option value="city">Cidade</option>
+                        <option value="language">Idioma</option>
+                    </optgroup>
+                    <optgroup label="📎 Upload">
+                        <option value="file">Upload Ficheiro</option>
+                        <option value="image">Upload Imagem</option>
+                        <option value="video">Upload Vídeo</option>
+                        <option value="audio">Upload Áudio</option>
+                        <option value="camera">Captura Câmara</option>
+                        <option value="signature">Assinatura Digital</option>
+                        <option value="drawing">Desenho Canvas</option>
+                    </optgroup>
+                    <optgroup label="🌍 Geo/Sensores">
+                        <option value="location">Localização (mapa)</option>
+                        <option value="gps">Coordenadas GPS</option>
+                        <option value="qr_scanner">Leitor QR/Barcode</option>
+                    </optgroup>
+                    <optgroup label="🏃 Desportivo">
+                        <option value="dorsal">Número de Dorsal</option>
+                        <option value="tshirt_size">Tamanho Camisola</option>
+                        <option value="club">Clube/Equipa</option>
+                        <option value="category">Categoria/Escalão</option>
+                        <option value="license">Licença Federativa</option>
+                        <option value="emergency_contact">Contacto Emergência</option>
+                    </optgroup>
+                    <optgroup label="📄 Documentação">
+                        <option value="nif">NIF/VAT</option>
+                        <option value="iban">IBAN</option>
+                        <option value="id_card">Cartão Cidadão/Passaporte</option>
+                        <option value="postal_code">Código Postal</option>
+                    </optgroup>
+                    <optgroup label="🎨 Outros">
+                        <option value="url">URL</option>
+                        <option value="color">Cor</option>
+                        <option value="matrix">Matriz Likert</option>
+                        <option value="table">Tabela Editável</option>
+                        <option value="repeater">Repetidor (grupo)</option>
+                        <option value="calculated">Campo Calculado</option>
+                        <option value="hidden">Campo Oculto</option>
+                        <option value="html">HTML Estático</option>
+                        <option value="separator">Separador</option>
+                    </optgroup>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Label (PT):</label>
+                <input type="text" id="customLabelPt" class="form-input" placeholder="Ex: Nome da Empresa">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Label (EN):</label>
+                <input type="text" id="customLabelEn" class="form-input" placeholder="Ex: Company Name">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Placeholder (PT) - Opcional:</label>
+                <input type="text" id="customPlaceholder" class="form-input" placeholder="Ex: Digite o nome da sua empresa">
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="customRequired">
+                <label for="customRequired">Campo obrigatório</label>
+            </div>
+            
+            <!-- Field Type Description & Preview -->
+            <div id="fieldTypeInfo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color);">
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 16px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #3b82f6;">ℹ️ Sobre este Tipo</h4>
+                    <div id="fieldTypeDescription" style="font-size: 13px; line-height: 1.5; color: var(--text-secondary);"></div>
+                </div>
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 16px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #22c55e;">👁️ Preview</h4>
+                    <div id="fieldTypePreview"></div>
+                </div>
+            </div>
+            
+            <!-- Type-specific configuration -->
+            <div id="typeSpecificConfig"></div>
+            
+            <!-- Options for select/radio/multiple_choice -->
+            <div id="customFieldOptions" style="display: none;">
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color);">
+                    <h4 style="margin: 0 0 16px 0;">📝 Opções</h4>
+                    <div id="customOptionsList"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addCustomOption()" style="margin-top: 8px;">➕ Adicionar Opção</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeCustomFieldModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveCustomField()">Criar Campo</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Field Configuration -->
+    <div id="fieldModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;" id="modalTitle">Configurar Campo</h2>
+                <button class="btn btn-sm btn-secondary" onclick="closeModal()">✕</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Label (PT):</label>
+                <input type="text" id="fieldLabelPt" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Label (EN):</label>
+                <input type="text" id="fieldLabelEn" class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Placeholder (PT):</label>
+                <input type="text" id="fieldPlaceholderPt" class="form-input">
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="fieldRequired">
+                <label for="fieldRequired">Campo obrigatório</label>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Texto de ajuda (PT):</label>
+                <input type="text" id="fieldHelpPt" class="form-input" placeholder="Texto pequeno abaixo do campo">
+            </div>
+            
+            <!-- Options Section (for select, radio, checkbox) -->
+            <div id="optionsSection"></div>
+            
+            <!-- Validations Section -->
+            <div id="validationsSection"></div>
+            
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveFieldConfig()">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+    <script src="/supabase.js?v=2025102605" defer></script>
+    <script src="/auth-client.js?v=2025102616" defer></script>
+    <script src="/auth-helper.js?v=2025102620" defer></script>
+    <script src="/navigation-config.js?v=2025102701" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/logo-loader.js?v=2025012702"></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    <script src="/universal-route-protection.js?v=2025102618" defer></script>
+    <script src="/form-builder-advanced.js"></script>
+    <script src="/field-type-configs.js"></script>
+    <script src="/field-type-info.js"></script>
+    
+    <script>
+        let currentFormId, currentEventId;
+        let formFields = [];
+        let catalogFields = [];
+        let editingFieldIndex = null;
+        
+        // Wait for systems
+        async function waitForAuth() {
+            while (!window.authSystem?.userProfile) await new Promise(r => setTimeout(r, 100));
+        }
+        
+        async function waitForNav() {
+            let attempts = 0;
+            while (!window.NavigationUtils && attempts++ < 50) await new Promise(r => setTimeout(r, 100));
+        }
+        
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForAuth();
+            await waitForNav();
+            
+            const params = new URLSearchParams(window.location.search);
+            currentFormId = params.get('form');
+            currentEventId = params.get('event');
+            
+            if (!currentFormId || !currentEventId) {
+                alert('Parâmetros inválidos');
+                window.location.href = '/form-builder-kromi.html';
+                return;
+            }
+            
+            if (window.navigationService) {
+                window.navigationService.setEventContext(currentEventId);
+            }
+            
+            await loadCatalog();
+            await loadForm();
+            initDragAndDrop();
+        });
+        
+        // Load catalog
+        async function loadCatalog() {
+            try {
+                const res = await fetch('/api/forms/catalog', { credentials: 'include' });
+                const { success, fields } = await res.json();
+                
+                console.log('📚 Catálogo response:', { success, fields });
+                
+                if (success && fields) {
+                    catalogFields = fields || [];
+                    console.log('✅ Catálogo carregado:', catalogFields.length, 'campos');
+                    renderCatalog();
+                } else {
+                    console.error('❌ Erro ao carregar catálogo');
+                    catalogFields = [];
+                    renderCatalog();
+                }
+            } catch (e) {
+                console.error('❌ Erro ao carregar catálogo:', e);
+                catalogFields = [];
+                renderCatalog();
+            }
+        }
+        
+        function renderCatalog() {
+            const container = document.getElementById('fieldCatalog');
+            
+            if (!catalogFields || catalogFields.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">Nenhum campo disponível</p>';
+                return;
+            }
+            
+            container.innerHTML = catalogFields.map(f => `
+                <div class="catalog-field" draggable="true" data-field-key="${f.field_key}" data-field-id="${f.id}">
+                    <strong>${f.label_translations?.pt || f.field_key}</strong>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                        ${f.field_type} ${f.validation_rules?.required ? '(obrigatório)' : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Load form
+        async function loadForm() {
+            try {
+                const res = await fetch(`/api/forms/${currentFormId}`, { credentials: 'include' });
+                const { success, form } = await res.json();
+                if (success && form) {
+                    document.getElementById('formTitle').textContent = form.form_title_translations?.pt || 'Sem título';
+                    document.getElementById('titlePt').value = form.form_title_translations?.pt || '';
+                    document.getElementById('titleEn').value = form.form_title_translations?.en || '';
+                    document.getElementById('descPt').value = form.form_description_translations?.pt || '';
+                    document.getElementById('descEn').value = form.form_description_translations?.en || '';
+                    
+                    // Show public URL if published
+                    if (form.published_at && form.form_slug) {
+                        const baseUrl = window.location.origin;
+                        const publicUrl = `${baseUrl}/form/${form.form_slug}`;
+                        
+                        document.getElementById('publicUrl').href = publicUrl;
+                        document.getElementById('publicUrl').textContent = `/form/${form.form_slug}`;
+                        document.getElementById('publicUrlContainer').style.display = 'block';
+                        document.getElementById('draftMessage').style.display = 'none';
+                        document.getElementById('btnPublish').textContent = '✅ Publicado';
+                        document.getElementById('btnPublish').classList.add('btn-secondary');
+                        document.getElementById('btnPublish').classList.remove('btn-success');
+                    } else {
+                        document.getElementById('publicUrlContainer').style.display = 'none';
+                        document.getElementById('draftMessage').style.display = 'block';
+                        document.getElementById('btnPublish').textContent = '🚀 Publicar';
+                        document.getElementById('btnPublish').classList.remove('btn-secondary');
+                        document.getElementById('btnPublish').classList.add('btn-success');
+                    }
+                    
+                    // Load settings
+                    const settings = form.settings || {};
+                    document.getElementById('maxSubmissions').value = settings.max_submissions || 10000;
+                    document.getElementById('captchaEnabled').checked = settings.captcha_enabled || false;
+                    document.getElementById('allowEdits').checked = settings.allow_edits || false;
+                    
+                    // Load payment
+                    const payment = form.payment_config || {};
+                    if (payment.enabled) {
+                        document.getElementById('paymentEnabled').checked = true;
+                        document.getElementById('paymentAmount').value = payment.amount || '';
+                        document.getElementById('paymentCurrency').value = payment.currency || 'EUR';
+                        togglePaymentFields();
+                    }
+                    
+                    await loadFormFields();
+                }
+            } catch (e) {
+                console.error('Erro ao carregar formulário:', e);
+            }
+        }
+        
+        function copyPublicUrl() {
+            const url = document.getElementById('publicUrl').href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ Link copiado!\n\n' + url);
+            }).catch(() => {
+                // Fallback
+                prompt('Link público (Ctrl+C para copiar):', url);
+            });
+        }
+        
+        async function loadFormFields() {
+            try {
+                const res = await fetch(`/api/forms/${currentFormId}/fields`, { credentials: 'include' });
+                const { success, fields } = await res.json();
+                if (success) {
+                    formFields = (fields || []).sort((a, b) => a.field_order - b.field_order);
+                    console.log('📋 Campos carregados do formulário:', formFields.length);
+                    renderFormBuilder();
+                    renderPreview();
+                }
+            } catch (e) {
+                console.error('Erro ao carregar campos:', e);
+            }
+        }
+        
+        function renderFormBuilder() {
+            const container = document.getElementById('formBuilder');
+            
+            if (formFields.length === 0) {
+                container.className = 'drop-zone empty';
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.className = 'drop-zone';
+            container.innerHTML = formFields.map((f, i) => {
+                const catalog = catalogFields.find(c => c.id === f.field_catalog_id);
+                const label = f.label_translations?.pt || catalog?.label_translations?.pt || f.field_key;
+                const type = f.field_type || catalog?.field_type || 'text';
+                const isCustom = !f.field_catalog_id;
+                
+                return `
+                    <div class="form-field" draggable="true" data-index="${i}">
+                        <div class="field-header">
+                            <strong>${label} ${isCustom ? '<span style="font-size: 10px; color: var(--primary);">(CUSTOM)</span>' : ''}</strong>
+                            <div class="field-actions">
+                                <button class="btn btn-sm btn-secondary" onclick="editField(${i})">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteField(${i})">🗑️</button>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            Tipo: ${type}
+                            ${f.is_required ? '• Obrigatório' : '• Opcional'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderPreview() {
+            const container = document.getElementById('formPreview');
+            if (formFields.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">Nenhum campo adicionado</p>';
+                return;
+            }
+            
+            container.innerHTML = formFields.map(f => {
+                const catalog = catalogFields.find(c => c.id === f.field_catalog_id);
+                const label = f.label_translations?.pt || catalog?.label_translations?.pt || f.field_key;
+                const type = f.field_type || catalog?.field_type || 'text';  // Support custom fields
+                const placeholder = f.placeholder_translations?.pt || catalog?.placeholder_translations?.pt || '';
+                
+                let input = '';
+                if (type === 'textarea') {
+                    input = `<textarea class="form-textarea" rows="3" placeholder="${placeholder}" disabled></textarea>`;
+                } else if (type === 'select' || type === 'radio' || type === 'multiple_choice') {
+                    const options = f.options || catalog?.options || { pt: [] };
+                    const optionsPt = options.pt || [];
+                    
+                    if (type === 'select') {
+                        input = '<select class="form-select" disabled><option>Selecione...</option>';
+                        optionsPt.forEach(opt => {
+                            input += `<option>${opt}</option>`;
+                        });
+                        input += '</select>';
+                    } else {
+                        input = optionsPt.map(opt => `
+                            <div style="margin-bottom: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="${type === 'multiple_choice' ? 'checkbox' : 'radio'}" name="${f.field_key}" disabled>
+                                    <span>${opt}</span>
+                                </label>
+                            </div>
+                        `).join('');
+                    }
+                } else if (type === 'checkbox' || type === 'gdpr_consent') {
+                    input = `
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" disabled>
+                            <span>${label}</span>
+                        </label>
+                    `;
+                    label = ''; // Já incluído no checkbox
+                } else {
+                    const inputType = type === 'email' ? 'email' : type === 'phone' ? 'tel' : type === 'date' ? 'date' : type === 'number' ? 'number' : 'text';
+                    input = `<input type="${inputType}" class="form-input" placeholder="${placeholder}" disabled>`;
+                }
+                
+                return `
+                    <div style="margin-bottom: 16px;">
+                        ${label ? `<label style="display: block; margin-bottom: 8px; font-weight: 600;">
+                            ${label} ${f.is_required ? '<span style="color: #ef4444;">*</span>' : ''}
+                        </label>` : ''}
+                        ${input}
+                        ${f.help_text_translations?.pt ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${f.help_text_translations.pt}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Drag & Drop
+        function initDragAndDrop() {
+            const catalog = document.getElementById('fieldCatalog');
+            const builder = document.getElementById('formBuilder');
+            
+            // Catalog drag start
+            catalog.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('catalog-field')) {
+                    e.dataTransfer.setData('field-key', e.target.dataset.fieldKey);
+                    e.dataTransfer.setData('field-id', e.target.dataset.fieldId);
+                    e.dataTransfer.setData('source', 'catalog');
+                    e.target.classList.add('dragging');
+                }
+            });
+            
+            catalog.addEventListener('dragend', (e) => {
+                e.target.classList.remove('dragging');
+            });
+            
+            // Builder drag events
+            builder.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                builder.classList.add('drag-over');
+            });
+            
+            builder.addEventListener('dragleave', () => {
+                builder.classList.remove('drag-over');
+            });
+            
+            builder.addEventListener('drop', (e) => {
+                e.preventDefault();
+                builder.classList.remove('drag-over');
+                
+                const source = e.dataTransfer.getData('source');
+                
+                if (source === 'catalog') {
+                    const fieldKey = e.dataTransfer.getData('field-key');
+                    const fieldId = e.dataTransfer.getData('field-id');
+                    addFieldFromCatalog(fieldKey, fieldId);
+                }
+            });
+            
+            // Sortable for reordering
+            if (window.Sortable) {
+                new Sortable(builder, {
+                    animation: 150,
+                    ghostClass: 'dragging',
+                    onEnd: (evt) => {
+                        const movedField = formFields.splice(evt.oldIndex, 1)[0];
+                        formFields.splice(evt.newIndex, 0, movedField);
+                        updateFieldOrders();
+                        renderPreview();
+                    }
+                });
+            }
+        }
+        
+        function addFieldFromCatalog(fieldKey, fieldId) {
+            const catalog = catalogFields.find(f => f.id === fieldId);
+            if (!catalog) return;
+            
+            const newField = {
+                field_catalog_id: fieldId,
+                field_key: fieldKey,
+                field_type: catalog.field_type,
+                is_required: catalog.validation_rules?.required || false,
+                field_order: formFields.length + 1,
+                label_translations: null,
+                placeholder_translations: null,
+                help_text_translations: null,
+                validation_rules: null,
+                options: null
+            };
+            
+            formFields.push(newField);
+            renderFormBuilder();
+            renderPreview();
+        }
+        
+        function createCustomField() {
+            // Reset modal
+            document.getElementById('customFieldKey').value = '';
+            document.getElementById('customFieldType').value = 'text';
+            document.getElementById('customLabelPt').value = '';
+            document.getElementById('customLabelEn').value = '';
+            document.getElementById('customPlaceholder').value = '';
+            document.getElementById('customRequired').checked = false;
+            document.getElementById('customFieldOptions').style.display = 'none';
+            document.getElementById('customOptionsList').innerHTML = '';
+            
+            // Show modal
+            document.getElementById('customFieldModal').classList.add('active');
+            
+            // Trigger update to show info for default type (text)
+            updateCustomFieldTypeOptions();
+        }
+        
+        function closeCustomFieldModal() {
+            document.getElementById('customFieldModal').classList.remove('active');
+        }
+        
+        function updateCustomFieldTypeOptions() {
+            const type = document.getElementById('customFieldType').value;
+            
+            // Renderizar descrição e preview do tipo
+            if (window.FieldTypeInfo) {
+                window.FieldTypeInfo.renderFieldInfo(type);
+            }
+            
+            // Renderizar configurações específicas do tipo
+            const typeConfigHtml = window.FieldTypeConfigs?.getTypeSpecificConfig(type) || '';
+            document.getElementById('typeSpecificConfig').innerHTML = typeConfigHtml;
+            
+            // Inicializar regras de categoria se for tipo category
+            if (type === 'category') {
+                setTimeout(() => {
+                    const list = document.getElementById('categoryRulesList');
+                    if (list && !list.children.length) {
+                        initDefaultCategoryRules();
+                    }
+                }, 100);
+            }
+            
+            // Inicializar perguntas da matriz se for tipo matrix
+            if (type === 'matrix') {
+                setTimeout(() => {
+                    const list = document.getElementById('matrixQuestionsList');
+                    if (list && !list.children.length) {
+                        window.initDefaultMatrixQuestions();
+                    }
+                }, 100);
+            }
+            
+            // Inicializar preview de fórmula se for calculated
+            if (type === 'calculated') {
+                setTimeout(() => {
+                    if (window.updateFormulaPreview) {
+                        window.updateFormulaPreview();
+                    }
+                }, 100);
+            }
+            
+            // Tipos que precisam de opções
+            const needsOptions = [
+                'select', 'multi_select', 'radio', 'multiple_choice', 
+                'autocomplete', 'country', 'language', 'tshirt_size', 
+                'category', 'matrix'
+            ].includes(type);
+            
+            const optionsSection = document.getElementById('customFieldOptions');
+            optionsSection.style.display = needsOptions ? 'block' : 'none';
+            
+            if (needsOptions) {
+                // Add default options based on type
+                const container = document.getElementById('customOptionsList');
+                let defaultOptions = [];
+                
+                // Pre-populate common options
+                if (type === 'tshirt_size') {
+                    defaultOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+                } else if (type === 'country') {
+                    defaultOptions = ['Portugal', 'Espanha', 'Brasil', 'Outro'];
+                } else if (type === 'language') {
+                    defaultOptions = ['Português', 'English', 'Español'];
+                } else if (type === 'rating') {
+                    defaultOptions = ['1 estrela', '2 estrelas', '3 estrelas', '4 estrelas', '5 estrelas'];
+                } else {
+                    defaultOptions = ['Opção 1', 'Opção 2', 'Opção 3'];
+                }
+                
+                container.innerHTML = defaultOptions.map((opt, i) => `
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input" id="custom_opt_${i}" value="${opt}" placeholder="Opção ${i+1}" style="flex: 1;">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function addCustomOption() {
+            const container = document.getElementById('customOptionsList');
+            const count = container.querySelectorAll('input').length;
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+            div.innerHTML = `
+                <input type="text" class="form-input" id="custom_opt_${count}" placeholder="Opção ${count + 1}" style="flex: 1;">
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        function saveCustomField() {
+            const fieldKey = document.getElementById('customFieldKey').value.trim();
+            const fieldType = document.getElementById('customFieldType').value;
+            const labelPt = document.getElementById('customLabelPt').value.trim();
+            const labelEn = document.getElementById('customLabelEn').value.trim();
+            const placeholder = document.getElementById('customPlaceholder').value.trim();
+            const isRequired = document.getElementById('customRequired').checked;
+            
+            // Validations
+            if (!fieldKey) {
+                alert('Por favor, defina a chave do campo');
+                return;
+            }
+            
+            if (!/^[a-z0-9_]+$/.test(fieldKey)) {
+                alert('Chave inválida. Use apenas letras minúsculas, números e underscore');
+                return;
+            }
+            
+            if (!labelPt) {
+                alert('Por favor, defina o label em português');
+                return;
+            }
+            
+            // Check if key already exists
+            if (formFields.find(f => f.field_key === fieldKey)) {
+                alert('Já existe um campo com esta chave!');
+                return;
+            }
+            
+            // Extract options if needed
+            let options = null;
+            const needsOptions = ['select', 'radio', 'multiple_choice'].includes(fieldType);
+            
+            if (needsOptions) {
+                const optionsPt = [];
+                const inputs = document.getElementById('customOptionsList').querySelectorAll('input');
+                
+                inputs.forEach(input => {
+                    const value = input.value.trim();
+                    if (value) optionsPt.push(value);
+                });
+                
+                if (optionsPt.length === 0) {
+                    alert('Por favor, adicione pelo menos uma opção');
+                    return;
+                }
+                
+                options = {
+                    pt: optionsPt,
+                    en: optionsPt  // Por enquanto, mesmas opções
+                };
+            }
+            
+            // Extract type-specific config
+            const typeConfig = window.FieldTypeConfigs?.extractTypeSpecificConfig(fieldType) || null;
+            
+            // Create custom field
+            const newField = {
+                field_catalog_id: null,  // NULL = campo custom
+                field_key: fieldKey,
+                field_type: fieldType,
+                is_required: isRequired,
+                field_order: formFields.length + 1,
+                label_translations: {
+                    pt: labelPt,
+                    en: labelEn || labelPt
+                },
+                placeholder_translations: placeholder ? {
+                    pt: placeholder,
+                    en: placeholder
+                } : null,
+                help_text_translations: null,
+                validation_rules: null,
+                options: options,
+                metadata: typeConfig ? { type_config: typeConfig } : null  // Configurações específicas do tipo
+            };
+            
+            console.log('✅ Campo custom criado:', newField);
+            
+            formFields.push(newField);
+            renderFormBuilder();
+            renderPreview();
+            closeCustomFieldModal();
+            
+            const configInfo = typeConfig ? `\nConfigurações: ${JSON.stringify(typeConfig, null, 2)}` : '';
+            alert(`✅ Campo custom "${labelPt}" criado!\n\nTipo: ${fieldType}\nChave: ${fieldKey}${configInfo}`);
+        }
+        
+        function updateFieldOrders() {
+            formFields.forEach((f, i) => f.field_order = i + 1);
+        }
+        
+        function editField(index) {
+            editingFieldIndex = index;
+            const field = formFields[index];
+            const catalog = catalogFields.find(c => c.id === field.field_catalog_id);
+            
+            document.getElementById('modalTitle').textContent = 'Configurar: ' + (catalog?.label_translations?.pt || field.field_key);
+            document.getElementById('fieldLabelPt').value = field.label_translations?.pt || catalog?.label_translations?.pt || '';
+            document.getElementById('fieldLabelEn').value = field.label_translations?.en || catalog?.label_translations?.en || '';
+            document.getElementById('fieldPlaceholderPt').value = field.placeholder_translations?.pt || '';
+            document.getElementById('fieldRequired').checked = field.is_required;
+            document.getElementById('fieldHelpPt').value = field.help_text_translations?.pt || '';
+            
+            // Render options (if select/radio/checkbox field)
+            const optionsHtml = window.formBuilderAdvanced?.renderOptionsEditor(field, catalog) || '';
+            document.getElementById('optionsSection').innerHTML = optionsHtml;
+            
+            // Render validations
+            const validationsHtml = window.formBuilderAdvanced?.renderValidationEditor(field, catalog) || '';
+            document.getElementById('validationsSection').innerHTML = validationsHtml;
+            
+            document.getElementById('fieldModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('fieldModal').classList.remove('active');
+            editingFieldIndex = null;
+        }
+        
+        function saveFieldConfig() {
+            if (editingFieldIndex === null) return;
+            
+            const field = formFields[editingFieldIndex];
+            field.label_translations = {
+                pt: document.getElementById('fieldLabelPt').value,
+                en: document.getElementById('fieldLabelEn').value
+            };
+            field.placeholder_translations = {
+                pt: document.getElementById('fieldPlaceholderPt').value
+            };
+            field.is_required = document.getElementById('fieldRequired').checked;
+            field.help_text_translations = {
+                pt: document.getElementById('fieldHelpPt').value
+            };
+            
+            // Extract options
+            if (window.formBuilderAdvanced) {
+                field.options = window.formBuilderAdvanced.extractOptions();
+            }
+            
+            // Extract validations
+            if (window.formBuilderAdvanced) {
+                field.validation_rules = window.formBuilderAdvanced.extractValidationRules();
+            }
+            
+            renderFormBuilder();
+            renderPreview();
+            closeModal();
+        }
+        
+        // Global functions for options management
+        window.addOption = function() {
+            const container = document.getElementById('optionsList');
+            const count = container.querySelectorAll('input').length;
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+            div.innerHTML = `
+                <input type="text" class="form-input" id="option_pt_${count}" placeholder="Opção ${count+1} (PT)" style="flex: 1;">
+                <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        window.removeOption = function(index) {
+            const el = document.getElementById(`option_pt_${index}`);
+            if (el) el.parentElement.remove();
+        }
+        
+        // Category Rules Management
+        window.toggleCategoryRules = function() {
+            const section = document.getElementById('categoryRulesSection');
+            const enabled = document.getElementById('config_auto_category')?.checked;
+            
+            if (enabled) {
+                section.style.display = 'block';
+                // Initialize with default rules if empty
+                const list = document.getElementById('categoryRulesList');
+                if (!list.children.length) {
+                    initDefaultCategoryRules();
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        function initDefaultCategoryRules() {
+            const defaultRules = [
+                { name: 'Sub-18', minAge: 0, maxAge: 17 },
+                { name: 'Sénior', minAge: 18, maxAge: 39 },
+                { name: 'Veterano', minAge: 40, maxAge: 99 }
+            ];
+            
+            defaultRules.forEach((rule, i) => {
+                addCategoryRule(rule.name, rule.minAge, rule.maxAge);
+            });
+        }
+        
+        window.addCategoryRule = function(name = '', minAge = '', maxAge = '') {
+            const container = document.getElementById('categoryRulesList');
+            const index = container.children.length;
+            
+            const div = document.createElement('div');
+            div.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: end;';
+            div.innerHTML = `
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label" style="font-size: 12px;">Nome do Escalão:</label>
+                    <input type="text" class="form-input" id="cat_name_${index}" value="${name}" placeholder="Ex: Sénior" style="font-size: 13px;">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label" style="font-size: 12px;">Idade Min:</label>
+                    <input type="number" class="form-input" id="cat_min_${index}" value="${minAge}" placeholder="18" style="font-size: 13px;">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label" style="font-size: 12px;">Idade Max:</label>
+                    <input type="number" class="form-input" id="cat_max_${index}" value="${maxAge}" placeholder="39" style="font-size: 13px;">
+                </div>
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        window.extractCategoryRules = function() {
+            const enabled = document.getElementById('config_auto_category')?.checked;
+            if (!enabled) return null;
+            
+            const container = document.getElementById('categoryRulesList');
+            const rules = {};
+            
+            Array.from(container.children).forEach((child, i) => {
+                const name = document.getElementById(`cat_name_${i}`)?.value.trim();
+                const minAge = document.getElementById(`cat_min_${i}`)?.value;
+                const maxAge = document.getElementById(`cat_max_${i}`)?.value;
+                
+                if (name && minAge && maxAge) {
+                    rules[name] = `${minAge}-${maxAge}`;
+                }
+            });
+            
+            return Object.keys(rules).length > 0 ? rules : null;
+        }
+        
+        // Matrix Questions Management
+        window.addMatrixQuestion = function(text = '') {
+            const container = document.getElementById('matrixQuestionsList');
+            const index = container.children.length;
+            
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+            div.innerHTML = `
+                <input type="text" class="form-input" id="matrix_q_${index}" value="${text}" placeholder="Pergunta ${index + 1}" style="flex: 1; font-size: 13px;">
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        window.initDefaultMatrixQuestions = function() {
+            const defaults = [
+                'O atendimento foi bom',
+                'Recomendaria a outros',
+                'O preço é justo'
+            ];
+            defaults.forEach(q => addMatrixQuestion(q));
+        }
+        
+        // Formula Builder
+        window.updateFormulaPreview = function() {
+            const operation = document.getElementById('config_calc_operation')?.value;
+            const symbols = { sum: '+', subtract: '-', multiply: '×', divide: '÷' };
+            
+            if (operation === 'custom') {
+                document.getElementById('calcFieldsSection').style.display = 'none';
+                document.getElementById('customFormulaSection').style.display = 'block';
+                document.getElementById('formulaPreview').textContent = 'Fórmula custom definida abaixo';
+            } else {
+                document.getElementById('calcFieldsSection').style.display = 'block';
+                document.getElementById('customFormulaSection').style.display = 'none';
+                document.getElementById('operatorSymbol').textContent = symbols[operation] || '+';
+                
+                const field1 = document.getElementById('config_field1')?.value || 'campo1';
+                const field2 = document.getElementById('config_field2')?.value || 'campo2';
+                document.getElementById('formulaPreview').textContent = `{${field1}} ${symbols[operation]} {${field2}}`;
+            }
+        }
+        
+        function deleteField(index) {
+            if (confirm('Remover este campo?')) {
+                formFields.splice(index, 1);
+                updateFieldOrders();
+                renderFormBuilder();
+                renderPreview();
+            }
+        }
+        
+        // Tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+        
+        function togglePaymentFields() {
+            document.getElementById('paymentFields').style.display = 
+                document.getElementById('paymentEnabled').checked ? 'block' : 'none';
+        }
+        
+        // Save
+        async function saveForm() {
+            try {
+                console.log('💾 Guardando formulário...');
+                
+                // Save basic info
+                const basicData = {
+                    form_title_translations: {
+                        pt: document.getElementById('titlePt').value,
+                        en: document.getElementById('titleEn').value
+                    },
+                    form_description_translations: {
+                        pt: document.getElementById('descPt').value,
+                        en: document.getElementById('descEn').value
+                    },
+                    settings: {
+                        max_submissions: parseInt(document.getElementById('maxSubmissions').value),
+                        captcha_enabled: document.getElementById('captchaEnabled').checked,
+                        allow_edits: document.getElementById('allowEdits').checked
+                    }
+                };
+                
+                if (document.getElementById('paymentEnabled').checked) {
+                    basicData.payment_config = {
+                        enabled: true,
+                        amount: parseFloat(document.getElementById('paymentAmount').value),
+                        currency: document.getElementById('paymentCurrency').value
+                    };
+                }
+                
+                console.log('📝 Dados básicos:', basicData);
+                
+                const res1 = await fetch(`/api/forms/${currentFormId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(basicData)
+                });
+                
+                const result1 = await res1.json();
+                console.log('✅ Formulário básico salvo:', result1);
+                
+                // Save fields (incluindo custom fields)
+                if (formFields.length > 0) {
+                    console.log('📋 Salvando campos:', formFields.length);
+                    console.log('📊 Campos (incluindo custom):', formFields);
+                    
+                    const res2 = await fetch(`/api/forms/${currentFormId}/fields`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(formFields)
+                    });
+                    
+                    const result2 = await res2.json();
+                    console.log('✅ Campos salvos:', result2);
+                    
+                    if (result2.success) {
+                        const customCount = formFields.filter(f => !f.field_catalog_id).length;
+                        const catalogCount = formFields.filter(f => f.field_catalog_id).length;
+                        
+                        alert(`✅ Formulário guardado com sucesso!\n\n` +
+                              `Campos do catálogo: ${catalogCount}\n` +
+                              `Campos custom: ${customCount}\n` +
+                              `Total: ${formFields.length}`);
+                    } else {
+                        alert('✅ Formulário salvo mas houve erro nos campos: ' + result2.error);
+                    }
+                } else {
+                    alert('✅ Formulário guardado com sucesso!');
+                }
+            } catch (e) {
+                console.error('❌ Erro ao guardar:', e);
+                alert('❌ Erro ao guardar formulário: ' + e.message);
+            }
+        }
+        
+        async function publishForm() {
+            if (!confirm('Publicar este formulário? Ficará acessível publicamente.')) return;
+            
+            try {
+                await saveForm();
+                
+                const res = await fetch(`/api/forms/${currentFormId}/publish`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                const { success, form } = await res.json();
+                if (success) {
+                    alert(`✅ Formulário publicado!\n\nURL: /form/${form.form_slug}`);
+                    window.location.href = `/form-builder-kromi.html?event=${currentEventId}`;
+                }
+            } catch (e) {
+                console.error('Erro ao publicar:', e);
+                alert('❌ Erro ao publicar formulário');
+            }
+        }
+        
+        function goBack() {
+            window.location.href = `/form-builder-kromi.html?event=${currentEventId}`;
+        }
+    </script>
+</body>
+</html>
+

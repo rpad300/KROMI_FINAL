@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionKrono - Rankings</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --gold: #F59E0B;
+            --silver: #9CA3AF;
+            --bronze: #D97706;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .select {
+            padding: 0.625rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            min-width: 200px;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #4338CA;
+        }
+
+        .podium {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .podium-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--gray-900);
+        }
+
+        .podium-display {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .podium-place {
+            text-align: center;
+        }
+
+        .podium-place.first {
+            order: 2;
+        }
+
+        .podium-place.second {
+            order: 1;
+        }
+
+        .podium-place.third {
+            order: 3;
+        }
+
+        .medal {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .medal.gold {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            transform: scale(1.2);
+        }
+
+        .medal.silver {
+            background: linear-gradient(135deg, #9CA3AF, #6B7280);
+        }
+
+        .medal.bronze {
+            background: linear-gradient(135deg, #D97706, #B45309);
+        }
+
+        .podium-name {
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            color: var(--gray-900);
+        }
+
+        .podium-time {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .podium-stats {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .rankings-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .rankings-header {
+            padding: 1.5rem 2rem;
+            background: var(--gray-100);
+            border-bottom: 2px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rankings-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--gray-100);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        th.center {
+            text-align: center;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+        }
+
+        td.center {
+            text-align: center;
+        }
+
+        tbody tr:hover {
+            background: var(--gray-100);
+        }
+
+        .rank-cell {
+            font-weight: 700;
+            font-size: 1.125rem;
+        }
+
+        .rank-1 { color: var(--gold); }
+        .rank-2 { color: var(--silver); }
+        .rank-3 { color: var(--bronze); }
+
+        .bib {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .participant-name {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .category-badge {
+            display: inline-block;
+            background: var(--gray-200);
+            color: var(--gray-700);
+            padding: 0.125rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+
+        .time {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-700);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: var(--gray-100);
+            padding: 1.25rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 Rankings</h1>
+            <div class="toolbar">
+                <select id="route-filter" class="select">
+                    <option value="">Selecione uma rota...</option>
+                </select>
+                <button class="btn" onclick="loadRankings()">🔄 Recarregar</button>
+                <button class="btn" onclick="exportCSV()">📥 Exportar CSV</button>
+            </div>
+        </div>
+
+        <div id="podium-section" style="display: none;">
+            <div class="podium">
+                <h2 class="podium-title">🏆 Pódio</h2>
+                <div class="podium-display" id="podium-display">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="rankings-card">
+            <div class="rankings-header">
+                <div class="rankings-title" id="rankings-title">Classificação Geral</div>
+                <div id="finishers-count">0 classificados</div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="center">Pos</th>
+                            <th class="center">Dorsal</th>
+                            <th>Participante</th>
+                            <th>Rota</th>
+                            <th class="center">Tempo</th>
+                            <th class="center">Vel. Média</th>
+                            <th class="center">Pace</th>
+                            <th class="center">Finalizado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankings-tbody">
+                        <tr>
+                            <td colspan="8">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                    <p>Carregando rankings...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="stats-section" style="display: none;">
+            <div class="stats-grid" id="stats-grid">
+                <!-- Estatísticas -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://mdrvgbztadnluhrrnlob.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcnZnYnp0YWRubHVocnJubG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTQ1MDUsImV4cCI6MjA3NjU3MDUwNX0.x2po57tZOQ443NLVURBWDIYQnYbJ4D6O45FlZ5qwmp4';
+        const EVENT_ID = 'YOUR_EVENT_ID';
+
+        let supabase;
+        let currentData = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            
+            await loadRoutes();
+            
+            document.getElementById('route-filter').addEventListener('change', loadRankings);
+        });
+
+        async function loadRoutes() {
+            try {
+                const { data, error } = await supabase
+                    .from('track_routes')
+                    .select('id, name')
+                    .eq('event_id', EVENT_ID)
+                    .eq('is_active', true)
+                    .order('name');
+
+                if (error) throw error;
+
+                const select = document.getElementById('route-filter');
+                data.forEach(route => {
+                    const option = document.createElement('option');
+                    option.value = route.id;
+                    option.textContent = route.name;
+                    select.appendChild(option);
+                });
+
+                // Selecionar primeira rota automaticamente
+                if (data.length > 0) {
+                    select.value = data[0].id;
+                    await loadRankings();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar rotas:', error);
+            }
+        }
+
+        async function loadRankings() {
+            const routeId = document.getElementById('route-filter').value;
+            
+            if (!routeId) {
+                showEmptyState('Selecione uma rota para ver os rankings');
+                return;
+            }
+
+            const tbody = document.getElementById('rankings-tbody');
+            tbody.innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div><p>Carregando...</p></div></td></tr>';
+
+            try {
+                const { data, error } = await supabase.rpc('track_get_rankings', {
+                    p_event_id: EVENT_ID,
+                    p_route_id: routeId,
+                    p_limit: 500
+                });
+
+                if (error) throw error;
+
+                currentData = data;
+
+                if (data.length === 0) {
+                    showEmptyState('Nenhum resultado ainda para esta rota');
+                    return;
+                }
+
+                renderRankings(data);
+                renderPodium(data.slice(0, 3));
+                renderStats(data);
+                
+                document.getElementById('finishers-count').textContent = `${data.length} classificado${data.length !== 1 ? 's' : ''}`;
+            } catch (error) {
+                console.error('Erro ao carregar rankings:', error);
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #EF4444; padding: 2rem">Erro: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderRankings(data) {
+            const tbody = document.getElementById('rankings-tbody');
+            const routeName = document.getElementById('route-filter').selectedOptions[0]?.text || 'Geral';
+            document.getElementById('rankings-title').textContent = `Classificação - ${routeName}`;
+
+            tbody.innerHTML = data.map(runner => `
+                <tr>
+                    <td class="center rank-cell ${getRankClass(runner.rank)}">${runner.rank}º</td>
+                    <td class="center"><span class="bib">#${runner.bib_number || '-'}</span></td>
+                    <td>
+                        <span class="participant-name">${runner.participant_name}</span>
+                        ${runner.category ? `<span class="category-badge">${runner.category}</span>` : ''}
+                    </td>
+                    <td>${runner.route_name}</td>
+                    <td class="center time">${runner.formatted_time}</td>
+                    <td class="center">${runner.avg_speed_kmh ? runner.avg_speed_kmh.toFixed(1) + ' km/h' : '-'}</td>
+                    <td class="center">${runner.avg_pace_min_km ? runner.avg_pace_min_km.toFixed(2) + ' min/km' : '-'}</td>
+                    <td class="center">${new Date(runner.finished_at).toLocaleString('pt-PT')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPodium(topThree) {
+            if (topThree.length === 0) {
+                document.getElementById('podium-section').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('podium-section').style.display = 'block';
+
+            const podiumHtml = [
+                // Ouro (1º)
+                topThree[0] ? `
+                    <div class="podium-place first">
+                        <div class="medal gold">1º</div>
+                        <div class="podium-name">${topThree[0].participant_name}</div>
+                        <div class="podium-time">${topThree[0].formatted_time}</div>
+                        <div class="podium-stats">
+                            ${topThree[0].avg_speed_kmh ? topThree[0].avg_speed_kmh.toFixed(1) + ' km/h' : '-'} • 
+                            Dorsal #${topThree[0].bib_number}
+                        </div>
+                    </div>
+                ` : '',
+                // Prata (2º)
+                topThree[1] ? `
+                    <div class="podium-place second">
+                        <div class="medal silver">2º</div>
+                        <div class="podium-name">${topThree[1].participant_name}</div>
+                        <div class="podium-time">${topThree[1].formatted_time}</div>
+                        <div class="podium-stats">
+                            ${topThree[1].avg_speed_kmh ? topThree[1].avg_speed_kmh.toFixed(1) + ' km/h' : '-'} • 
+                            Dorsal #${topThree[1].bib_number}
+                        </div>
+                    </div>
+                ` : '',
+                // Bronze (3º)
+                topThree[2] ? `
+                    <div class="podium-place third">
+                        <div class="medal bronze">3º</div>
+                        <div class="podium-name">${topThree[2].participant_name}</div>
+                        <div class="podium-time">${topThree[2].formatted_time}</div>
+                        <div class="podium-stats">
+                            ${topThree[2].avg_speed_kmh ? topThree[2].avg_speed_kmh.toFixed(1) + ' km/h' : '-'} • 
+                            Dorsal #${topThree[2].bib_number}
+                        </div>
+                    </div>
+                ` : ''
+            ];
+
+            document.getElementById('podium-display').innerHTML = podiumHtml.join('');
+        }
+
+        function renderStats(data) {
+            if (data.length === 0) {
+                document.getElementById('stats-section').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('stats-section').style.display = 'block';
+
+            const times = data.map(d => d.total_time_sec).filter(t => t);
+            const speeds = data.map(d => d.avg_speed_kmh).filter(s => s);
+
+            const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+            const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+            const bestTime = Math.min(...times);
+            const slowestTime = Math.max(...times);
+
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Melhor Tempo</div>
+                    <div class="stat-value">${formatTime(bestTime)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Tempo Médio</div>
+                    <div class="stat-value">${formatTime(Math.round(avgTime))}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Velocidade Média</div>
+                    <div class="stat-value">${avgSpeed.toFixed(1)} km/h</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Classificados</div>
+                    <div class="stat-value">${data.length}</div>
+                </div>
+            `;
+        }
+
+        function getRankClass(rank) {
+            if (rank === 1) return 'rank-1';
+            if (rank === 2) return 'rank-2';
+            if (rank === 3) return 'rank-3';
+            return '';
+        }
+
+        function showEmptyState(message) {
+            document.getElementById('rankings-tbody').innerHTML = `
+                <tr><td colspan="8"><div class="empty-state"><p>${message}</p></div></td></tr>
+            `;
+            document.getElementById('podium-section').style.display = 'none';
+            document.getElementById('stats-section').style.display = 'none';
+            document.getElementById('finishers-count').textContent = '0 classificados';
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function exportCSV() {
+            if (currentData.length === 0) {
+                alert('Nenhum dado para exportar');
+                return;
+            }
+
+            const routeName = document.getElementById('route-filter').selectedOptions[0]?.text || 'Geral';
+            const headers = ['Posição', 'Dorsal', 'Participante', 'Categoria', 'Rota', 'Tempo', 'Vel. Média (km/h)', 'Pace (min/km)', 'Distância (m)', 'Finalizado'];
+            
+            const rows = currentData.map(r => [
+                r.rank,
+                r.bib_number,
+                r.participant_name,
+                r.category || '',
+                r.route_name,
+                r.formatted_time,
+                r.avg_speed_kmh?.toFixed(1) || '',
+                r.avg_pace_min_km?.toFixed(2) || '',
+                r.total_distance_m || '',
+                new Date(r.finished_at).toLocaleString('pt-PT')
+            ]);
+
+            const csv = [headers, ...rows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `rankings_${routeName}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
+

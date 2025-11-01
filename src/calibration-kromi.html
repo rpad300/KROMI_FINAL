@@ -675,18 +675,59 @@
                         </div>
                     </div>
                     
-                    <!-- Step 2: Nomenclatura dos Dorsais -->
+                    <!-- Step 2: Nomenclatura dos Dorsais (READ-ONLY) -->
                     <div class="step" id="step2" style="display: none;">
                         <div class="step-header">
                             <div class="step-number">2</div>
                             <h3 class="step-title">🔢 Nomenclatura dos Dorsais</h3>
                         </div>
                         <div class="step-content">
-                            <p class="step-description">
-                                Configure o formato dos números de dorsal usados no evento. Isto ajuda a IA a detectar corretamente os diferentes tipos de numeração.
-                            </p>
+                            <!-- Info Box -->
+                            <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                    <span style="font-size: var(--font-size-xl);">✅</span>
+                                    <h4 style="margin: 0; font-size: var(--font-size-lg);">Configurado nas Configurações do Evento</h4>
+                                </div>
+                                <div style="font-size: var(--font-size-sm); line-height: 1.6;">
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        A nomenclatura dos dorsais está configurada centralmente nas <strong>Configurações do Evento</strong>.
+                                    </p>
+                                    <p style="margin: 0;">
+                                        Para alterar, use o botão abaixo.
+                                    </p>
+                                </div>
+                            </div>
                             
-                            <!-- Informações Explicativas -->
+                            <!-- Resultado da Análise de IA -->
+                            <div id="analysisResultDisplay" style="display: none; background: linear-gradient(135deg, var(--primary), #3b82f6); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
+                                <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                    <span style="font-size: var(--font-size-xl);">🤖</span>
+                                    <h4 style="margin: 0; font-size: var(--font-size-lg);">Resultado da Análise de IA</h4>
+                                </div>
+                                <div style="font-size: var(--font-size-base); line-height: 1.6;">
+                                    <p style="margin: 0 0 var(--spacing-2) 0;">
+                                        <strong>Número detectado:</strong> <span id="analysisDetectedNumber" style="font-size: var(--font-size-xl); font-weight: 700;">--</span>
+                                    </p>
+                                    <p style="margin: 0; opacity: 0.9; font-size: var(--font-size-sm);" id="analysisDescription">
+                                        A IA analisou a imagem e detectou um número no dorsal.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Mostrar Config Atual (Read-Only) -->
+                            <div id="currentNomenclatureDisplay" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--spacing-4); margin-bottom: var(--spacing-4);">
+                                <h4 style="margin: 0 0 var(--spacing-3) 0;">📋 Configuração Atual:</h4>
+                                <div id="nomenclatureReadOnlyContent">
+                                    <p style="color: var(--text-secondary);">Carregando...</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Botão para Config -->
+                            <button onclick="window.open('config-kromi.html?event=' + new URLSearchParams(window.location.search).get('event'), '_blank')" class="btn btn-primary" style="width: 100%;">
+                                ⚙️ Ir para Configurações do Evento
+                            </button>
+                            
+                            <!-- Informações Explicativas (mantém só para contexto) -->
                             <div style="background: linear-gradient(135deg, var(--info), #3b82f6); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
                                 <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
                                     <span style="font-size: var(--font-size-xl);">💡</span>
@@ -704,261 +745,13 @@
                                     </p>
                                 </div>
                             </div>
-                            </p>
-                            
-                            <!-- Tipo de Nomenclatura -->
-                            <div style="margin-bottom: var(--spacing-5);">
-                                <label style="display: block; margin-bottom: var(--spacing-3); font-weight: 600; color: var(--text-primary);">
-                                    Tipo de Nomenclatura:
-                                </label>
-                                
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('numeric')">
-                                        <input type="radio" name="nomenclatureType" value="numeric" checked>
-                                        <div>
-                                            <div style="font-weight: 600;">🔢 Numérico (Padrão)</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Números simples: 1, 2, 3, ..., 9999</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('prefix')">
-                                        <input type="radio" name="nomenclatureType" value="prefix">
-                                        <div>
-                                            <div style="font-weight: 600;">📝 Com Prefixo</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407, F-156, PRO-023</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('suffix')">
-                                        <input type="radio" name="nomenclatureType" value="suffix">
-                                        <div>
-                                            <div style="font-weight: 600;">📝 Com Sufixo</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: 407-M, 156-F, 023-PRO</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('prefix-suffix')">
-                                        <input type="radio" name="nomenclatureType" value="prefix-suffix">
-                                        <div>
-                                            <div style="font-weight: 600;">📝 Prefixo + Sufixo</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407-F, PRO-023-ELITE</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('markers')">
-                                        <input type="radio" name="nomenclatureType" value="markers">
-                                        <div>
-                                            <div style="font-weight: 600;">🎨 Marcadores de Cor</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Cores antes/depois: 🟢407🔴</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label style="display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-3); border: 1px solid var(--border-color); border-radius: var(--radius-base); cursor: pointer;" onclick="selectNomenclature('custom')">
-                                        <input type="radio" name="nomenclatureType" value="custom">
-                                        <div>
-                                            <div style="font-weight: 600;">⚙️ Personalizado (Regex)</div>
-                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Padrão customizado com expressão regular</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Numérico -->
-                            <div id="numericConfig" class="nomenclature-config" style="display: block;">
-                                <h4 style="margin-bottom: var(--spacing-3);">📊 Configuração Numérica</h4>
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número Mínimo:</label>
-                                        <input type="number" id="numericMin" value="1" min="1" max="9999" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número Máximo:</label>
-                                        <input type="number" id="numericMax" value="9999" min="1" max="9999" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                    </div>
-                                    <div>
-                                        <label style="display: flex; align-items: center; gap: var(--spacing-2);">
-                                            <input type="checkbox" id="usePadding">
-                                            Usar zeros à esquerda (001, 002, 003)
-                                        </label>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Dígitos (com padding):</label>
-                                        <input type="number" id="numericDigits" value="3" min="1" max="6" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                    </div>
-                                </div>
-                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
-                                    <strong>Exemplos:</strong> <span id="numericPreview">1, 2, 3, ..., 9999</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Prefixo -->
-                            <div id="prefixConfig" class="nomenclature-config" style="display: none;">
-                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Prefixo</h4>
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Prefixo(s) Permitidos:</label>
-                                        <input type="text" id="prefixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula (sem separador)</small>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre prefixo e número:</label>
-                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
-                                            <input type="text" id="prefixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
-                                                <input type="checkbox" id="prefixUseSeparator" checked>
-                                                Usar separador
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número após prefixo:</label>
-                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
-                                            <input type="number" id="prefixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <input type="number" id="prefixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
-                                    <strong>Exemplos:</strong> <span id="prefixPreview">M-1, M-2, F-1, F-2, PRO-1</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Sufixo -->
-                            <div id="suffixConfig" class="nomenclature-config" style="display: none;">
-                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Sufixo</h4>
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Sufixo(s) Permitidos:</label>
-                                        <input type="text" id="suffixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula (sem separador)</small>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre número e sufixo:</label>
-                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
-                                            <input type="text" id="suffixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
-                                                <input type="checkbox" id="suffixUseSeparator" checked>
-                                                Usar separador
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número antes do sufixo:</label>
-                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
-                                            <input type="number" id="suffixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <input type="number" id="suffixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
-                                    <strong>Exemplos:</strong> <span id="suffixPreview">1-M, 2-M, 1-F, 2-F, 1-PRO</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Prefixo + Sufixo -->
-                            <div id="prefixSuffixConfig" class="nomenclature-config" style="display: none;">
-                                <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Prefixo + Sufixo</h4>
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Prefixo(s) Permitidos:</label>
-                                        <input type="text" id="prefixSuffixPrefixText" placeholder="Ex: M, F, PRO" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula</small>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Sufixo(s) Permitidos:</label>
-                                        <input type="text" id="prefixSuffixSuffixText" placeholder="Ex: M, F, ELITE" value="M,F" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        <small style="color: var(--text-secondary);">Separar múltiplos com vírgula</small>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre prefixo e número:</label>
-                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
-                                            <input type="text" id="prefixSuffixPrefixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
-                                                <input type="checkbox" id="prefixSuffixPrefixUseSeparator" checked>
-                                                Usar separador
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Separador entre número e sufixo:</label>
-                                        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-2);">
-                                            <input type="text" id="prefixSuffixSuffixSeparator" placeholder="Ex: -, _, ." value="-" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <label style="display: flex; align-items: center; gap: var(--spacing-2);">
-                                                <input type="checkbox" id="prefixSuffixSuffixUseSeparator" checked>
-                                                Usar separador
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Número central:</label>
-                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-2);">
-                                            <input type="number" id="prefixSuffixMin" value="1" min="1" placeholder="Mín" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                            <input type="number" id="prefixSuffixMax" value="999" max="9999" placeholder="Máx" style="padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
-                                    <strong>Exemplos:</strong> <span id="prefixSuffixPreview">M-1-M, M-2-F, PRO-1-ELITE</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Marcadores -->
-                            <div id="markersConfig" class="nomenclature-config" style="display: none;">
-                                <h4 style="margin-bottom: var(--spacing-3);">🎨 Configuração com Marcadores de Cor</h4>
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Cor de Início:</label>
-                                        <div style="display: flex; gap: var(--spacing-2); align-items: center;">
-                                            <input type="color" id="startColor" value="#10b981" style="width: 60px; height: 40px; border: none; border-radius: var(--radius-base);">
-                                            <input type="text" id="startColorName" placeholder="Ex: Verde" style="flex: 1; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Cor de Fim:</label>
-                                        <div style="display: flex; gap: var(--spacing-2); align-items: center;">
-                                            <input type="color" id="endColor" value="#ef4444" style="width: 60px; height: 40px; border: none; border-radius: var(--radius-base);">
-                                            <input type="text" id="endColorName" placeholder="Ex: Vermelho" style="flex: 1; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Tolerância de Cor (%):</label>
-                                        <input type="range" id="colorTolerance" min="5" max="50" value="20" style="width: 100%;">
-                                        <div style="text-align: center; color: var(--text-secondary);"><span id="toleranceValue">20</span>%</div>
-                                    </div>
-                                </div>
-                                <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-primary); border-radius: var(--radius-base);">
-                                    <strong>Exemplo:</strong> <span style="color: #10b981;">🟢</span> 407 <span style="color: #ef4444;">🔴</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Config Custom -->
-                            <div id="customConfig" class="nomenclature-config" style="display: none;">
-                                <h4 style="margin-bottom: var(--spacing-3);">⚙️ Configuração Personalizada (Regex)</h4>
-                                <div style="display: grid; gap: var(--spacing-3);">
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Expressão Regular:</label>
-                                        <input type="text" id="customRegex" placeholder="Ex: ^[A-Z]\d{3}$" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary); font-family: monospace;">
-                                        <small style="color: var(--text-secondary);">Padrão para validar dorsais</small>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: var(--spacing-2);">Exemplos (separar com vírgula):</label>
-                                        <input type="text" id="customExamples" placeholder="Ex: A123, B456, C789" style="width: 100%; padding: var(--spacing-2); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-base); color: var(--text-primary);">
-                                    </div>
-                                    <div>
-                                        <button class="btn btn-secondary" onclick="testRegex()">
-                                            <i>🧪</i> Testar Regex
-                                        </button>
-                                        <div id="regexTestResult" style="margin-top: var(--spacing-2); color: var(--text-secondary);"></div>
-                                    </div>
-                                </div>
-                            </div>
                             
                             <div class="calibration-controls">
-                                <button class="btn btn-primary" id="saveNomenclature">
-                                    <i>💾</i> Guardar Nomenclatura
-                                </button>
                                 <button class="btn btn-secondary" onclick="showStep(1)">
                                     <i>←</i> Voltar
+                                </button>
+                                <button class="btn btn-primary" onclick="showStep(3)">
+                                    Continuar <i>→</i>
                                 </button>
                             </div>
                         </div>
@@ -1217,6 +1010,10 @@
                                     
                                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3);">
                                         <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                            <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--primary);" id="detectedNumberResult">--</div>
+                                            <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Número Detectado</div>
+                                        </div>
+                                        <div style="text-align: center; padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
                                             <div style="font-size: var(--font-size-2xl); font-weight: 600; color: var(--primary);" id="confidenceResult">--</div>
                                             <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Confiança</div>
                                         </div>
@@ -1297,14 +1094,30 @@
                         </div>
                         
                         <div class="calibration-grid">
-                            <!-- Imagem de Calibração -->
+                            <!-- Imagens de Calibração -->
                             <div class="calibration-card">
                                 <div class="card-header">
                                     <div class="card-icon">📷</div>
-                                    <div class="card-title">Imagem de Calibração</div>
+                                    <div class="card-title">Imagens de Calibração</div>
                                 </div>
                                 <div class="card-content">
-                                    <img id="existingImagePreview" class="calibration-image" alt="Imagem de calibração">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-4);">
+                                        <!-- Imagem Base (Original) -->
+                                        <div style="text-align: center;">
+                                            <div style="margin-bottom: var(--spacing-2); font-weight: 600; color: var(--text-primary);">
+                                                📷 Imagem Original
+                                            </div>
+                                            <img id="existingBaseImagePreview" class="calibration-image" alt="Imagem original" style="max-width: 100%; border-radius: var(--radius-base); border: 2px solid var(--border-color);">
+                                        </div>
+                                        
+                                        <!-- Imagem com Retângulo Verde -->
+                                        <div style="text-align: center;">
+                                            <div style="margin-bottom: var(--spacing-2); font-weight: 600; color: var(--text-primary);">
+                                                🎨 Imagem com Área Selecionada
+                                            </div>
+                                            <img id="existingTemplateImagePreview" class="calibration-image" alt="Imagem com retângulo verde" style="max-width: 100%; border-radius: var(--radius-base); border: 2px solid var(--border-color);">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1415,8 +1228,205 @@
         let aiConfig = {};
         let calibrationResults = {};
         let imageAnalysis = null;
+        let currentCalibrationId = null; // ID da calibração atual na BD
         
         // Initialize page
+        // Carregar configuração de nomenclatura (read-only)
+        async function loadNomenclatureConfigReadOnly(eventId) {
+            try {
+                const container = document.getElementById('nomenclatureReadOnlyContent');
+                if (!container) {
+                    console.warn('⚠️ Container nomenclatureReadOnlyContent não encontrado');
+                    return;
+                }
+                
+                // Usar API REST (bypassa RLS, mesmo método que loadEventInfo usa)
+                console.log('🔍 Carregando evento via API REST:', eventId);
+                const res = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        console.warn('⚠️ Evento não encontrado:', eventId);
+                        container.innerHTML = '<p style="color: var(--text-secondary);">⚠️ Evento não encontrado.</p>';
+                        return;
+                    }
+                    throw new Error(`Erro HTTP ${res.status}`);
+                }
+                
+                const apiResponse = await res.json();
+                console.log('📥 Resposta completa da API:', apiResponse);
+                
+                const { success, event, error: apiError } = apiResponse;
+                
+                if (!success || apiError) {
+                    console.error('❌ Erro ao carregar evento:', apiError);
+                    container.innerHTML = '<p style="color: var(--danger);">Erro ao carregar configuração</p>';
+                    return;
+                }
+                
+                if (!event) {
+                    console.warn('⚠️ Evento não encontrado:', eventId);
+                    container.innerHTML = '<p style="color: var(--text-secondary);">⚠️ Evento não encontrado.</p>';
+                    return;
+                }
+                
+                console.log('📋 Evento completo da API:', event);
+                console.log('🔍 event.settings tipo:', typeof event.settings);
+                console.log('🔍 event.settings valor:', event.settings);
+                
+                // Settings pode ser null, undefined, string "null", ou objeto vazio
+                let settings = event.settings;
+                
+                // Se settings é null ou string "null", converter para objeto vazio
+                if (!settings || settings === null || settings === 'null' || (typeof settings === 'string' && settings.toLowerCase() === 'null')) {
+                    settings = {};
+                    console.log('⚠️ Settings era null/undefined, convertido para objeto vazio');
+                }
+                
+                // Se settings é string JSON, fazer parse
+                if (typeof settings === 'string') {
+                    try {
+                        settings = JSON.parse(settings);
+                        console.log('✅ Settings parseado de string JSON');
+                    } catch (e) {
+                        console.warn('⚠️ Erro ao parsear settings:', e);
+                        settings = {};
+                    }
+                }
+                
+                console.log('🔍 Settings do evento (após processamento):', settings);
+                console.log('🔍 Tipo de settings:', typeof settings);
+                console.log('🔍 Keys de settings:', Object.keys(settings || {}));
+                console.log('🔍 dorsal_nomenclature:', settings?.dorsal_nomenclature);
+                
+                const nomenclature = settings?.dorsal_nomenclature;
+                
+                if (!nomenclature || (typeof nomenclature === 'object' && Object.keys(nomenclature).length === 0)) {
+                    console.warn('⚠️ Nomenclatura não encontrada em settings. Settings completo:', JSON.stringify(settings, null, 2));
+                    container.innerHTML = `
+                        <p style="color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                            ⚠️ Configuração de nomenclatura ainda não foi definida.
+                        </p>
+                        <p style="color: var(--text-secondary); margin-bottom: var(--spacing-3);">
+                            Por favor, configure a nomenclatura dos dorsais nas <strong>Configurações do Evento</strong>.
+                        </p>
+                        <button onclick="window.open('config-kromi.html?event=' + new URLSearchParams(window.location.search).get('event'), '_blank')" 
+                                class="btn btn-primary" 
+                                style="width: 100%; margin-top: var(--spacing-3);">
+                            ⚙️ Ir para Configurações do Evento
+                        </button>
+                    `;
+                    return;
+                }
+                
+                let html = `<div style="font-size: var(--font-size-base); color: var(--text-primary);">`;
+                
+                html += `<p style="margin-bottom: var(--spacing-3);"><strong>Tipo:</strong> `;
+                
+                if (nomenclature.type === 'numeric') {
+                    html += `🔢 Numérico</p>`;
+                    const cfg = nomenclature.numeric || {};
+                    const mode = cfg.mode === 'random' ? 'Aleatório (sorteia dentro do range)' : 'Sequencial (1, 2, 3...)';
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li><strong>Modo de Atribuição:</strong> ${mode}</li>
+                            <li>Range: ${cfg.min || 1} até ${cfg.max || 9999}</li>
+                            <li>Padding: ${cfg.use_padding ? 'Sim (' + (cfg.digits || 3) + ' dígitos)' : 'Não'}</li>
+                            <li>Exemplo: ${cfg.use_padding ? String(1).padStart(cfg.digits || 3, '0') : '1'}, ${cfg.use_padding ? String(2).padStart(cfg.digits || 3, '0') : '2'}...</li>
+                        </ul>
+                    `;
+                } else if (nomenclature.type === 'prefix') {
+                    html += `📝 Com Prefixo</p>`;
+                    const cfg = nomenclature.prefix || {};
+                    const mode = cfg.mode === 'random' ? 'Aleatório (sorteia dentro do range)' : 'Sequencial (1, 2, 3...)';
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li><strong>Modo de Atribuição:</strong> ${mode}</li>
+                            <li>Prefixos: ${Array.isArray(cfg.prefixes) ? cfg.prefixes.join(', ') : (cfg.prefixes || 'M, F')}</li>
+                            <li>Separador: "${cfg.separator || '-'}"</li>
+                            <li>Range numérico: ${cfg.min || 1} até ${cfg.max || 999}</li>
+                            <li>Exemplo: M${cfg.separator || '-'}1, F${cfg.separator || '-'}1...</li>
+                        </ul>
+                    `;
+                } else if (nomenclature.type === 'suffix') {
+                    html += `📝 Com Sufixo</p>`;
+                    const cfg = nomenclature.suffix || {};
+                    const mode = cfg.mode === 'random' ? 'Aleatório (sorteia dentro do range)' : 'Sequencial (1, 2, 3...)';
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li><strong>Modo de Atribuição:</strong> ${mode}</li>
+                            <li>Sufixos: ${Array.isArray(cfg.suffixes) ? cfg.suffixes.join(', ') : (cfg.suffixes || 'M, F')}</li>
+                            <li>Separador: "${cfg.separator || '-'}"</li>
+                            <li>Range numérico: ${cfg.min || 1} até ${cfg.max || 999}</li>
+                            <li>Exemplo: 1${cfg.separator || '-'}M, 1${cfg.separator || '-'}F...</li>
+                        </ul>
+                    `;
+                } else if (nomenclature.type === 'prefix-suffix') {
+                    html += `📝 Prefixo + Sufixo</p>`;
+                    const cfg = nomenclature['prefix-suffix'] || {};
+                    const mode = cfg.mode === 'random' ? 'Aleatório (sorteia dentro do range)' : 'Sequencial (1, 2, 3...)';
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li><strong>Modo de Atribuição:</strong> ${mode}</li>
+                            <li>Prefixos: ${Array.isArray(cfg.prefixes) ? cfg.prefixes.join(', ') : (cfg.prefixes || 'M, F')}</li>
+                            <li>Sufixos: ${Array.isArray(cfg.suffixes) ? cfg.suffixes.join(', ') : (cfg.suffixes || 'M, F')}</li>
+                            <li>Separadores: "${cfg.prefix_separator || '-'}" e "${cfg.suffix_separator || '-'}"</li>
+                            <li>Range numérico: ${cfg.min || 1} até ${cfg.max || 999}</li>
+                            <li>Exemplo: M${cfg.prefix_separator || '-'}1${cfg.suffix_separator || '-'}M...</li>
+                        </ul>
+                    `;
+                } else if (nomenclature.type === 'markers') {
+                    html += `🎨 Marcadores de Cor</p>`;
+                    const cfg = nomenclature.markers || {};
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li>Cor Início: <span style="color:${cfg.start_color || '#10b981'};">⬤</span> ${cfg.start_color || '#10b981'}</li>
+                            <li>Cor Fim: <span style="color:${cfg.end_color || '#ef4444'};">⬤</span> ${cfg.end_color || '#ef4444'}</li>
+                            <li>Tolerância: ${cfg.tolerance || 20}%</li>
+                            <li>Exemplo: <span style="color:${cfg.start_color || '#10b981'};">🟢</span> 407 <span style="color:${cfg.end_color || '#ef4444'};">🔴</span></li>
+                        </ul>
+                    `;
+                } else if (nomenclature.type === 'custom') {
+                    html += `⚙️ Personalizado (Regex)</p>`;
+                    const cfg = nomenclature.custom || {};
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li style="font-family:monospace;">Regex: ${cfg.regex || '(não configurado)'}</li>
+                            <li>Exemplos: ${cfg.examples || 'A001, B002'}</li>
+                        </ul>
+                    `;
+                } else {
+                    // Tipo desconhecido ou não definido - usar padrão numérico
+                    console.warn('⚠️ Tipo de nomenclatura desconhecido:', nomenclature.type, '- usando padrão numérico');
+                    html += `🔢 Numérico (Padrão)</p>`;
+                    html += `
+                        <ul style="margin-left: var(--spacing-4); color: var(--text-secondary);">
+                            <li><strong>Modo de Atribuição:</strong> Sequencial (1, 2, 3...)</li>
+                            <li>Range: 1 até 9999</li>
+                            <li>Padding: Não</li>
+                            <li>Exemplo: 1, 2, 3...</li>
+                            <li style="color: var(--warning);"><em>Nota: Configuração salva pode ter estrutura diferente</em></li>
+                        </ul>
+                    `;
+                }
+                
+                html += `</div>`;
+                
+                container.innerHTML = html;
+                
+                console.log('✅ Nomenclatura carregada (read-only) na calibração:', nomenclature);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar nomenclatura:', error);
+                const container = document.getElementById('nomenclatureReadOnlyContent');
+                if (container) {
+                    container.innerHTML = '<p style="color: var(--danger);">Erro ao carregar configuração</p>';
+                }
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 // 1) Aguardar sistema de navegação estar pronto
@@ -1434,6 +1444,8 @@
                     loadEventInfo(eventId);
                     // Check for existing calibration
                     checkExistingCalibration(eventId);
+                    // Load nomenclature config (read-only)
+                    await loadNomenclatureConfigReadOnly(eventId);
                 }
                 
                 // 4) Setup event listeners
@@ -1692,16 +1704,77 @@
                 // Preselecionar nomenclatura baseada na análise
                 preselectNomenclature(analysisResult);
                 
+                showProgress('Detectando número na imagem...', 60);
+                
+                // Tentar detectar número na imagem usando IA (Gemini)
+                let detectedNumberFromAnalysis = null;
+                try {
+                    // Criar uma área padrão para detecção inicial (toda a imagem)
+                    const fullImageArea = {
+                        x: 0,
+                        y: 0,
+                        width: 1,
+                        height: 1
+                    };
+                    
+                    // Processar imagem para detectar número
+                    const detectedNumberRaw = await processImageWithAI(
+                        uploadedImage,
+                        fullImageArea,
+                        { confidenceThreshold: 0.5, detectionSpeed: 'fast', enablePreprocessing: true, enablePostprocessing: false, maxDetections: 1, detectionTimeout: 5000 }
+                    );
+                    
+                    // processImageWithAI retorna apenas o número, não um objeto
+                    if (detectedNumberRaw !== null && detectedNumberRaw !== undefined) {
+                        detectedNumberFromAnalysis = String(detectedNumberRaw);
+                        console.log('✅ Número detectado na análise inicial:', detectedNumberFromAnalysis);
+                        
+                        // Mostrar resultado no passo 2
+                        const analysisResultDisplay = document.getElementById('analysisResultDisplay');
+                        const analysisDetectedNumber = document.getElementById('analysisDetectedNumber');
+                        const analysisDescription = document.getElementById('analysisDescription');
+                        
+                        if (analysisResultDisplay && analysisDetectedNumber) {
+                            analysisDetectedNumber.textContent = detectedNumberFromAnalysis;
+                            if (analysisDescription) {
+                                analysisDescription.textContent = `A IA analisou a imagem e detectou o número "${detectedNumberFromAnalysis}" no dorsal. Este número será usado como referência para a calibração.`;
+                            }
+                            analysisResultDisplay.style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Não foi possível detectar número na análise inicial:', error);
+                    // Não é crítico, continuar normalmente
+                }
+                
                 showProgress('Definindo área de detecção...', 75);
                 
                 // Predelimitar área de detecção
                 predelineateDetectionArea(analysisResult);
                 
                 hideProgress();
+                
+                // Inicializar calibração na BD com a imagem
+                await initializeCalibrationInDB();
+                
+                // Avançar para passo 2 (nomenclatura) para mostrar o resultado da análise
                 showStep(2);
                 
                 // Set detection image
                 document.getElementById('detectionImage').src = uploadedImage;
+                
+                // Aplicar área sugerida pela IA se disponível
+                if (analysisResult.detectionArea) {
+                    const area = analysisResult.detectionArea;
+                    const detectionAreaEl = document.getElementById('detectionArea');
+                    if (detectionAreaEl) {
+                        detectionAreaEl.style.left = (area.x * 100) + '%';
+                        detectionAreaEl.style.top = (area.y * 100) + '%';
+                        detectionAreaEl.style.width = (area.width * 100) + '%';
+                        detectionAreaEl.style.height = (area.height * 100) + '%';
+                        updateAreaInfo();
+                    }
+                }
                 
                 showSuccess('Análise concluída! Configurações sugeridas pela IA aplicadas.');
                 
@@ -1711,8 +1784,162 @@
                 showError('Erro na análise da imagem. Continuando com configurações padrão.');
                 
                 // Fallback para configurações padrão
-                showStep(2);
+                // Inicializar calibração na BD mesmo em caso de erro
+                await initializeCalibrationInDB();
+                
+                showStep(3);
                 document.getElementById('detectionImage').src = uploadedImage;
+            }
+        }
+        
+        // Inicializar calibração na BD
+        async function initializeCalibrationInDB() {
+            if (!currentEvent || !window.supabaseClient || !uploadedImage) {
+                console.warn('⚠️ Não é possível inicializar calibração: evento, supabase ou imagem não disponível');
+                return;
+            }
+            
+            try {
+                console.log('💾 Inicializando calibração na BD...');
+                
+                // Se já existe uma calibração, usar ela; caso contrário, criar nova
+                if (!currentCalibrationId) {
+                    // Criar nova calibração
+                    const { data: calibrationId, error } = await window.supabaseClient.supabase
+                        .rpc('create_calibration', {
+                            p_event_id: currentEvent.id,
+                            p_device_id: null,
+                            p_image_data: uploadedImage,
+                            p_image_width: null,
+                            p_image_height: null,
+                            p_detection_area_x: 0.2,
+                            p_detection_area_y: 0.2,
+                            p_detection_area_width: 0.6,
+                            p_detection_area_height: 0.6,
+                            p_nomenclature_type: 'numeric',
+                            p_nomenclature_config: {},
+                            p_ai_config: {}
+                        });
+                    
+                    if (error) {
+                        console.error('❌ Erro ao criar calibração:', error);
+                        throw error;
+                    }
+                    
+                    currentCalibrationId = calibrationId;
+                    console.log('✅ Calibração criada com ID:', currentCalibrationId);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao inicializar calibração:', error);
+                throw error;
+            }
+        }
+        
+        // Atualizar calibração na BD
+        async function updateCalibrationInDB(updates) {
+            if (!currentCalibrationId || !window.supabaseClient) {
+                console.warn('⚠️ Não é possível atualizar calibração: calibration_id não disponível');
+                return;
+            }
+            
+            try {
+                console.log('🔄 Atualizando calibração:', updates);
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('event_calibrations')
+                    .update({
+                        ...updates,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentCalibrationId);
+                
+                if (error) {
+                    console.error('❌ Erro ao atualizar calibração:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Calibração atualizada');
+            } catch (error) {
+                console.error('❌ Erro ao atualizar calibração:', error);
+                throw error;
+            }
+        }
+        
+        // Gerar imagem com retângulo verde sobre a área selecionada
+        async function generateTemplateImageWithGreenRectangle(imageSrc, regionX, regionY, regionWidth, regionHeight) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Desenhar imagem original
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Desenhar retângulo verde sobre a área selecionada
+                    const rectX = regionX * img.width;
+                    const rectY = regionY * img.height;
+                    const rectWidth = regionWidth * img.width;
+                    const rectHeight = regionHeight * img.height;
+                    
+                    // Retângulo verde semi-transparente
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+                    
+                    // Borda verde sólida
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
+                    
+                    // Converter para Base64
+                    const base64 = canvas.toDataURL('image/png');
+                    resolve(base64);
+                };
+                
+                img.onerror = () => {
+                    reject(new Error('Erro ao carregar imagem'));
+                };
+                
+                img.src = imageSrc;
+            });
+        }
+        
+        // Carregar expected_digits da nomenclatura do evento
+        async function getExpectedDigitsFromNomenclature(eventId) {
+            try {
+                const response = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) return 4; // Default
+                
+                const data = await response.json();
+                if (!data.success || !data.event?.settings?.dorsal_nomenclature) {
+                    return 4; // Default
+                }
+                
+                const nomenclature = data.event.settings.dorsal_nomenclature;
+                
+                // Calcular expected_digits baseado no tipo de nomenclatura
+                if (nomenclature.type === 'numeric' && nomenclature.numeric) {
+                    const numeric = nomenclature.numeric;
+                    if (numeric.use_padding && numeric.digits) {
+                        return numeric.digits;
+                    }
+                    // Calcular dígitos baseado no máximo
+                    if (numeric.max) {
+                        return String(numeric.max).length;
+                    }
+                    return numeric.digits || 4;
+                }
+                
+                // Para outros tipos, usar padrão
+                return 4;
+            } catch (error) {
+                console.warn('⚠️ Erro ao calcular expected_digits, usando padrão:', error);
+                return 4;
             }
         }
         
@@ -1721,23 +1948,184 @@
             const rect = area.getBoundingClientRect();
             const imgRect = document.getElementById('detectionImage').getBoundingClientRect();
             
-            detectionArea = {
+            if (!uploadedImage) {
+                showError('Imagem não disponível');
+                return;
+            }
+            
+            // Calcular coordenadas normalizadas
+            const numberRegion = {
                 x: (rect.left - imgRect.left) / imgRect.width,
                 y: (rect.top - imgRect.top) / imgRect.height,
                 width: rect.width / imgRect.width,
                 height: rect.height / imgRect.height
             };
             
-            // Salvar usando o método saveConfiguration
-            if (currentEvent && window.supabaseClient) {
-                await window.supabaseClient.saveConfiguration('number_area', detectionArea, currentEvent.id);
-            } else {
-                // Fallback para localStorage sem eventId
-                await window.supabaseClient.saveConfiguration('number_area', detectionArea);
-            }
+            // Por enquanto, bib_region = number_region (depois pode ser ajustado)
+            const bibRegion = { ...numberRegion };
             
-            showStep(4); // Ir para config IA
-            showSuccess('Área de detecção guardada');
+            detectionArea = numberRegion;
+            
+            try {
+                // Verificar se uploadedImage está disponível
+                if (!uploadedImage) {
+                    console.error('❌ uploadedImage não está disponível!');
+                    showError('Imagem não disponível para guardar. Por favor, faça upload novamente.');
+                    return;
+                }
+                
+                // Guardar imagem base (original, sem marcações)
+                console.log('💾 Guardando imagem base (original)...');
+                console.log('📷 uploadedImage disponível:', !!uploadedImage, 'Tamanho:', uploadedImage.length);
+                
+                // Gerar imagem com retângulo verde
+                console.log('🎨 Gerando imagem com retângulo verde...');
+                const templateImageBase64 = await generateTemplateImageWithGreenRectangle(
+                    uploadedImage,
+                    numberRegion.x,
+                    numberRegion.y,
+                    numberRegion.width,
+                    numberRegion.height
+                );
+                
+                if (!templateImageBase64) {
+                    console.error('❌ Erro ao gerar imagem com retângulo verde!');
+                    showError('Erro ao gerar imagem com retângulo verde.');
+                    return;
+                }
+                
+                // Obter expected_digits da nomenclatura
+                const expectedDigits = await getExpectedDigitsFromNomenclature(currentEvent.id);
+                
+                // Obter confidence_threshold da configuração AI (se já foi configurado)
+                const confidenceThreshold = aiConfig?.confidenceThreshold || 0.75;
+                
+                console.log('💾 Guardando ambas as imagens na tabela bib_templates...');
+                console.log('📷 Imagem base (original):', uploadedImage.substring(0, 50) + '...', 'Tamanho total:', uploadedImage.length);
+                console.log('🎨 Imagem com retângulo verde:', templateImageBase64.substring(0, 50) + '...', 'Tamanho total:', templateImageBase64.length);
+                
+                // Preparar dados para guardar (garantir que base_image_base64 não é NULL)
+                const templateData = {
+                    event_id: currentEvent.id,
+                    base_image_base64: uploadedImage,  // Imagem original sem marcações - SEMPRE definido
+                    template_image_base64: templateImageBase64,  // Imagem com retângulo verde
+                    template_image_url: null,
+                    bib_region_x: bibRegion.x,
+                    bib_region_y: bibRegion.y,
+                    bib_region_width: bibRegion.width,
+                    bib_region_height: bibRegion.height,
+                    number_region_x: numberRegion.x,
+                    number_region_y: numberRegion.y,
+                    number_region_width: numberRegion.width,
+                    number_region_height: numberRegion.height,
+                    expected_digits: expectedDigits,
+                    confidence_threshold: confidenceThreshold
+                };
+                
+                console.log('📋 Dados a guardar:', {
+                    event_id: templateData.event_id,
+                    hasBaseImage: !!templateData.base_image_base64,
+                    baseImageType: typeof templateData.base_image_base64,
+                    baseImageLength: templateData.base_image_base64?.length || 0,
+                    hasTemplateImage: !!templateData.template_image_base64,
+                    templateImageLength: templateData.template_image_base64?.length || 0
+                });
+                
+                // Verificar se já existe um template para este evento
+                const { data: existingTemplate, error: checkError } = await window.supabaseClient.supabase
+                    .from('bib_templates')
+                    .select('id, base_image_base64')
+                    .eq('event_id', currentEvent.id)
+                    .maybeSingle(); // Usar maybeSingle para não dar erro se não existir
+                
+                let result;
+                if (existingTemplate && !checkError) {
+                    // UPDATE - atualizar registo existente
+                    // IMPORTANTE: Usar UPDATE explícito com todos os campos para forçar atualização de NULL
+                    console.log('🔄 Atualizando template existente:', existingTemplate.id);
+                    console.log('🔍 base_image_base64 atual no BD:', existingTemplate.base_image_base64 ? 'Existe' : 'NULL');
+                    
+                    // Garantir que todos os campos são atualizados, incluindo NULLs
+                    result = await window.supabaseClient.supabase
+                        .from('bib_templates')
+                        .update({
+                            base_image_base64: templateData.base_image_base64,  // Forçar atualização mesmo se NULL
+                            template_image_base64: templateData.template_image_base64,
+                            template_image_url: templateData.template_image_url,
+                            bib_region_x: templateData.bib_region_x,
+                            bib_region_y: templateData.bib_region_y,
+                            bib_region_width: templateData.bib_region_width,
+                            bib_region_height: templateData.bib_region_height,
+                            number_region_x: templateData.number_region_x,
+                            number_region_y: templateData.number_region_y,
+                            number_region_width: templateData.number_region_width,
+                            number_region_height: templateData.number_region_height,
+                            expected_digits: templateData.expected_digits,
+                            confidence_threshold: templateData.confidence_threshold,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('event_id', currentEvent.id)
+                        .select()
+                        .single();
+                } else {
+                    // INSERT - criar novo registo
+                    console.log('➕ Criando novo template');
+                    result = await window.supabaseClient.supabase
+                        .from('bib_templates')
+                        .insert(templateData)
+                        .select()
+                        .single();
+                }
+                
+                const { data, error } = result;
+                
+                if (data) {
+                    console.log('✅ Template guardado/atualizado:', {
+                        id: data.id,
+                        hasBaseImage: !!data.base_image_base64,
+                        baseImageLength: data.base_image_base64?.length || 0,
+                        hasTemplateImage: !!data.template_image_base64,
+                        templateImageLength: data.template_image_base64?.length || 0
+                    });
+                }
+                
+                if (error) {
+                    console.error('❌ Erro ao guardar bib_template:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Template guardado na tabela bib_templates:', data);
+                
+                // Também atualizar event_calibrations (para compatibilidade)
+                if (currentCalibrationId) {
+                    await updateCalibrationInDB({
+                        detection_area_x: numberRegion.x,
+                        detection_area_y: numberRegion.y,
+                        detection_area_width: numberRegion.width,
+                        detection_area_height: numberRegion.height
+                    });
+                }
+                
+                // Aplicar valores padrão de AI Config se ainda não foram configurados
+                if (!aiConfig || Object.keys(aiConfig).length === 0) {
+                    aiConfig = {
+                        confidenceThreshold: 0.75,
+                        detectionSpeed: 'balanced',
+                        enablePreprocessing: true,
+                        enablePostprocessing: true,
+                        maxDetections: 3,
+                        detectionTimeout: 1000
+                    };
+                    console.log('✅ Valores padrão de AI Config aplicados:', aiConfig);
+                }
+                
+                showStep(4); // Ir para config IA
+                showSuccess('Área de detecção guardada com template de imagem');
+                
+            } catch (error) {
+                console.error('❌ Erro ao guardar área de detecção:', error);
+                showError('Erro ao guardar área de detecção. Tente novamente.');
+            }
         }
         
         function setupDraggableArea() {
@@ -1871,11 +2259,39 @@
             
             console.log('✅ AI Config criado:', aiConfig);
             
-            // Salvar usando o método saveConfiguration
-            if (currentEvent && window.supabaseClient) {
-                await window.supabaseClient.saveConfiguration('ai_config', aiConfig, currentEvent.id);
+            // Guardar diretamente na BD (event_calibrations)
+            if (currentCalibrationId) {
+                await updateCalibrationInDB({
+                    ai_config: aiConfig
+                });
             } else {
-                await window.supabaseClient.saveConfiguration('ai_config', aiConfig);
+                // Se não existe calibração, criar agora
+                await initializeCalibrationInDB();
+                await updateCalibrationInDB({
+                    ai_config: aiConfig
+                });
+            }
+            
+            // Atualizar também confidence_threshold na tabela bib_templates se existir
+            if (currentEvent && window.supabaseClient) {
+                try {
+                    const { error: bibError } = await window.supabaseClient.supabase
+                        .from('bib_templates')
+                        .update({
+                            confidence_threshold: aiConfig.confidenceThreshold,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('event_id', currentEvent.id);
+                    
+                    if (bibError) {
+                        console.warn('⚠️ Erro ao atualizar confidence_threshold em bib_templates:', bibError);
+                        // Não bloquear se falhar, pode não existir ainda
+                    } else {
+                        console.log('✅ confidence_threshold atualizado em bib_templates');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao atualizar bib_templates:', error);
+                }
             }
             
             showSuccess('Configuração da IA guardada! Pode agora testar.');
@@ -2687,6 +3103,7 @@
             document.getElementById('aiDescription').textContent = calibrationResults.aiDescription;
             
             // Atualizar estatísticas
+            document.getElementById('detectedNumberResult').textContent = calibrationResults.detectedNumber || '--';
             document.getElementById('confidenceResult').textContent = (calibrationResults.confidence * 100).toFixed(1) + '%';
             document.getElementById('processingTimeResult').textContent = calibrationResults.processingTime + 'ms';
             document.getElementById('detectionCountResult').textContent = calibrationResults.detectionCount;
@@ -2756,38 +3173,18 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             }
             
             try {
-                // Salvar calibração completa no Supabase usando as novas tabelas
-                if (window.supabaseClient && currentEvent) {
-                    console.log('💾 Salvando calibração no Supabase...');
+                // Garantir que temos uma calibração na BD
+                if (!currentCalibrationId) {
+                    await initializeCalibrationInDB();
+                }
+                
+                // Completar calibração com resultados usando RPC
+                if (window.supabaseClient && currentCalibrationId) {
+                    console.log('💾 Completando calibração no Supabase...');
                     
-                    // Criar calibração
-                    const { data: calibrationData, error: createError } = await window.supabaseClient.supabase
-                        .rpc('create_calibration', {
-                            p_event_id: currentEvent.id,
-                            p_device_id: null, // Pode ser associado a um dispositivo específico depois
-                            p_image_data: uploadedImage,
-                            p_image_width: null, // Será calculado automaticamente
-                            p_image_height: null, // Será calculado automaticamente
-                            p_detection_area_x: detectionArea.x,
-                            p_detection_area_y: detectionArea.y,
-                            p_detection_area_width: detectionArea.width,
-                            p_detection_area_height: detectionArea.height,
-                            p_nomenclature_type: aiConfig.nomenclatureType || 'numeric',
-                            p_nomenclature_config: aiConfig.nomenclatureConfig || {},
-                            p_ai_config: aiConfig
-                        });
-                    
-                    if (createError) {
-                        console.error('❌ Erro ao criar calibração:', createError);
-                        throw createError;
-                    }
-                    
-                    console.log('✅ Calibração criada com ID:', calibrationData);
-                    
-                    // Completar calibração com resultados
                     const { error: completeError } = await window.supabaseClient.supabase
                         .rpc('complete_calibration', {
-                            p_calibration_id: calibrationData,
+                            p_calibration_id: currentCalibrationId,
                             p_detected_number: calibrationResults.detectedNumber,
                             p_confidence: calibrationResults.confidence,
                             p_processing_time_ms: calibrationResults.processingTime,
@@ -2800,20 +3197,16 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                     }
                     
                     console.log('✅ Calibração completada no Supabase');
-                }
-                
-                // Salvar também usando o método saveConfiguration
-                const config = {
-                    image: uploadedImage,
-                    detectionArea: detectionArea,
-                    aiConfig: aiConfig,
-                    results: calibrationResults,
-                    timestamp: new Date().toISOString()
-                };
-                
-                const eventId = currentEvent ? currentEvent.id : null;
-                if (window.supabaseClient) {
-                    await window.supabaseClient.saveConfiguration('calibration_complete', config, eventId);
+                } else {
+                    // Fallback: atualizar diretamente
+                    await updateCalibrationInDB({
+                        detected_number: calibrationResults.detectedNumber,
+                        confidence: calibrationResults.confidence,
+                        processing_time_ms: calibrationResults.processingTime,
+                        ai_description: calibrationResults.aiDescription,
+                        is_complete: true,
+                        completed_at: new Date().toISOString()
+                    });
                 }
                 
                 showSuccess('Calibração concluída e salva! Redirecionando para o evento...');
@@ -2851,34 +3244,63 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                     await window.supabaseClient.init();
                 }
                 
-                // Buscar calibração usando o método getConfiguration
+                // Primeiro, tentar localStorage (para compatibilidade)
                 let calibration = null;
+                const key = eventId 
+                    ? `visionkrono:${eventId}:calibration_complete`
+                    : 'visionkrono_calibration_complete';
+                const localCalibration = localStorage.getItem(key);
                 
-                if (window.supabaseClient) {
-                    calibration = await window.supabaseClient.getConfiguration('calibration_complete', eventId);
-                }
-                
-                // Se não encontrou, tentar chave legada no localStorage
-                if (!calibration) {
-                    const key = eventId 
-                        ? `visionkrono:${eventId}:calibration_complete`
-                        : 'visionkrono_calibration_complete';
-                    const localCalibration = localStorage.getItem(key);
-                    
-                    if (!localCalibration) {
-                        // Tentar chave legada sem namespace
-                        const legacyCalibration = localStorage.getItem('visionkrono_calibration_complete') 
-                            || localStorage.getItem('visionkrono_calibration');
-                        if (legacyCalibration) {
+                if (!localCalibration) {
+                    // Tentar chave legada sem namespace
+                    const legacyCalibration = localStorage.getItem('visionkrono_calibration_complete') 
+                        || localStorage.getItem('visionkrono_calibration');
+                    if (legacyCalibration) {
+                        try {
                             calibration = JSON.parse(legacyCalibration);
+                        } catch (e) {
+                            console.warn('⚠️ Erro ao parsear calibração do localStorage:', e);
                         }
-                    } else {
+                    }
+                } else {
+                    try {
                         calibration = JSON.parse(localCalibration);
+                    } catch (e) {
+                        console.warn('⚠️ Erro ao parsear calibração do localStorage:', e);
                     }
                 }
                 
                 if (calibration) {
-                    console.log('📋 Dados encontrados:', calibration);
+                    console.log('📋 Dados encontrados no localStorage:', calibration);
+                    
+                    // Tentar carregar imagens do bib_templates mesmo quando vem do localStorage
+                    let baseImage = calibration.image || null;
+                    let templateImage = null;
+                    
+                    if (window.supabaseClient && window.supabaseClient.supabase && eventId) {
+                        try {
+                            const { data: bibTemplateData, error: bibTemplateError } = await window.supabaseClient.supabase
+                                .rpc('get_bib_template', { event_uuid: eventId });
+                            
+                            if (!bibTemplateError && bibTemplateData && bibTemplateData.length > 0) {
+                                const bibTemplate = bibTemplateData[0];
+                                console.log('✅ Template de bib encontrado (localStorage):', bibTemplate);
+                                
+                                if (bibTemplate.base_image_base64) {
+                                    baseImage = bibTemplate.base_image_base64;
+                                }
+                                if (bibTemplate.template_image_base64) {
+                                    templateImage = bibTemplate.template_image_base64;
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Erro ao carregar template de bib (localStorage):', error);
+                        }
+                    }
+                    
+                    // Adicionar imagens ao objeto calibration
+                    calibration.image = baseImage;
+                    calibration.templateImage = templateImage;
                     
                     // Verificar se tem resultados válidos
                     if (calibration.results && calibration.results.detectedNumber) {
@@ -2887,27 +3309,13 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                         return;
                     } else if (calibration.image && calibration.detectionArea && calibration.aiConfig) {
                         console.log('✅ Configuração de calibração encontrada no localStorage (sem resultados)');
-                        console.log('📊 Estrutura dos dados:', {
-                            hasImage: !!calibration.image,
-                            hasDetectionArea: !!calibration.detectionArea,
-                            hasAiConfig: !!calibration.aiConfig,
-                            hasResults: !!calibration.results,
-                            resultsDetectedNumber: calibration.results?.detectedNumber
-                        });
                         // Mostrar modal mesmo sem resultados, indicando que há configuração salva
                         showExistingCalibrationSection(calibration);
                         return;
-                    } else {
-                        console.log('⚠️ Dados encontrados mas estrutura incompleta:', {
-                            hasImage: !!calibration.image,
-                            hasDetectionArea: !!calibration.detectionArea,
-                            hasAiConfig: !!calibration.aiConfig,
-                            hasResults: !!calibration.results
-                        });
                     }
                 }
                 
-                // Verificar no Supabase
+                // Verificar no Supabase usando RPC (não usar getConfiguration para calibração)
                 if (window.supabaseClient && window.supabaseClient.supabase) {
                     console.log('🔍 Verificando calibração no Supabase...');
                     
@@ -2919,16 +3327,74 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                         const calibration = calibrationData[0];
                         console.log('✅ Calibração encontrada no Supabase:', calibration);
                         
+                        // Guardar o ID da calibração
+                        currentCalibrationId = calibration.id;
+                        console.log('✅ currentCalibrationId definido:', currentCalibrationId);
+                        
+                        // Carregar dados nas variáveis globais para uso posterior
+                        uploadedImage = calibration.image_data;
+                        detectionArea = {
+                            x: parseFloat(calibration.detection_area_x),
+                            y: parseFloat(calibration.detection_area_y),
+                            width: parseFloat(calibration.detection_area_width),
+                            height: parseFloat(calibration.detection_area_height)
+                        };
+                        aiConfig = calibration.ai_config || {};
+                        
+                        if (calibration.is_complete && calibration.detected_number) {
+                            calibrationResults = {
+                                detectedNumber: calibration.detected_number,
+                                confidence: parseFloat(calibration.confidence || 0),
+                                processingTime: calibration.processing_time_ms || 0,
+                                aiDescription: calibration.ai_description
+                            };
+                        }
+                        
+                        // Carregar imagens da tabela bib_templates
+                        let baseImage = calibration.image_data; // Fallback para imagem da calibração
+                        let templateImage = null;
+                        
+                        try {
+                            const { data: bibTemplateData, error: bibTemplateError } = await window.supabaseClient.supabase
+                                .rpc('get_bib_template', { event_uuid: eventId });
+                            
+                            if (!bibTemplateError && bibTemplateData && bibTemplateData.length > 0) {
+                                const bibTemplate = bibTemplateData[0];
+                                console.log('✅ Template de bib encontrado:', bibTemplate);
+                                
+                                // Usar imagens do template se disponíveis
+                                if (bibTemplate.base_image_base64) {
+                                    baseImage = bibTemplate.base_image_base64;
+                                    console.log('📷 Imagem base carregada do bib_templates');
+                                }
+                                if (bibTemplate.template_image_base64) {
+                                    templateImage = bibTemplate.template_image_base64;
+                                    console.log('🎨 Imagem com retângulo verde carregada do bib_templates');
+                                }
+                            } else {
+                                console.log('ℹ️ Nenhum template de bib encontrado, usando imagem da calibração');
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Erro ao carregar template de bib:', error);
+                            // Continuar com imagem da calibração
+                        }
+                        
+                        console.log('✅ Dados carregados nas variáveis globais:', {
+                            hasImage: !!uploadedImage,
+                            hasDetectionArea: !!detectionArea,
+                            hasAIConfig: !!aiConfig && Object.keys(aiConfig).length > 0,
+                            aiConfig: aiConfig,
+                            hasBaseImage: !!baseImage,
+                            hasTemplateImage: !!templateImage
+                        });
+                        
                         // Converter para formato compatível
                         const configData = {
-                            image: calibration.image_data,
-                            detectionArea: {
-                                x: parseFloat(calibration.detection_area_x),
-                                y: parseFloat(calibration.detection_area_y),
-                                width: parseFloat(calibration.detection_area_width),
-                                height: parseFloat(calibration.detection_area_height)
-                            },
-                            aiConfig: calibration.ai_config || {},
+                            id: calibration.id,
+                            image: baseImage, // Imagem base (original)
+                            templateImage: templateImage, // Imagem com retângulo verde
+                            detectionArea: detectionArea,
+                            aiConfig: aiConfig,
                             results: calibration.is_complete ? {
                                 detectedNumber: calibration.detected_number,
                                 confidence: parseFloat(calibration.confidence || 0),
@@ -2969,19 +3435,31 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                     console.error('❌ calibrationContainer não encontrado ou sem style');
                 }
                 
-                // Mostrar imagem real da calibração
-                if (calibrationData.image) {
-                    const imagePreview = document.getElementById('existingImagePreview');
-                    if (imagePreview && imagePreview.style) {
-                        imagePreview.src = calibrationData.image;
-                        imagePreview.style.display = 'block';
-                        console.log('📷 Imagem de calibração carregada');
-                    }
-                } else {
-                    const imagePreview = document.getElementById('existingImagePreview');
-                    if (imagePreview && imagePreview.style) {
-                        imagePreview.style.display = 'none';
-                    }
+                // Mostrar ambas as imagens (base e com retângulo verde)
+                const baseImagePreview = document.getElementById('existingBaseImagePreview');
+                const templateImagePreview = document.getElementById('existingTemplateImagePreview');
+                
+                // Imagem base (original)
+                if (calibrationData.image && baseImagePreview) {
+                    baseImagePreview.src = calibrationData.image;
+                    baseImagePreview.style.display = 'block';
+                    console.log('📷 Imagem base carregada');
+                } else if (baseImagePreview) {
+                    baseImagePreview.style.display = 'none';
+                }
+                
+                // Imagem com retângulo verde (template)
+                if (calibrationData.templateImage && templateImagePreview) {
+                    templateImagePreview.src = calibrationData.templateImage;
+                    templateImagePreview.style.display = 'block';
+                    console.log('🎨 Imagem com retângulo verde carregada');
+                } else if (calibrationData.image && templateImagePreview) {
+                    // Se não tiver templateImage, usar a imagem base como fallback
+                    templateImagePreview.src = calibrationData.image;
+                    templateImagePreview.style.display = 'block';
+                    console.log('⚠️ Imagem com retângulo verde não encontrada, usando imagem base');
+                } else if (templateImagePreview) {
+                    templateImagePreview.style.display = 'none';
                 }
                 
                 // Atualizar informações na seção
@@ -3066,15 +3544,61 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             const urlParams = new URLSearchParams(window.location.search);
             const eventId = urlParams.get('event');
             
-            // Carregar dados da calibração usando getConfiguration
+            // Carregar dados da calibração usando RPC get_active_calibration
             let calibration = null;
             
-            if (window.supabaseClient) {
-                calibration = await window.supabaseClient.getConfiguration('calibration_complete', eventId);
+            if (window.supabaseClient && window.supabaseClient.supabase) {
+                const { data: calibrationData, error } = await window.supabaseClient.supabase
+                    .rpc('get_active_calibration', { event_uuid: eventId });
+                
+                if (!error && calibrationData && calibrationData.length > 0) {
+                    const cal = calibrationData[0];
+                    calibration = {
+                        image: cal.image_data,
+                        detectionArea: {
+                            x: parseFloat(cal.detection_area_x),
+                            y: parseFloat(cal.detection_area_y),
+                            width: parseFloat(cal.detection_area_width),
+                            height: parseFloat(cal.detection_area_height)
+                        },
+                        aiConfig: cal.ai_config || {},
+                        results: cal.is_complete ? {
+                            detectedNumber: cal.detected_number,
+                            confidence: parseFloat(cal.confidence || 0),
+                            processingTime: cal.processing_time_ms || 0,
+                            aiDescription: cal.ai_description
+                        } : null,
+                        timestamp: cal.completed_at || cal.created_at
+                    };
+                }
             }
             
             if (calibration) {
+                // Garantir que currentCalibrationId está definido
+                if (calibration.id) {
+                    currentCalibrationId = calibration.id;
+                    console.log('✅ currentCalibrationId definido ao continuar:', currentCalibrationId);
+                }
+                
                 loadExistingCalibrationData(calibration);
+                
+                // Garantir que aiConfig está definido nas variáveis globais
+                if (calibration.aiConfig && Object.keys(calibration.aiConfig).length > 0) {
+                    aiConfig = calibration.aiConfig;
+                    console.log('✅ aiConfig carregado:', aiConfig);
+                } else {
+                    console.warn('⚠️ aiConfig vazio na calibração existente');
+                }
+                
+                // Ir para o passo onde parou (ou passo 3 se tem área)
+                if (calibration.detectionArea && calibration.detectionArea.x !== undefined) {
+                    showStep(3);
+                } else if (calibration.image) {
+                    showStep(2);
+                } else {
+                    showStep(1);
+                }
+                
                 showSuccess('Calibração existente carregada! Pode fazer ajustes se necessário.');
             } else {
                 showError('Não foi possível carregar a calibração existente.');
@@ -3085,8 +3609,10 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             console.log('🔄 Iniciando nova calibração');
             hideExistingCalibrationSection();
             
-            // Limpar dados existentes
+            // Limpar dados existentes (incluindo currentCalibrationId para criar nova)
             resetCalibration();
+            currentCalibrationId = null; // Limpar ID para criar nova calibração
+            console.log('✅ Dados limpos, ready para nova calibração');
             
             // Mostrar passo 1
             showStep(1);
@@ -3101,11 +3627,33 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             const urlParams = new URLSearchParams(window.location.search);
             const eventId = urlParams.get('event');
             
-            // Carregar dados da calibração usando getConfiguration
+            // Carregar dados da calibração usando RPC get_active_calibration
             let calibration = null;
             
-            if (window.supabaseClient) {
-                calibration = await window.supabaseClient.getConfiguration('calibration_complete', eventId);
+            if (window.supabaseClient && window.supabaseClient.supabase) {
+                const { data: calibrationData, error } = await window.supabaseClient.supabase
+                    .rpc('get_active_calibration', { event_uuid: eventId });
+                
+                if (!error && calibrationData && calibrationData.length > 0) {
+                    const cal = calibrationData[0];
+                    calibration = {
+                        image: cal.image_data,
+                        detectionArea: {
+                            x: parseFloat(cal.detection_area_x),
+                            y: parseFloat(cal.detection_area_y),
+                            width: parseFloat(cal.detection_area_width),
+                            height: parseFloat(cal.detection_area_height)
+                        },
+                        aiConfig: cal.ai_config || {},
+                        results: cal.is_complete ? {
+                            detectedNumber: cal.detected_number,
+                            confidence: parseFloat(cal.confidence || 0),
+                            processingTime: cal.processing_time_ms || 0,
+                            aiDescription: cal.ai_description
+                        } : null,
+                        timestamp: cal.completed_at || cal.created_at
+                    };
+                }
             }
             
             if (calibration) {
@@ -3119,10 +3667,34 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             }
         }
         
-        function loadExistingCalibrationData(calibrationData) {
+        async function loadExistingCalibrationData(calibrationData) {
             console.log('📥 Carregando dados da calibração existente:', calibrationData);
             
-            // Carregar imagem
+            // Obter eventId da URL para carregar template_image_base64 se disponível
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            
+            // Tentar carregar template_image_base64 da BD se não vier no calibrationData
+            let templateImageBase64 = calibrationData.templateImage || null;
+            
+            if (!templateImageBase64 && eventId && window.supabaseClient && window.supabaseClient.supabase) {
+                try {
+                    const { data: bibTemplateData, error: bibTemplateError } = await window.supabaseClient.supabase
+                        .rpc('get_bib_template', { event_uuid: eventId });
+                    
+                    if (!bibTemplateError && bibTemplateData && bibTemplateData.length > 0) {
+                        const bibTemplate = bibTemplateData[0];
+                        if (bibTemplate.template_image_base64) {
+                            templateImageBase64 = bibTemplate.template_image_base64;
+                            console.log('✅ template_image_base64 carregado da BD para uso na interface');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao carregar template_image_base64:', error);
+                }
+            }
+            
+            // Carregar imagem base (original)
             if (calibrationData.image) {
                 uploadedImage = calibrationData.image;
                 showImagePreview(calibrationData.image);
@@ -3131,10 +3703,27 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             // Carregar área de detecção
             if (calibrationData.detectionArea) {
                 detectionArea = calibrationData.detectionArea;
-                // Aplicar área na imagem se estiver visível
-                if (document.getElementById('detectionImage').src) {
-                    applyDetectionArea(calibrationData.detectionArea);
+            }
+            
+            // NOVO: Se temos template_image_base64, usar diretamente essa imagem no detectionImage
+            // Em vez de gerar dinamicamente com applyDetectionArea
+            const detectionImage = document.getElementById('detectionImage');
+            if (detectionImage && templateImageBase64) {
+                // Usar diretamente a imagem guardada com retângulo verde
+                detectionImage.src = templateImageBase64;
+                console.log('🎨 Usando imagem com retângulo verde guardada da BD (não gerando dinamicamente)');
+                
+                // Ocultar o div de área sobreposta já que a imagem já tem o retângulo desenhado
+                const detectionAreaDiv = document.getElementById('detectionArea');
+                if (detectionAreaDiv) {
+                    detectionAreaDiv.style.display = 'none';
+                    console.log('👁️ Div de área sobreposta ocultado (imagem já tem retângulo)');
                 }
+            } else if (detectionImage && calibrationData.image && detectionArea) {
+                // Fallback: se não tiver template_image_base64, usar imagem base e aplicar área
+                detectionImage.src = calibrationData.image;
+                applyDetectionArea(detectionArea);
+                console.log('⚠️ Template image não encontrado, aplicando área dinamicamente');
             }
             
             // Carregar configuração da IA
@@ -3265,13 +3854,39 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
                     await window.supabaseClient.init();
                 }
                 
-                // Carregar configuração usando o método getConfiguration
-                if (window.supabaseClient) {
-                    const config = await window.supabaseClient.getConfiguration('calibration', eventId);
-                    if (config) {
-                        console.log('📂 Configuração carregada:', config);
-                        // Apply saved configuration
-                        // TODO: aplicar configuração quando necessário
+                // Carregar configuração usando RPC get_active_calibration
+                if (window.supabaseClient && window.supabaseClient.supabase) {
+                    const { data: calibrationData, error } = await window.supabaseClient.supabase
+                        .rpc('get_active_calibration', { event_uuid: eventId });
+                    
+                    if (!error && calibrationData && calibrationData.length > 0) {
+                        const cal = calibrationData[0];
+                        
+                        // Guardar o ID da calibração
+                        currentCalibrationId = cal.id;
+                        console.log('✅ currentCalibrationId carregado:', currentCalibrationId);
+                        
+                        // Carregar dados na memória
+                        uploadedImage = cal.image_data;
+                        detectionArea = {
+                            x: parseFloat(cal.detection_area_x),
+                            y: parseFloat(cal.detection_area_y),
+                            width: parseFloat(cal.detection_area_width),
+                            height: parseFloat(cal.detection_area_height)
+                        };
+                        aiConfig = cal.ai_config || {};
+                        
+                        // Se tem resultados, carregar também
+                        if (cal.is_complete && cal.detected_number) {
+                            calibrationResults = {
+                                detectedNumber: cal.detected_number,
+                                confidence: parseFloat(cal.confidence || 0),
+                                processingTime: cal.processing_time_ms || 0,
+                                aiDescription: cal.ai_description
+                            };
+                        }
+                        
+                        console.log('📂 Configuração carregada da BD:', { detectionArea, aiConfig });
                     }
                 }
             } catch (error) {
@@ -3302,7 +3917,7 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             }
         }
         
-        function showStep(stepNumber) {
+        async function showStep(stepNumber) {
             // Hide all steps
             for (let i = 1; i <= 5; i++) {
                 const step = document.getElementById(`step${i}`);
@@ -3314,6 +3929,107 @@ Timeout: ${aiConfig.detectionTimeout || 1000}ms`;
             if (currentStep) {
                 currentStep.style.display = 'block';
                 window.scrollTo(0, 0);
+                
+                // Se for Step 2, carregar configuração read-only
+                if (stepNumber === 2) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const eventId = urlParams.get('event');
+                    if (eventId) {
+                        await loadNomenclatureConfigReadOnly(eventId);
+                    }
+                }
+                
+                // Se for Step 4, garantir que aiConfig tem valores padrão se estiver vazio
+                if (stepNumber === 4) {
+                    if (!aiConfig || Object.keys(aiConfig).length === 0) {
+                        console.log('⚠️ aiConfig vazio, aplicando valores padrão');
+                        // Aplicar valores padrão
+                        const defaultSlider = document.getElementById('confidenceThreshold');
+                        const defaultSpeed = document.getElementById('detectionSpeed');
+                        const defaultMaxDetections = document.getElementById('maxDetections');
+                        const defaultTimeout = document.getElementById('detectionTimeout');
+                        const defaultPreprocessing = document.getElementById('preprocessingSwitch');
+                        const defaultPostprocessing = document.getElementById('postprocessingSwitch');
+                        
+                        if (defaultSlider) {
+                            defaultSlider.value = 0.75;
+                            updateConfidenceValue();
+                        }
+                        if (defaultSpeed) defaultSpeed.value = 'balanced';
+                        if (defaultMaxDetections) defaultMaxDetections.value = 3;
+                        if (defaultTimeout) defaultTimeout.value = 1000;
+                        if (defaultPreprocessing) defaultPreprocessing.classList.add('active');
+                        if (defaultPostprocessing) defaultPostprocessing.classList.add('active');
+                        
+                        // Também definir aiConfig com valores padrão
+                        aiConfig = {
+                            confidenceThreshold: 0.75,
+                            detectionSpeed: 'balanced',
+                            enablePreprocessing: true,
+                            enablePostprocessing: true,
+                            maxDetections: 3,
+                            detectionTimeout: 1000
+                        };
+                        console.log('✅ Valores padrão aplicados:', aiConfig);
+                    } else {
+                        // Carregar configuração existente nos campos
+                        loadAIConfig(aiConfig);
+                    }
+                }
+                
+                // Se for Step 3, aplicar área de detecção se existir
+                if (stepNumber === 3) {
+                    // Tentar carregar template_image_base64 da BD para mostrar diretamente
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const eventId = urlParams.get('event');
+                    
+                    if (eventId && window.supabaseClient && window.supabaseClient.supabase) {
+                        try {
+                            const { data: bibTemplateData, error: bibTemplateError } = await window.supabaseClient.supabase
+                                .rpc('get_bib_template', { event_uuid: eventId });
+                            
+                            if (!bibTemplateError && bibTemplateData && bibTemplateData.length > 0) {
+                                const bibTemplate = bibTemplateData[0];
+                                if (bibTemplate.template_image_base64) {
+                                    // Usar diretamente a imagem guardada com retângulo verde
+                                    const detectionImage = document.getElementById('detectionImage');
+                                    const detectionAreaDiv = document.getElementById('detectionArea');
+                                    
+                                    if (detectionImage) {
+                                        detectionImage.src = bibTemplate.template_image_base64;
+                                        console.log('🎨 Passo 3: Usando imagem com retângulo verde guardada da BD');
+                                    }
+                                    
+                                    // Ocultar div de área sobreposta já que a imagem já tem o retângulo
+                                    if (detectionAreaDiv) {
+                                        detectionAreaDiv.style.display = 'none';
+                                        console.log('👁️ Div de área sobreposta ocultado (imagem já tem retângulo)');
+                                    }
+                                    
+                                    return; // Não fazer mais nada, já usámos a imagem guardada
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Erro ao carregar template_image_base64 no Passo 3:', error);
+                        }
+                    }
+                    
+                    // Fallback: se não tiver template_image_base64, usar imagem base e aplicar área dinamicamente
+                    if (uploadedImage) {
+                        const detectionImage = document.getElementById('detectionImage');
+                        const detectionAreaDiv = document.getElementById('detectionArea');
+                        
+                        if (detectionImage) {
+                            detectionImage.src = uploadedImage;
+                        }
+                        if (detectionAreaDiv) {
+                            detectionAreaDiv.style.display = 'block'; // Mostrar div de área
+                        }
+                    }
+                    if (detectionArea && detectionArea.x !== undefined) {
+                        applyDetectionArea(detectionArea);
+                    }
+                }
             }
         }
         

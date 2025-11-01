@@ -15,6 +15,7 @@ const nodemailer = require('nodemailer');
 // Limpar cache do módulo para forçar reload
 delete require.cache[require.resolve('./src/background-processor')];
 const BackgroundImageProcessor = require('./src/background-processor');
+const DeviceDetectionProcessorSimple = require('./src/device-detection-processor-simple');
 const EmailAutomation = require('./src/email-automation');
 const SessionManager = require('./src/session-manager');
 const { createSessionMiddleware, requireAuth, requireRole } = require('./src/session-middleware');
@@ -92,6 +93,9 @@ const csrfProtection = new CSRFProtection();
 
 // Inicializar processador de imagens em background
 const imageProcessor = new BackgroundImageProcessor();
+
+// Inicializar processador de device detections (app nativa) - versão SIMPLES (processa no servidor)
+const deviceDetectionProcessor = new DeviceDetectionProcessorSimple();
 
 // Middlewares globais
 app.use(cookieParser()); // Parser de cookies
@@ -183,6 +187,38 @@ app.get('/api/event/:eventId', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('❌ Erro na rota /api/event:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Rota para buscar device_detections (para visualização de imagens)
+app.get('/api/device-detections', async (req, res) => {
+    try {
+        const { status, limit = 10 } = req.query;
+        
+        // Usar supabaseAdmin se disponível (tem SERVICE_ROLE_KEY)
+        const client = supabaseAdmin || supabase;
+        
+        let query = client
+            .from('device_detections')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(parseInt(limit));
+        
+        if (status) {
+            query = query.eq('status', status);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+            console.error('❌ Erro ao buscar device_detections:', error);
+            return res.status(500).json({ error: error.message });
+        }
+        
+        res.json(data || []);
+    } catch (error) {
+        console.error('❌ Erro na rota /api/device-detections:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
@@ -1280,17 +1316,31 @@ app.post('/api/auth/resend-verification', express.json(), async (req, res) => {
             const token = urlObj.searchParams.get('token');
             
             // Buscar APP_URL
-            let appUrl = process.env.APP_URL || `https://${req.get('host')}`;
-            try {
-                const { data: urlConfig } = await supabaseAdmin
-                    .from('platform_configurations')
-                    .select('config_value')
-                    .eq('config_key', 'APP_URL')
-                    .single();
-                if (urlConfig && urlConfig.config_value) {
-                    appUrl = urlConfig.config_value;
+            // PRIORIDADE 1: Variável de ambiente (.env) - RECOMENDADO
+            let appUrl = process.env.APP_URL;
+            
+            // PRIORIDADE 2: Base de dados (fallback)
+            if (!appUrl) {
+                try {
+                    const { data: urlConfig } = await supabaseAdmin
+                        .from('platform_configurations')
+                        .select('config_value')
+                        .eq('config_key', 'APP_URL')
+                        .single();
+                    if (urlConfig && urlConfig.config_value) {
+                        appUrl = urlConfig.config_value;
+                    }
+                } catch (e) {
+                    // Ignorar erro e continuar
                 }
-            } catch (e) {}
+            }
+            
+            // PRIORIDADE 3: Hostname da requisição (último recurso)
+            if (!appUrl) {
+                const host = req.get('host') || req.hostname;
+                const protocol = req.protocol || (req.secure ? 'https' : 'http');
+                appUrl = `${protocol}://${host}`;
+            }
             
             const confirmationUrl = `${appUrl}/api/auth/verify-email-callback?token=${token}&type=email`;
             
@@ -1439,16 +1489,36 @@ app.get('/api/auth/google', async (req, res) => {
             });
         }
         
-        // URL de callback - usar porta 1144 explicitamente
-        // IMPORTANTE: O Supabase pode ignorar redirectTo e usar configuração do dashboard
-        // Por isso, vamos usar uma página HTML que funciona em qualquer URL
-        const protocol = req.protocol === 'https' ? 'https' : 'http';
-        const host = req.get('host');
-        // Garantir que usa porta 1144 se não especificada
-        const callbackHost = host.includes(':1144') ? host : `${host.split(':')[0]}:1144`;
+        // Obter URL base da aplicação
+        // PRIORIDADE 1: Variável de ambiente (.env) - RECOMENDADO
+        let appUrl = process.env.APP_URL;
+        
+        // PRIORIDADE 2: Base de dados (fallback)
+        if (!appUrl) {
+            try {
+                const { data: urlConfig } = await supabaseAdmin
+                    .from('platform_configurations')
+                    .select('config_value')
+                    .eq('config_key', 'APP_URL')
+                    .single();
+                
+                if (urlConfig && urlConfig.config_value) {
+                    appUrl = urlConfig.config_value;
+                }
+            } catch (e) {
+                // Ignorar erro e continuar
+            }
+        }
+        
+        // PRIORIDADE 3: Hostname da requisição (último recurso)
+        if (!appUrl) {
+            const protocol = req.protocol === 'https' ? 'https' : 'http';
+            const host = req.get('host') || req.hostname;
+            appUrl = `${protocol}://${host}`;
+        }
         
         // Usar página HTML que funciona mesmo se Supabase redirecionar para localhost:3000
-        const redirectUrl = `${protocol}://${callbackHost}/auth/google-callback.html`;
+        const redirectUrl = `${appUrl}/auth/google-callback.html`;
         
         console.log(`🔐 Iniciando Google OAuth com callback: ${redirectUrl}`);
         
@@ -1533,12 +1603,35 @@ app.get('/api/auth/google/callback', async (req, res) => {
         // Mas na verdade, se não temos código, devemos redirecionar para a página HTML
         // que vai processar o hash (mesmo que venha de localhost:3000)
         else {
-            // Redirecionar para página HTML que processa tokens do hash
-            // Esta página funciona independentemente da URL de origem
-            const protocol = req.protocol === 'https' ? 'https' : 'http';
-            const host = req.get('host');
-            const callbackHost = host.includes(':1144') ? host : `${host.split(':')[0]}:1144`;
-            const redirectUrl = `${protocol}://${callbackHost}/auth/google-callback.html`;
+            // Obter URL base da aplicação
+            // PRIORIDADE 1: Variável de ambiente (.env) - RECOMENDADO
+            let appUrl = process.env.APP_URL;
+            
+            // PRIORIDADE 2: Base de dados (fallback)
+            if (!appUrl) {
+                try {
+                    const { data: urlConfig } = await supabaseAdmin
+                        .from('platform_configurations')
+                        .select('config_value')
+                        .eq('config_key', 'APP_URL')
+                        .single();
+                    
+                    if (urlConfig && urlConfig.config_value) {
+                        appUrl = urlConfig.config_value;
+                    }
+                } catch (e) {
+                    // Ignorar erro e continuar
+                }
+            }
+            
+            // PRIORIDADE 3: Hostname da requisição (último recurso)
+            if (!appUrl) {
+                const protocol = req.protocol === 'https' ? 'https' : 'http';
+                const host = req.get('host') || req.hostname;
+                appUrl = `${protocol}://${host}`;
+            }
+            
+            const redirectUrl = `${appUrl}/auth/google-callback.html`;
             
             // Se já estamos na URL correta com hash, deixar o browser processar
             // Se não, redirecionar (mas manter o hash se houver)
@@ -3854,19 +3947,31 @@ app.post('/api/auth/send-confirmation-email', express.json(), async (req, res) =
             }
             
             // Obter URL da aplicação
-            let appUrl = 'https://192.168.1.219:1144';
-            try {
-                const { data: urlConfig } = await supabaseAdmin
-                    .from('platform_configurations')
-                    .select('config_value')
-                    .eq('config_key', 'APP_URL')
-                    .single();
-                
-                if (urlConfig && urlConfig.config_value) {
-                    appUrl = urlConfig.config_value;
+            // PRIORIDADE 1: Variável de ambiente (.env) - RECOMENDADO
+            let appUrl = process.env.APP_URL;
+            
+            // PRIORIDADE 2: Base de dados (fallback)
+            if (!appUrl) {
+                try {
+                    const { data: urlConfig } = await supabaseAdmin
+                        .from('platform_configurations')
+                        .select('config_value')
+                        .eq('config_key', 'APP_URL')
+                        .single();
+                    
+                    if (urlConfig && urlConfig.config_value) {
+                        appUrl = urlConfig.config_value;
+                    }
+                } catch (e) {
+                    // Ignorar erro e continuar
                 }
-            } catch (e) {
-                appUrl = process.env.APP_URL || `https://${req.get('host')}`;
+            }
+            
+            // PRIORIDADE 3: Hostname da requisição (último recurso)
+            if (!appUrl) {
+                const host = req.get('host') || req.hostname;
+                const protocol = req.protocol || (req.secure ? 'https' : 'http');
+                appUrl = `${protocol}://${host}`;
             }
             
             // Construir URL de confirmação - usar callback do Supabase que redireciona para nossa API
@@ -4035,6 +4140,12 @@ function createDefaultConfirmationEmail(userName, confirmationUrl) {
 // ==========================================
 const setupEventsRoutes = require('./src/events-routes');
 setupEventsRoutes(app, sessionManager, supabaseAdmin, auditLogger);
+
+// ==========================================
+// ROTAS DE FORM BUILDER
+// ==========================================
+const setupFormBuilderRoutes = require('./src/form-builder-routes');
+setupFormBuilderRoutes(app, sessionManager, supabaseAdmin, auditLogger);
 
 // Função helper para obter preços
 function getOpenAIPricing(modelId) {
@@ -5098,6 +5209,17 @@ server.listen(PORT, '0.0.0.0', () => {
         }
     });
     
+    // Iniciar processador de device detections (app nativa)
+    console.log('📱 Iniciando processador de device detections (app nativa)...');
+    deviceDetectionProcessor.init().then(success => {
+        if (success) {
+            console.log('✅ Processador de device detections ativo');
+            deviceDetectionProcessor.startAutoProcessor();
+        } else {
+            console.log('⚠️ Falha ao iniciar processador de device detections (pode ser normal se SQL não foi executado)');
+        }
+    });
+    
     // Iniciar sistema de automação de emails
     console.log('📧 Iniciando sistema de automação de emails...');
     global.emailAutomation = new EmailAutomation(supabaseAdmin);
@@ -5120,6 +5242,9 @@ process.on('SIGINT', async () => {
     console.log('\n🛑 Parando servidor...');
     console.log('🛑 Parando processador de imagens...');
     imageProcessor.stop();
+    
+    console.log('🛑 Parando processador de device detections...');
+    deviceDetectionProcessor.stop();
     
     if (global.emailAutomation) {
         console.log('🛑 Parando automação de emails...');

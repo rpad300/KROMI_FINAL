@@ -1,0 +1,426 @@
+<!-- ============================================================================
+     EXEMPLO DE INTEGRAÇÃO - GPS TRACKING NO SISTEMA DE EVENTOS
+     ============================================================================
+     
+     Este ficheiro mostra EXEMPLOS de como adicionar links para o GPS Tracking
+     nas diferentes partes do sistema VisionKrono existente.
+     
+     NÃO execute este ficheiro diretamente - use os snippets abaixo!
+     ============================================================================ -->
+
+<!-- EXEMPLO 1: Adicionar na lista de eventos -->
+<!-- Localização: src/event-management-system.html ou similar -->
+
+<div class="event-card">
+  <div class="event-header">
+    <h3>Maratona Lisboa 2025</h3>
+  </div>
+  
+  <div class="event-actions">
+    <!-- Botões existentes (editar, detalhes, etc.) -->
+    <button class="btn btn-primary" onclick="editEvent('uuid')">Editar</button>
+    
+    <!-- ✨ NOVO: Adicionar este botão -->
+    <button class="btn btn-primary" onclick="openGPSTracking('uuid-do-evento')">
+      <i class="fas fa-route"></i> GPS Tracking
+    </button>
+  </div>
+</div>
+
+<script>
+  function openGPSTracking(eventId) {
+    window.location.href = `event-gps-tracking.html?event_id=${eventId}`;
+  }
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 2: Adicionar como card no dashboard do evento -->
+<!-- ============================================================================ -->
+
+<div class="event-dashboard">
+  <h2>Maratona Lisboa 2025 - Dashboard</h2>
+  
+  <div class="dashboard-grid">
+    <!-- Cards existentes -->
+    <div class="compact-card" onclick="openParticipants()">
+      <i class="fas fa-users"></i>
+      <div>Participantes</div>
+    </div>
+    
+    <div class="compact-card" onclick="openRegistrations()">
+      <i class="fas fa-clipboard-list"></i>
+      <div>Inscrições</div>
+    </div>
+    
+    <!-- ✨ NOVO: Adicionar este card -->
+    <div class="compact-card" onclick="window.location.href='event-gps-tracking.html?event_id=' + currentEventId">
+      <i class="fas fa-map-marked-alt" style="font-size: 32px; color: var(--primary);"></i>
+      <div style="margin-top: 8px;">
+        <div style="font-weight: 600;">GPS Tracking</div>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+          Cronometragem em tempo real
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 3: Adicionar na bottom navigation (menu inferior) -->
+<!-- ============================================================================ -->
+
+<div class="app-bottom-nav">
+  <!-- Items existentes -->
+  <div class="nav-item" onclick="showSection('events')">
+    <i class="fas fa-calendar"></i>
+    <span>Eventos</span>
+  </div>
+  
+  <div class="nav-item" onclick="showSection('participants')">
+    <i class="fas fa-users"></i>
+    <span>Participantes</span>
+  </div>
+  
+  <!-- ✨ NOVO: Adicionar este item (apenas se estiver dentro de um evento) -->
+  <div class="nav-item" onclick="openGPSTracking(getCurrentEventId())">
+    <i class="fas fa-route"></i>
+    <span>GPS</span>
+  </div>
+  
+  <div class="nav-item" onclick="showSection('settings')">
+    <i class="fas fa-cog"></i>
+    <span>Definições</span>
+  </div>
+</div>
+
+<script>
+  function getCurrentEventId() {
+    // Implementar lógica para obter ID do evento atual
+    return localStorage.getItem('currentEventId') || 'default-event-id';
+  }
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 4: Adicionar no menu de opções do evento (dropdown) -->
+<!-- ============================================================================ -->
+
+<div class="event-menu">
+  <button class="menu-trigger" onclick="toggleMenu()">
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  
+  <div class="menu-dropdown" id="event-menu">
+    <!-- Opções existentes -->
+    <a href="#" onclick="editEvent()">
+      <i class="fas fa-edit"></i> Editar Evento
+    </a>
+    
+    <a href="#" onclick="viewParticipants()">
+      <i class="fas fa-users"></i> Ver Participantes
+    </a>
+    
+    <!-- ✨ NOVO: Adicionar esta opção -->
+    <a href="event-gps-tracking.html?event_id=UUID" onclick="closeMenu()">
+      <i class="fas fa-route"></i> GPS Tracking
+    </a>
+    
+    <a href="#" onclick="deleteEvent()">
+      <i class="fas fa-trash"></i> Eliminar Evento
+    </a>
+  </div>
+</div>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 5: Adicionar como tab/aba no evento -->
+<!-- ============================================================================ -->
+
+<div class="event-details">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('overview')">
+      <i class="fas fa-info-circle"></i> Resumo
+    </div>
+    
+    <div class="tab" onclick="showTab('participants')">
+      <i class="fas fa-users"></i> Participantes
+    </div>
+    
+    <!-- ✨ NOVO: Adicionar esta tab -->
+    <div class="tab" onclick="showTab('gps-tracking')">
+      <i class="fas fa-route"></i> GPS Tracking
+    </div>
+  </div>
+  
+  <div class="tab-content">
+    <div id="tab-overview" class="tab-pane active">
+      <!-- Conteúdo do resumo -->
+    </div>
+    
+    <div id="tab-participants" class="tab-pane">
+      <!-- Conteúdo de participantes -->
+    </div>
+    
+    <!-- ✨ NOVO: Adicionar este painel -->
+    <div id="tab-gps-tracking" class="tab-pane">
+      <iframe 
+        src="event-gps-tracking.html?event_id=UUID" 
+        style="width: 100%; height: 800px; border: none;">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(tabName) {
+    // Esconder todos os painéis
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      pane.classList.remove('active');
+    });
+    
+    // Remover active de todas as tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    
+    // Mostrar painel selecionado
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 6: Adicionar na página de detalhes do evento -->
+<!-- ============================================================================ -->
+
+<div class="event-detail-page">
+  <div class="event-header">
+    <button onclick="goBack()" class="btn">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </button>
+    <h1>Maratona Lisboa 2025</h1>
+  </div>
+  
+  <div class="quick-actions">
+    <h3>Ações Rápidas</h3>
+    
+    <!-- ✨ NOVO: Adicionar este botão destacado -->
+    <a href="event-gps-tracking.html?event_id=UUID" class="quick-action-card primary">
+      <i class="fas fa-map-marked-alt"></i>
+      <div>
+        <strong>GPS Tracking</strong>
+        <small>Cronometragem em tempo real</small>
+      </div>
+    </a>
+    
+    <!-- Outros botões... -->
+    <a href="#" class="quick-action-card">
+      <i class="fas fa-users"></i>
+      <div>
+        <strong>Participantes</strong>
+        <small>Gerir inscrições</small>
+      </div>
+    </a>
+  </div>
+</div>
+
+<style>
+  .quick-action-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    transition: all 0.2s;
+  }
+  
+  .quick-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  .quick-action-card.primary {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(252, 107, 3, 0.1), transparent);
+  }
+  
+  .quick-action-card i {
+    font-size: 32px;
+    color: var(--primary);
+  }
+  
+  .quick-action-card strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  
+  .quick-action-card small {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+</style>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 7: Verificar se evento tem GPS tracking habilitado -->
+<!-- ============================================================================ -->
+
+<script>
+  async function checkGPSTrackingAvailable(eventId) {
+    try {
+      // Verificar se há rotas criadas para este evento
+      const { data, error } = await supabaseClient
+        .from('track_routes')
+        .select('id')
+        .eq('event_id', eventId)
+        .limit(1);
+      
+      if (error) throw error;
+      
+      const hasGPS = data && data.length > 0;
+      
+      // Mostrar/esconder botão GPS baseado na disponibilidade
+      const gpsButton = document.getElementById('gps-tracking-button');
+      if (gpsButton) {
+        gpsButton.style.display = hasGPS ? 'block' : 'none';
+      }
+      
+      // Ou adicionar badge
+      if (hasGPS) {
+        document.getElementById('event-title').innerHTML += 
+          ' <span class="badge badge-active">GPS Ativo</span>';
+      }
+      
+      return hasGPS;
+    } catch (error) {
+      console.error('Erro ao verificar GPS:', error);
+      return false;
+    }
+  }
+  
+  // Usar ao carregar página do evento
+  document.addEventListener('DOMContentLoaded', () => {
+    const eventId = getCurrentEventId();
+    checkGPSTrackingAvailable(eventId);
+  });
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- EXEMPLO 8: Notificação quando GPS tracking está ativo -->
+<!-- ============================================================================ -->
+
+<div class="event-alerts">
+  <!-- ✨ Mostrar este alerta se GPS tracking estiver ativo -->
+  <div class="alert alert-info" id="gps-active-alert" style="display: none;">
+    <i class="fas fa-satellite-dish"></i>
+    <div>
+      <strong>GPS Tracking Ativo</strong>
+      <p>Este evento está a usar cronometragem GPS em tempo real.</p>
+      <a href="event-gps-tracking.html?event_id=UUID" class="btn btn-sm btn-primary">
+        Ver Dashboard Live
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Verificar e mostrar alerta
+  async function checkAndShowGPSAlert(eventId) {
+    const hasGPS = await checkGPSTrackingAvailable(eventId);
+    if (hasGPS) {
+      document.getElementById('gps-active-alert').style.display = 'flex';
+    }
+  }
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- CONFIGURAÇÃO GLOBAL (Adicionar no ficheiro principal) -->
+<!-- ============================================================================ -->
+
+<script>
+  // Configuração global para GPS Tracking
+  const GPS_TRACKING_CONFIG = {
+    enabled: true,
+    pageUrl: 'event-gps-tracking.html',
+    
+    // Função helper para abrir GPS tracking
+    open: function(eventId) {
+      if (!this.enabled) {
+        alert('GPS Tracking não está disponível');
+        return;
+      }
+      window.location.href = `${this.pageUrl}?event_id=${eventId}`;
+    },
+    
+    // Verificar se evento tem GPS
+    check: async function(eventId) {
+      try {
+        const { data } = await supabaseClient
+          .from('track_routes')
+          .select('id')
+          .eq('event_id', eventId)
+          .limit(1);
+        return data && data.length > 0;
+      } catch {
+        return false;
+      }
+    }
+  };
+  
+  // Usar em qualquer lugar:
+  // GPS_TRACKING_CONFIG.open('event-uuid');
+  // await GPS_TRACKING_CONFIG.check('event-uuid');
+</script>
+
+
+<!-- ============================================================================ -->
+<!-- RESUMO DE IMPLEMENTAÇÃO -->
+<!-- ============================================================================ -->
+
+<!--
+
+PASSOS PARA INTEGRAR:
+
+1. ✅ Ficheiro já criado: src/event-gps-tracking.html
+
+2. Escolher UMA das opções acima (exemplo 1, 2, 3, etc.)
+
+3. Copiar o snippet escolhido para o ficheiro apropriado
+
+4. Substituir 'UUID' ou 'uuid-do-evento' pelo ID real
+
+5. Testar navegação
+
+6. (Opcional) Adicionar verificação se GPS está disponível
+
+7. (Opcional) Adicionar configuração global
+
+
+FICHEIROS A EDITAR (dependendo da escolha):
+
+- src/event-management-system.html (principal)
+- src/events-kromi.html (se usar este)
+- Ou qualquer outro ficheiro onde liste eventos
+
+
+LEMBRAR:
+
+- Configurar SUPABASE_URL e SUPABASE_KEY no event-gps-tracking.html
+- Garantir que SQL foi executado (tabelas track_*)
+- Testar com evento real que tenha participantes
+
+
+FIM DOS EXEMPLOS
+-->
+

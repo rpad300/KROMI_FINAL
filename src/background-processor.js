@@ -66,26 +66,39 @@ class BackgroundImageProcessor {
             // Carregar configurações de API da base de dados
             const apiConfigs = await this.getApiConfigurationsFromDatabase();
             
-            // Aplicar configurações
-            if (apiConfigs.geminiApiKey) {
-                this.geminiApiKey = apiConfigs.geminiApiKey;
-                this.log('Chave Gemini carregada da base de dados', 'info');
+            // ⚠️ IMPORTANTE: NUNCA usar API keys da base de dados
+            // APENAS usar as do .env
+            // Base de dados tem keys expiradas que causam erros
+            
+            if (this.geminiApiKey) {
+                this.log('✅ Usando Gemini do .env', 'info');
+            } else {
+                this.log('⚠️ Gemini não configurada no .env', 'warning');
             }
             
-            if (apiConfigs.openaiApiKey) {
-                this.openaiApiKey = apiConfigs.openaiApiKey;
-                this.log('Chave OpenAI carregada da base de dados', 'info');
+            if (this.openaiApiKey) {
+                this.log('✅ Usando OpenAI do .env', 'info');
+            } else {
+                this.log('⚠️ OpenAI não configurada no .env', 'warning');
             }
             
-            if (apiConfigs.deepseekApiKey) {
-                this.deepseekApiKey = apiConfigs.deepseekApiKey;
-                this.log('Chave DeepSeek carregada da base de dados', 'info');
+            if (this.deepseekApiKey) {
+                this.log('✅ Usando DeepSeek do .env', 'info');
+            } else {
+                this.log('⚠️ DeepSeek não configurada no .env', 'warning');
             }
             
-            if (apiConfigs.googleVisionApiKey) {
-                this.googleVisionApiKey = apiConfigs.googleVisionApiKey;
-                this.log('Chave Google Vision carregada da base de dados', 'info');
+            if (this.googleVisionApiKey) {
+                this.log('✅ Usando Google Vision do .env', 'info');
+            } else {
+                this.log('⚠️ Google Vision não configurada no .env', 'warning');
             }
+            
+            // NÃO carregar API keys da base de dados (estão expiradas)
+            // Se precisar de fallback, adicionar aqui mas comentado:
+            // if (apiConfigs.geminiApiKey && !this.geminiApiKey) {
+            //     this.geminiApiKey = apiConfigs.geminiApiKey;
+            // }
             
             if (apiConfigs.supabaseUrl) {
                 // Validar e corrigir URL se necessário
@@ -641,34 +654,62 @@ class BackgroundImageProcessor {
     }
     
     /**
-     * Determina a cadeia de fallback baseado no processador principal
+     * Determina a cadeia de fallback baseado nas APIs disponíveis no .env
+     * Prioriza as APIs que estão configuradas
      */
     getFallbackChain() {
-        // Ordem padrão de fallback (custos e qualidade)
-        const priorityOrder = [
-            'gemini',        // Mais barato e rápido
-            'openai',       // Média qualidade
-            'deepseek',     // Alternativa econômica
-            'google-vision' // OCR tradicional
+        // Verificar quais APIs estão configuradas (têm keys no .env)
+        const availableProcessors = [];
+        
+        const allProcessors = [
+            'gemini',
+            'openai', 
+            'deepseek',
+            'google-vision'
         ];
         
-        // Remover o processador principal e adicionar no início
+        // Detectar quais APIs têm keys configuradas
+        for (const processor of allProcessors) {
+            if (this.hasApiKeyForProcessor(processor)) {
+                availableProcessors.push(processor);
+                this.log(`✅ ${processor.toUpperCase()} configurada no .env`, 'info');
+            }
+        }
+        
+        // Se nenhuma API configurada, retornar apenas o principal
+        if (availableProcessors.length === 0) {
+            this.log('⚠️ Nenhuma API configurada no .env', 'warning');
+            return [this.processorType];
+        }
+        
+        // Ordem de prioridade (do mais barato/rápido para o mais caro)
+        const priorityOrder = [
+            'gemini',        // Prioridade 1: Mais barato e rápido
+            'deepseek',      // Prioridade 2: Alternativa econômica
+            'openai',        // Prioridade 3: Boa qualidade
+            'google-vision'  // Prioridade 4: OCR tradicional
+        ];
+        
+        // Ordenar processadores disponíveis por prioridade
+        const sortedProcessors = availableProcessors.sort((a, b) => {
+            return priorityOrder.indexOf(a) - priorityOrder.indexOf(b);
+        });
+        
+        // Remover o processador principal da lista
         const mainProcessor = this.processorType;
         const fallbackChain = [mainProcessor];
         
         // Adicionar fallbacks disponíveis (excluindo o principal e híbrido/manual)
         const excludedTypes = ['hybrid', 'manual', 'ocr'];
         
-        for (const processor of priorityOrder) {
+        for (const processor of sortedProcessors) {
             if (processor !== mainProcessor && !excludedTypes.includes(processor)) {
-                // Verificar se tem API key configurada
-                if (this.hasApiKeyForProcessor(processor)) {
-                    fallbackChain.push(processor);
-                }
+                fallbackChain.push(processor);
             }
         }
         
-        this.log(`🔗 Cadeia de fallback: ${fallbackChain.join(' → ')}`, 'info');
+        this.log(`🔗 Cadeia de fallback (baseada no .env): ${fallbackChain.join(' → ')}`, 'info');
+        this.log(`📊 ${availableProcessors.length} API(s) configurada(s): ${availableProcessors.join(', ')}`, 'info');
         
         return fallbackChain;
     }
@@ -1369,6 +1410,35 @@ Analise as imagens:`
 
     async createClassificationFromDetection(image, detectionResult) {
         try {
+            // ✅ VALIDAÇÃO: Verificar se dorsal existe nos participantes
+            const participantExists = await this.checkParticipantExists(image.event_id, detectionResult.number);
+            
+            if (!participantExists) {
+                this.log(`⚠️ Dorsal ${detectionResult.number} NÃO está registado nos participantes - IGNORANDO classificação`, 'warning');
+                this.log(`   Detecção será salva, mas classificação NÃO será criada`, 'info');
+                
+                // Salvar APENAS a detecção (sem criar classificação)
+                await this.saveDetection({
+                    number: detectionResult.number,
+                    timestamp: image.captured_at,
+                    latitude: image.latitude,
+                    longitude: image.longitude,
+                    accuracy: image.accuracy,
+                    device_type: 'mobile',
+                    session_id: image.session_id,
+                    event_id: image.event_id,
+                    proof_image: image.display_image || image.image_data,
+                    dorsal_region: null,
+                    detection_method: detectionResult.source || detectionResult.method || 'AI'
+                });
+                
+                this.log(`✅ Detecção salva (dorsal ${detectionResult.number}) mas classificação IGNORADA (não é participante)`, 'success');
+                return; // Parar aqui - NÃO criar classificação
+            }
+            
+            // Participante existe - continuar com fluxo normal
+            this.log(`✅ Dorsal ${detectionResult.number} é participante válido - criando classificação`, 'info');
+            
             // Salvar detecção primeiro
                 const savedDetection = await this.saveDetection({
                 number: detectionResult.number,
@@ -1409,6 +1479,18 @@ Analise as imagens:`
                 this.log(`ℹ️ Checkpoint intermediário: split_time calculado`, 'info');
             }
             
+            // ✅ VERIFICAR SE JÁ EXISTE CLASSIFICAÇÃO (evitar duplicados)
+            const classificationExists = await this.checkClassificationExists(
+                image.event_id,
+                detectionResult.number,
+                deviceOrder
+            );
+            
+            if (classificationExists) {
+                this.log(`⚠️ Classificação JÁ EXISTE para dorsal ${detectionResult.number} no checkpoint ${deviceOrder} - IGNORANDO duplicado`, 'warning');
+                return; // NÃO criar duplicado
+            }
+            
             // Criar classificação
             await this.saveClassification({
                 event_id: image.event_id,
@@ -1420,7 +1502,7 @@ Analise as imagens:`
                 split_time: times.split_time
             });
             
-            this.log(`✅ Classificação criada: dorsal ${detectionResult.number}`, 'success');
+            this.log(`✅ Classificação criada: dorsal ${detectionResult.number} no checkpoint ${deviceOrder}`, 'success');
 
         } catch (error) {
             this.log(`Erro ao criar classificação: ${error.message}`, 'error');
@@ -1573,6 +1655,111 @@ Analise as imagens:`
 
             req.on('error', () => {
                 resolve(null);
+            });
+
+            req.end();
+        });
+    }
+    
+    /**
+     * Verificar se um dorsal existe nos participantes do evento
+     * @param {string} eventId - ID do evento
+     * @param {number} dorsalNumber - Número do dorsal
+     * @returns {Promise<boolean>} - true se participante existe
+     */
+    async checkParticipantExists(eventId, dorsalNumber) {
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/participants?event_id=eq.${eventId}&dorsal_number=eq.${dorsalNumber}&select=id&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            // Se retornar array com pelo menos 1 item = participante existe
+                            resolve(result && result.length > 0);
+                        } catch (e) {
+                            resolve(false);
+                        }
+                    } else {
+                        resolve(false);
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(false);
+            });
+
+            req.end();
+        });
+    }
+    
+    /**
+     * Verificar se já existe classificação para evitar duplicados
+     * @param {string} eventId - ID do evento
+     * @param {number} dorsalNumber - Número do dorsal
+     * @param {number} deviceOrder - Ordem do checkpoint
+     * @returns {Promise<boolean>} - true se classificação já existe
+     */
+    async checkClassificationExists(eventId, dorsalNumber, deviceOrder) {
+        return new Promise((resolve) => {
+            const url = `${this.supabaseUrl}/rest/v1/classifications?event_id=eq.${eventId}&dorsal_number=eq.${dorsalNumber}&device_order=eq.${deviceOrder}&select=id&limit=1`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'apikey': this.supabaseKey,
+                    'Authorization': `Bearer ${this.supabaseKey}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const result = JSON.parse(data);
+                            // Se retornar array com pelo menos 1 item = classificação existe
+                            resolve(result && result.length > 0);
+                        } catch (e) {
+                            resolve(false);
+                        }
+                    } else {
+                        resolve(false);
+                    }
+                });
+            });
+
+            req.on('error', () => {
+                resolve(false);
             });
 
             req.end();

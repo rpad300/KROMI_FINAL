@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Imagens - Device Detections</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .image-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .image-box h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .image-box img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status.pending { background: #ffc107; color: #000; }
+        .status.processed { background: #28a745; color: white; }
+        .status.failed { background: #dc3545; color: white; }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .no-image {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Visualizar Imagens - Device Detections</h1>
+
+        <div class="controls">
+            <button onclick="loadLatest()">🔄 Carregar Última</button>
+            <button onclick="loadPrevious()">⬅️ Anterior</button>
+            <button onclick="loadNext()">➡️ Próxima</button>
+            <select id="statusFilter" onchange="loadLatest()">
+                <option value="">Todos os Status</option>
+                <option value="pending">Pending</option>
+                <option value="processed">Processed</option>
+                <option value="failed">Failed</option>
+            </select>
+        </div>
+
+        <div id="content">
+            <div class="loading">Carregando...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Configuração Supabase
+        const SUPABASE_URL = window.location.hostname === 'localhost' 
+            ? 'https://lgpyarllyfrgdfzcjwnb.supabase.co'
+            : 'https://lgpyarllyfrgdfzcjwnb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncHlhcmxseWZyZ2RmemNqd25iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcwMzEwNTEsImV4cCI6MjA1MjYwNzA1MX0.0E-RvXMTZbS7g0JHUacPJTwAIxvzJ-2xnmSmQcEBMkg';
+
+        // Variáveis globais
+        let currentRecords = [];
+        let currentIndex = 0;
+        let supabaseClient = null;
+        
+        // Inicializar Supabase quando o script carregar
+        const { createClient } = window.supabase;
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function loadLatest() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            try {
+                document.getElementById('content').innerHTML = '<div class="loading">Carregando...</div>';
+
+                let query = supabaseClient
+                    .from('device_detections')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (statusFilter) {
+                    query = query.eq('status', statusFilter);
+                }
+
+                const { data, error } = await query.limit(10);
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="error">
+                            Nenhum registro encontrado${statusFilter ? ` com status "${statusFilter}"` : ''}.
+                        </div>
+                    `;
+                    return;
+                }
+
+                currentRecords = data;
+                currentIndex = 0;
+                displayRecord(currentRecords[currentIndex]);
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <strong>Erro ao carregar:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function loadNext() {
+            if (currentIndex < currentRecords.length - 1) {
+                currentIndex++;
+                displayRecord(currentRecords[currentIndex]);
+            }
+        }
+
+        function loadPrevious() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                displayRecord(currentRecords[currentIndex]);
+            }
+        }
+
+        function displayRecord(record) {
+            if (!record) return;
+
+            const imageDataSrc = record.image_data 
+                ? `data:image/jpeg;base64,${record.image_data}`
+                : null;
+
+            const displayImageSrc = record.display_image 
+                ? `data:image/jpeg;base64,${record.display_image}`
+                : null;
+
+            const html = `
+                <div class="info">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2>Registro ${currentIndex + 1} de ${currentRecords.length}</h2>
+                        <span class="status ${record.status}">${record.status.toUpperCase()}</span>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">ID</div>
+                            <div class="info-value">${record.id}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Access Code</div>
+                            <div class="info-value">${record.access_code || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Dorsal</div>
+                            <div class="info-value">${record.dorsal_number || 'Não detectado'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Criado em</div>
+                            <div class="info-value">${new Date(record.created_at).toLocaleString('pt-PT')}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">GPS</div>
+                            <div class="info-value">
+                                ${record.latitude && record.longitude 
+                                    ? `${record.latitude.toFixed(6)}, ${record.longitude.toFixed(6)}`
+                                    : 'N/A'}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Session ID</div>
+                            <div class="info-value">${record.session_id || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${record.processing_error ? `
+                        <div class="error" style="margin-top: 15px;">
+                            <strong>Erro:</strong> ${record.processing_error}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="images">
+                    <div class="image-box">
+                        <h3>Image Data (para AI)</h3>
+                        ${imageDataSrc 
+                            ? `<img src="${imageDataSrc}" alt="Image Data">`
+                            : '<div class="no-image">Sem imagem</div>'}
+                    </div>
+                    
+                    <div class="image-box">
+                        <h3>Display Image</h3>
+                        ${displayImageSrc 
+                            ? `<img src="${displayImageSrc}" alt="Display Image">`
+                            : '<div class="no-image">Sem imagem</div>'}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Carregar ao abrir a página
+        loadLatest();
+    </script>
+</body>
+</html>
+

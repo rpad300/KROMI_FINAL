@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Modal GPS</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial; }
+        .test-btn { padding: 12px 24px; background: #fc6b03; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Modal GPS Tracking</h1>
+    <button class="test-btn" onclick="showModal()">Abrir Modal (Teste)</button>
+    
+    <script>
+        function showModal() {
+            // Criar modal dinamicamente
+            const modalHTML = `
+                <div id="test-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999999;display:flex;align-items:center;justify-content:center;">
+                    <div style="background:white;padding:24px;border-radius:12px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                        <h2>Nova Rota</h2>
+                        <p>Nome: <input type="text" style="width:100%;padding:8px;"></p>
+                        <p>Distância: <input type="number" style="width:100%;padding:8px;"></p>
+                        <button onclick="document.getElementById('test-modal').remove();" style="padding:8px 16px;background:#fc6b03;color:white;border:none;border-radius:6px;cursor:pointer;">Fechar</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            console.log('✅ Modal criado dinamicamente');
+        }
+    </script>
+</body>
+</html>
+

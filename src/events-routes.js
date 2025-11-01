@@ -529,27 +529,90 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
     app.put('/api/events/:id', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
         try {
             const eventId = req.params.id;
-            const { name, description, event_date, location, status } = req.body;
+            const { name, description, event_date, location, status, settings } = req.body;
             
             console.log('✏️ [PUT /api/events/:id] Editando evento:', eventId);
+            console.log('📋 [PUT /api/events/:id] Body recebido:', { 
+                hasName: !!name, 
+                hasSettings: !!settings,
+                settingsKeys: settings ? Object.keys(settings) : []
+            });
             
-            // Validação básica
-            if (!name || name.trim() === '') {
+            // Buscar evento atual para preservar campos não enviados
+            const { data: currentEvent, error: fetchError } = await supabase
+                .from('events')
+                .select('*')
+                .eq('id', eventId)
+                .single();
+            
+            if (fetchError || !currentEvent) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Evento não encontrado',
+                    code: 'NOT_FOUND'
+                });
+            }
+            
+            // Preparar updateData - incluir apenas campos que foram enviados
+            const updateData = {
+                updated_at: new Date().toISOString()
+            };
+            
+            // Verificar se pelo menos um campo está a ser atualizado
+            const hasUpdates = name !== undefined || description !== undefined || 
+                              event_date !== undefined || location !== undefined || 
+                              status !== undefined || settings !== undefined;
+            
+            if (!hasUpdates) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Nome do evento é obrigatório',
+                    error: 'Pelo menos um campo deve ser fornecido para atualização',
                     code: 'VALIDATION_ERROR'
                 });
             }
             
-            const updateData = {
-                name: name.trim(),
-                description: description?.trim() || null,
-                event_date: event_date || null,
-                location: location?.trim() || null,
-                status: status || 'active',
-                updated_at: new Date().toISOString()
-            };
+            // Incluir campos apenas se foram enviados no body
+            // Nome só é validado se foi explicitamente enviado
+            if (name !== undefined) {
+                if (name === null || (typeof name === 'string' && name.trim() === '')) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Nome do evento não pode estar vazio',
+                        code: 'VALIDATION_ERROR'
+                    });
+                }
+                updateData.name = typeof name === 'string' ? name.trim() : name;
+            }
+            
+            if (description !== undefined) {
+                updateData.description = (description === null || description === '') ? null : description.trim();
+            }
+            
+            if (event_date !== undefined) {
+                updateData.event_date = event_date || null;
+            }
+            
+            if (location !== undefined) {
+                updateData.location = (location === null || location === '') ? null : location.trim();
+            }
+            
+            if (status !== undefined) {
+                updateData.status = status || 'active';
+            }
+            
+            if (settings !== undefined) {
+                // Garantir que settings é um objeto válido
+                if (settings === null) {
+                    updateData.settings = {};
+                } else if (typeof settings === 'object' && !Array.isArray(settings)) {
+                    updateData.settings = settings;
+                } else {
+                    updateData.settings = currentEvent.settings || {};
+                }
+                console.log('📋 [PUT /api/events/:id] Settings a guardar:', JSON.stringify(updateData.settings, null, 2));
+            }
+            
+            console.log('📋 [PUT /api/events/:id] Campos a atualizar:', Object.keys(updateData));
             
             const { data, error } = await supabase
                 .from('events')

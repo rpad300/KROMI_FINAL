@@ -236,7 +236,7 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: var(--spacing-4);
             margin-bottom: var(--spacing-6);
         }
@@ -344,8 +344,11 @@
                 <button class="btn btn-sm btn-primary" id="addParticipant">
                     <i>➕</i> Adicionar
                 </button>
+                <button class="btn btn-sm btn-secondary" id="downloadExampleFile">
+                    <i>📥</i> Download Exemplo
+                </button>
                 <button class="btn btn-sm btn-secondary" id="importParticipants">
-                    <i>📊</i> Importar CSV
+                    <i>📊</i> Importar Excel/CSV
                 </button>
                 <button class="btn btn-sm btn-secondary" id="exportParticipants">
                     <i>📤</i> Exportar
@@ -372,6 +375,37 @@
                     </div>
                 </div>
                 
+                <!-- Import Instructions -->
+                <div class="participants-grid event-selector-container" id="importInstructions" style="display: none;">
+                    <div class="event-selector-card" style="background: linear-gradient(135deg, var(--info), #3b82f6); color: white;">
+                        <h3 style="margin: 0 0 var(--spacing-3) 0; font-size: var(--font-size-lg); font-weight: 600;">
+                            📋 Formato de Importação
+                        </h3>
+                        <div style="font-size: var(--font-size-sm); line-height: 1.6; opacity: 0.95;">
+                            <p style="margin: 0 0 var(--spacing-2) 0;">
+                                <strong>Formatos suportados:</strong> Excel (.xlsx) ou CSV (.csv)
+                            </p>
+                            <p style="margin: 0 0 var(--spacing-2) 0;">
+                                <strong>Colunas obrigatórias:</strong> Dorsal, Nome
+                            </p>
+                            <p style="margin: 0 0 var(--spacing-2) 0;">
+                                <strong>Colunas opcionais:</strong> Email, Telefone, Data Nascimento, Género (M/F), Equipa, Categoria, Data Pagamento, Estado Inscrição (pending/paid), Pagamento (valor)
+                            </p>
+                            <p style="margin: 0 0 var(--spacing-2) 0; font-size: 11px; opacity: 0.9;">
+                                <em>Nota: Código e Idade são gerados automaticamente. Data Inscrição é criada no momento da importação.</em>
+                            </p>
+                            <p style="margin: 0;">
+                                <strong>Primeira linha:</strong> Deve conter os cabeçalhos (Dorsal, Nome, etc.)
+                            </p>
+                        </div>
+                        <div style="margin-top: var(--spacing-3);">
+                            <button class="btn btn-sm" style="background: white; color: var(--info); border: none;" id="downloadExampleFileCard">
+                                <i>📥</i> Baixar Ficheiro de Exemplo (Excel)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Statistics -->
                 <div class="stats-grid event-info-container" id="statsGrid" style="display: none;">
                     <div class="stat-card">
@@ -392,11 +426,29 @@
                     </div>
                 </div>
                 
+                <!-- Registration Chart -->
+                <div class="event-info-container" id="chartContainer" style="display: none; margin-bottom: var(--spacing-6);">
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--spacing-5);">
+                        <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); font-weight: 600;">
+                            📈 Evolução de Inscrições
+                        </h3>
+                        <canvas id="registrationChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+                
                 <!-- Participants Table -->
                 <div class="participants-table" id="participantsTable" style="display: none;">
                     <div class="table-header">
                         <h3 class="table-title">👥 Lista de Participantes</h3>
                         <div class="table-actions">
+                            <input 
+                                type="text" 
+                                id="searchParticipants" 
+                                placeholder="🔍 Pesquisar por nome, email ou telefone..." 
+                                class="form-input"
+                                style="min-width: 300px; margin-right: var(--spacing-2);"
+                                onkeyup="filterParticipants()"
+                            />
                             <button class="btn btn-sm btn-secondary" id="refreshParticipants">
                                 <i>🔄</i> Atualizar
                             </button>
@@ -410,6 +462,7 @@
                             <thead>
                                 <tr>
                                     <th>Dorsal</th>
+                                    <th>Código</th>
                                     <th>Nome</th>
                                     <th>Email</th>
                                     <th>Telefone</th>
@@ -417,6 +470,10 @@
                                     <th>Género</th>
                                     <th>Equipa</th>
                                     <th>Categoria</th>
+                                    <th>Data Inscrição</th>
+                                    <th>Data Pagamento</th>
+                                    <th>Estado Inscrição</th>
+                                    <th>Pagamento</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -513,6 +570,11 @@
     </div>
     
     <!-- Scripts -->
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS para ler ficheiros Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <!-- Scripts de Autenticação -->
     <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
     <script src="/supabase.js?v=2025102605" defer></script>
@@ -577,6 +639,12 @@
                     eventSelectorContainer.style.display = 'none';
                 }
                 
+                // Mostrar instruções de importação
+                const importInstructions = document.getElementById('importInstructions');
+                if (importInstructions) {
+                    importInstructions.style.display = 'block';
+                }
+                
                 // Mostrar info do evento selecionado
                 const eventInfoContainer = document.querySelector('.event-info-container');
                 if (eventInfoContainer) {
@@ -619,9 +687,13 @@
             // Import/Export
             const importParticipantsBtn = document.getElementById('importParticipants');
             const exportParticipantsBtn = document.getElementById('exportParticipants');
+            const downloadExampleFileBtn = document.getElementById('downloadExampleFile');
+            const downloadExampleFileCardBtn = document.getElementById('downloadExampleFileCard');
             
             if (importParticipantsBtn) importParticipantsBtn.addEventListener('click', importParticipants);
             if (exportParticipantsBtn) exportParticipantsBtn.addEventListener('click', exportParticipants);
+            if (downloadExampleFileBtn) downloadExampleFileBtn.addEventListener('click', downloadExampleFile);
+            if (downloadExampleFileCardBtn) downloadExampleFileCardBtn.addEventListener('click', downloadExampleFile);
             
             // Menu toggle mobile
             const menuToggle = document.getElementById('menuToggle');
@@ -824,6 +896,7 @@
             // Hide event info
             document.getElementById('eventConfigCard').style.display = 'none';
             document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('chartContainer').style.display = 'none';
             document.getElementById('participantsTable').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             
@@ -879,8 +952,38 @@
                     }
                 }
                 
+                // Status badge
+                const registrationStatus = participant.registration_status || 'pending';
+                const paymentStatus = participant.payment_status || 'pending';
+                const isFree = participant.is_free || false;
+                
+                let statusBadge = '';
+                if (registrationStatus === 'paid') {
+                    statusBadge = '<span style="display: inline-block; padding: 4px 12px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border-radius: 12px; font-size: 12px; font-weight: 600;">✅ Pago</span>';
+                } else if (isFree) {
+                    statusBadge = '<span style="display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.2); color: #3b82f6; border-radius: 12px; font-size: 12px; font-weight: 600;">🎁 Gratuito</span>';
+                } else {
+                    statusBadge = '<span style="display: inline-block; padding: 4px 12px; background: rgba(251, 146, 60, 0.2); color: #fb923c; border-radius: 12px; font-size: 12px; font-weight: 600;">⏳ Pendente</span>';
+                }
+                
+                let paymentInfo = '--';
+                if (paymentStatus === 'paid' && participant.payment_amount) {
+                    paymentInfo = `${participant.payment_amount}€`;
+                } else if (isFree) {
+                    paymentInfo = 'Gratuito';
+                }
+                
+                // Formatar datas
+                const createdAt = participant.created_at 
+                    ? new Date(participant.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '--';
+                const paymentDate = participant.payment_date 
+                    ? new Date(participant.payment_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '--';
+                
                 row.innerHTML = `
                     <td><strong>${participant.dorsal_number || '--'}</strong></td>
+                    <td><code style="background: var(--color-primary-light); padding: 4px 8px; border-radius: 4px; font-weight: 600; color: var(--color-primary);">${participant.participant_code || '--'}</code></td>
                     <td>${participant.full_name || '--'}</td>
                     <td>${participant.email || '--'}</td>
                     <td>${participant.phone || '--'}</td>
@@ -888,13 +991,25 @@
                     <td>${participant.gender === 'M' ? 'Masculino' : participant.gender === 'F' ? 'Feminino' : 'Outro'}</td>
                     <td>${participant.team_name || '--'}</td>
                     <td>${participant.category || 'Open'}</td>
+                    <td style="font-size: 11px; white-space: nowrap;">${createdAt}</td>
+                    <td style="font-size: 11px; white-space: nowrap;">${paymentDate}</td>
+                    <td>${statusBadge}</td>
+                    <td>${paymentInfo}</td>
                     <td>
-                        <div style="display: flex; gap: var(--spacing-1);">
+                        <div style="display: flex; gap: var(--spacing-1); flex-wrap: wrap;">
+                            ${registrationStatus !== 'paid' && !isFree ? `
+                                <button class="btn btn-sm btn-success" onclick="markAsPaid('${participant.id}')" title="Marcar como Pago">
+                                    💰
+                                </button>
+                                <button class="btn btn-sm btn-info" onclick="markAsFree('${participant.id}')" title="Dar Inscrição Gratuita">
+                                    🎁
+                                </button>
+                            ` : ''}
                             <button class="btn btn-sm btn-secondary" onclick="editParticipant(${participant.dorsal_number})">
-                                <i>✏️</i>
+                                ✏️
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteParticipant(${participant.dorsal_number})">
-                                <i>🗑️</i>
+                                🗑️
                             </button>
                         </div>
                     </td>
@@ -926,12 +1041,133 @@
             const total = participants.length;
             const male = participants.filter(p => p.gender === 'M').length;
             const female = participants.filter(p => p.gender === 'F').length;
-            const confirmed = participants.filter(p => p.status === 'confirmed').length;
+            const confirmed = participants.filter(p => p.registration_status === 'paid').length;
             
             document.getElementById('totalParticipants').textContent = total;
             document.getElementById('maleParticipants').textContent = male;
             document.getElementById('femaleParticipants').textContent = female;
             document.getElementById('confirmedParticipants').textContent = confirmed;
+            
+            // Update chart
+            updateRegistrationChart();
+        }
+        
+        let registrationChart = null;
+        
+        function updateRegistrationChart() {
+            if (!participants || participants.length === 0) {
+                const container = document.getElementById('chartContainer');
+                if (container) container.style.display = 'none';
+                return;
+            }
+            
+            // Show chart container
+            const container = document.getElementById('chartContainer');
+            if (container) container.style.display = 'block';
+            
+            // Group by date
+            const registrationsByDate = {};
+            participants.forEach(p => {
+                if (p.created_at) {
+                    const date = new Date(p.created_at).toLocaleDateString('pt-PT');
+                    registrationsByDate[date] = (registrationsByDate[date] || 0) + 1;
+                }
+            });
+            
+            // Sort dates
+            const sortedDates = Object.keys(registrationsByDate).sort((a, b) => {
+                const [dayA, monthA, yearA] = a.split('/');
+                const [dayB, monthB, yearB] = b.split('/');
+                return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+            });
+            
+            // Calculate cumulative
+            let cumulative = 0;
+            const cumulativeData = sortedDates.map(date => {
+                cumulative += registrationsByDate[date];
+                return cumulative;
+            });
+            
+            const ctx = document.getElementById('registrationChart');
+            if (!ctx) return;
+            
+            // Destroy existing chart
+            if (registrationChart) {
+                registrationChart.destroy();
+            }
+            
+            // Create new chart
+            registrationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'Inscrições Acumuladas',
+                        data: cumulativeData,
+                        borderColor: '#fc6b03',
+                        backgroundColor: 'rgba(252, 107, 3, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }, {
+                        label: 'Inscrições por Dia',
+                        data: sortedDates.map(date => registrationsByDate[date]),
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#fff'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#aaa',
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#aaa'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function filterParticipants() {
+            const searchTerm = document.getElementById('searchParticipants').value.toLowerCase();
+            const tbody = document.getElementById('participantsBody');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let row of rows) {
+                const name = row.cells[2]?.textContent.toLowerCase() || '';
+                const email = row.cells[3]?.textContent.toLowerCase() || '';
+                const phone = row.cells[4]?.textContent.toLowerCase() || '';
+                
+                if (name.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
         }
         
         function saveEventConfig() {
@@ -1100,6 +1336,48 @@
             }
         }
         
+        async function markAsPaid(participantId) {
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .update({ 
+                        payment_status: 'paid',
+                        payment_date: new Date().toISOString()
+                    })
+                    .eq('id', participantId);
+                
+                if (error) throw error;
+                
+                showSuccess('Participante marcado como PAGO! ✅');
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao marcar como pago:', error);
+                showError('Erro ao marcar como pago');
+            }
+        }
+        
+        async function markAsFree(participantId) {
+            try {
+                const { error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .update({ 
+                        is_free: true,
+                        notes: 'Inscrição gratuita atribuída pelo organizador'
+                    })
+                    .eq('id', participantId);
+                
+                if (error) throw error;
+                
+                showSuccess('Participante marcado como GRATUITO! 🎁');
+                await loadParticipants();
+                
+            } catch (error) {
+                console.error('❌ Erro ao marcar como gratuito:', error);
+                showError('Erro ao marcar como gratuito');
+            }
+        }
+        
         function refreshParticipants() {
             loadParticipants();
             showSuccess('Lista atualizada');
@@ -1114,60 +1392,383 @@
             }
         }
         
+        function downloadExampleFile() {
+            try {
+                // Definir todos os campos possíveis baseados na tabela de participantes
+                // Nota: Código, Idade e Data Inscrição são gerados/calculados automaticamente
+                const allFields = [
+                    'Dorsal',               // obrigatório
+                    'Nome',                 // obrigatório
+                    'Email',
+                    'Telefone',
+                    'Data Nascimento',      // usado para calcular Idade
+                    'Género',              // M ou F
+                    'Equipa',
+                    'Categoria',
+                    'Data Pagamento',       // opcional
+                    'Estado Inscrição',    // pending, paid, etc.
+                    'Pagamento'            // valor em euros (opcional)
+                    // Nota: Código é gerado automaticamente, Idade é calculada, Data Inscrição é criada automaticamente
+                ];
+                
+                // Se temos participantes, usar os primeiros como exemplo
+                let exampleRows = [];
+                
+                if (participants && participants.length > 0) {
+                    // Usar dados reais dos participantes existentes (máximo 5)
+                    exampleRows = participants.slice(0, 5).map(p => [
+                        p.dorsal_number || '',
+                        p.full_name || '',
+                        p.email || '',
+                        p.phone || '',
+                        p.birth_date ? p.birth_date.split('T')[0] : '',
+                        p.gender || 'M',
+                        p.team_name || '',
+                        p.category || 'Open',
+                        p.payment_date ? p.payment_date.split('T')[0] : '',
+                        p.registration_status || 'pending',
+                        p.payment_amount ? `${p.payment_amount}€` : ''
+                    ]);
+                    
+                    // Se não tivermos 5 participantes, completar com dados de exemplo
+                    while (exampleRows.length < 5) {
+                        const exampleNum = exampleRows.length + 1;
+                        exampleRows.push([
+                            exampleNum,
+                            `Participante ${exampleNum}`,
+                            `participante${exampleNum}@email.com`,
+                            `+351 912 345 ${String(exampleNum).padStart(3, '0')}`,
+                            `199${exampleNum}-0${exampleNum}-1${exampleNum}`,
+                            exampleNum % 2 === 0 ? 'F' : 'M',
+                            `Equipa ${String.fromCharCode(64 + exampleNum)}`,
+                            'Open',
+                            '', // Data Pagamento
+                            'pending', // Estado Inscrição
+                            '' // Pagamento
+                        ]);
+                    }
+                } else {
+                    // Criar dados de exemplo padrão
+                    exampleRows = [
+                        [1, 'João Silva', 'joao.silva@email.com', '+351 912 345 678', '1990-05-15', 'M', 'Equipa A', 'Open', '2025-01-15', 'paid', '25€'],
+                        [2, 'Maria Santos', 'maria.santos@email.com', '+351 912 345 679', '1992-08-20', 'F', 'Equipa B', 'Open', '', 'pending', ''],
+                        [3, 'Pedro Costa', 'pedro.costa@email.com', '+351 912 345 680', '1988-03-10', 'M', 'Equipa A', 'Open', '2025-01-20', 'paid', '25€'],
+                        [4, 'Ana Oliveira', 'ana.oliveira@email.com', '+351 912 345 681', '1995-11-25', 'F', 'Equipa C', 'Open', '', 'pending', ''],
+                        [5, 'Carlos Ferreira', 'carlos.ferreira@email.com', '+351 912 345 682', '1991-07-30', 'M', 'Equipa B', 'Open', '2025-01-18', 'paid', '25€']
+                    ];
+                }
+                
+                // Criar array completo com cabeçalhos
+                const exampleData = [allFields, ...exampleRows];
+                
+                // Verificar se XLSX está disponível
+                if (typeof XLSX === 'undefined') {
+                    // Fallback: criar CSV se XLSX não estiver disponível
+                    const csvData = exampleData.map(row => 
+                        row.map(cell => `"${cell}"`).join(',')
+                    ).join('\n');
+                    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'exemplo_importacao_participantes.csv';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showSuccess('Ficheiro CSV de exemplo descarregado');
+                    return;
+                }
+                
+                // Criar workbook Excel
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(exampleData);
+                
+                // Ajustar largura das colunas baseado nos campos
+                ws['!cols'] = [
+                    { wch: 10 },  // Dorsal
+                    { wch: 25 },  // Nome
+                    { wch: 30 },  // Email
+                    { wch: 18 },  // Telefone
+                    { wch: 18 },  // Data Nascimento
+                    { wch: 10 },  // Género
+                    { wch: 15 },  // Equipa
+                    { wch: 12 },  // Categoria
+                    { wch: 18 },  // Data Pagamento
+                    { wch: 18 },  // Estado Inscrição
+                    { wch: 12 }   // Pagamento
+                ];
+                
+                // Estilizar cabeçalhos (fazer negrito)
+                const headerRange = XLSX.utils.decode_range(ws['!ref']);
+                for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                    if (!ws[cellAddress]) continue;
+                    ws[cellAddress].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: "E8E8E8" } },
+                        alignment: { horizontal: "center" }
+                    };
+                }
+                
+                // Adicionar worksheet ao workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Participantes');
+                
+                // Fazer download
+                const fileName = participants && participants.length > 0 
+                    ? `exemplo_importacao_participantes_baseado_em_dados_existentes.xlsx`
+                    : `exemplo_importacao_participantes.xlsx`;
+                
+                XLSX.writeFile(wb, fileName);
+                showSuccess('Ficheiro Excel de exemplo descarregado');
+                
+            } catch (error) {
+                console.error('❌ Erro ao gerar ficheiro de exemplo:', error);
+                showError('Erro ao gerar ficheiro de exemplo');
+            }
+        }
+        
+        async function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Ler primeira sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Converter para JSON (mantendo primeira linha como header)
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                            header: 1,
+                            defval: '' // Valores vazios como string vazia
+                        });
+                        
+                        if (jsonData.length < 2) {
+                            reject(new Error('Excel vazio ou inválido (precisa de pelo menos cabeçalho + 1 linha)'));
+                            return;
+                        }
+                        
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = () => reject(new Error('Erro ao ler ficheiro'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        async function parseCSVFile(file) {
+            const text = await file.text();
+            const lines = text.split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) {
+                throw new Error('CSV vazio ou inválido');
+            }
+            
+            // Converter CSV para array de arrays
+            const data = lines.map(line => {
+                // Parse CSV considerando aspas e vírgulas dentro de campos
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim());
+                return result;
+            });
+            
+            return data;
+        }
+        
         function importParticipants() {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.csv';
+            input.accept = '.csv,.xlsx,.xls';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 
+                if (!currentEvent || !currentEvent.id) {
+                    showError('Por favor, selecione um evento primeiro');
+                    return;
+                }
+                
                 try {
-                    const text = await file.text();
-                    const lines = text.split('\n').filter(line => line.trim());
+                    let rows = [];
+                    const fileName = file.name.toLowerCase();
                     
-                    if (lines.length < 2) {
-                        showError('CSV vazio ou inválido');
+                    // Determinar tipo de ficheiro e fazer parse
+                    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                        console.log('📊 Lendo ficheiro Excel...');
+                        rows = await parseExcelFile(file);
+                    } else if (fileName.endsWith('.csv')) {
+                        console.log('📊 Lendo ficheiro CSV...');
+                        rows = await parseCSVFile(file);
+                    } else {
+                        showError('Formato não suportado. Use Excel (.xlsx) ou CSV (.csv)');
                         return;
                     }
                     
-                    // Skip header
-                    const dataLines = lines.slice(1);
-                    const importData = [];
+                    if (rows.length < 2) {
+                        showError('Ficheiro vazio ou inválido (precisa de cabeçalho + pelo menos 1 linha de dados)');
+                        return;
+                    }
                     
-                    for (const line of dataLines) {
-                        const [dorsal, name, birthDate, gender, team] = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+                    // Primeira linha são os cabeçalhos
+                    const headers = rows[0].map(h => h.toString().toLowerCase().trim());
+                    console.log('📋 Cabeçalhos encontrados:', headers);
+                    
+                    // Encontrar índices das colunas (case-insensitive)
+                    const dorsalIndex = headers.findIndex(h => h.includes('dorsal') || h.includes('número') || h.includes('numero'));
+                    const nameIndex = headers.findIndex(h => h.includes('nome') || h.includes('name') || h.includes('nome completo'));
+                    const emailIndex = headers.findIndex(h => h.includes('email') || h.includes('e-mail'));
+                    const phoneIndex = headers.findIndex(h => h.includes('telefone') || h.includes('phone') || h.includes('tel'));
+                    const birthDateIndex = headers.findIndex(h => h.includes('data') && (h.includes('nasc') || h.includes('birth')));
+                    const genderIndex = headers.findIndex(h => h.includes('género') || h.includes('genero') || h.includes('gender') || h.includes('sexo'));
+                    const teamIndex = headers.findIndex(h => h.includes('equipa') || h.includes('equipe') || h.includes('team'));
+                    const categoryIndex = headers.findIndex(h => h.includes('categoria') || h.includes('category'));
+                    const paymentDateIndex = headers.findIndex(h => h.includes('pagamento') && h.includes('data') || h.includes('payment') && h.includes('date'));
+                    const registrationStatusIndex = headers.findIndex(h => h.includes('estado') && h.includes('inscri') || h.includes('registration') && h.includes('status') || h.includes('status') && h.includes('inscri'));
+                    const paymentAmountIndex = headers.findIndex(h => (h.includes('pagamento') && !h.includes('data')) || (h.includes('payment') && !h.includes('date')) || h === 'pagamento' || h === 'payment');
+                    
+                    if (dorsalIndex === -1 || nameIndex === -1) {
+                        showError('Cabeçalhos obrigatórios não encontrados. Procure por: Dorsal/Número e Nome');
+                        console.error('Cabeçalhos necessários:', {
+                            encontrado: {
+                                dorsal: dorsalIndex !== -1,
+                                name: nameIndex !== -1
+                            },
+                            headers: headers
+                        });
+                        return;
+                    }
+                    
+                    // Processar linhas de dados (pular cabeçalho)
+                    const dataLines = rows.slice(1);
+                    const importData = [];
+                    const errors = [];
+                    
+                    for (let i = 0; i < dataLines.length; i++) {
+                        const row = dataLines[i];
+                        const dorsal = row[dorsalIndex]?.toString().trim();
+                        const name = row[nameIndex]?.toString().trim();
                         
-                        if (dorsal && name) {
-                            importData.push({
-                                event_id: currentEvent.id,
-                                dorsal_number: parseInt(dorsal),
-                                full_name: name,
-                                birth_date: birthDate || null,
-                                gender: gender || 'M',
-                                team_name: team || null
-                            });
+                        if (!dorsal || !name || dorsal === '' || name === '') {
+                            continue; // Pular linhas vazias
                         }
+                        
+                        const dorsalNumber = parseInt(dorsal);
+                        if (isNaN(dorsalNumber)) {
+                            errors.push(`Linha ${i + 2}: Dorsal "${dorsal}" não é um número válido`);
+                            continue;
+                        }
+                        
+                        const email = emailIndex !== -1 && row[emailIndex] ? row[emailIndex].toString().trim() : null;
+                        const phone = phoneIndex !== -1 && row[phoneIndex] ? row[phoneIndex].toString().trim() : null;
+                        const birthDate = birthDateIndex !== -1 && row[birthDateIndex] ? row[birthDateIndex].toString().trim() : null;
+                        const gender = genderIndex !== -1 && row[genderIndex] ? row[genderIndex].toString().trim().toUpperCase() : 'M';
+                        const team = teamIndex !== -1 && row[teamIndex] ? row[teamIndex].toString().trim() : null;
+                        const category = categoryIndex !== -1 && row[categoryIndex] ? row[categoryIndex].toString().trim() : null;
+                        
+                        // Campos de pagamento
+                        let paymentDate = null;
+                        if (paymentDateIndex !== -1 && row[paymentDateIndex]) {
+                            const pd = row[paymentDateIndex].toString().trim();
+                            paymentDate = pd ? pd : null;
+                        }
+                        
+                        let registrationStatus = null;
+                        if (registrationStatusIndex !== -1 && row[registrationStatusIndex]) {
+                            const rs = row[registrationStatusIndex].toString().trim().toLowerCase();
+                            if (rs === 'paid' || rs === 'pago' || rs.includes('pago')) {
+                                registrationStatus = 'paid';
+                            } else if (rs === 'pending' || rs === 'pendente' || rs.includes('pendente')) {
+                                registrationStatus = 'pending';
+                            }
+                        }
+                        
+                        let paymentAmount = null;
+                        if (paymentAmountIndex !== -1 && row[paymentAmountIndex]) {
+                            const pa = row[paymentAmountIndex].toString().trim();
+                            // Remover símbolos de moeda e espaços, converter para número
+                            const cleanAmount = pa.replace(/[€$,\s]/g, '').replace(',', '.');
+                            const amount = parseFloat(cleanAmount);
+                            if (!isNaN(amount) && amount > 0) {
+                                paymentAmount = amount;
+                            }
+                        }
+                        
+                        // Validar e normalizar género
+                        let normalizedGender = 'M';
+                        if (gender === 'F' || gender === 'FEMININO' || gender === 'FEMALE' || gender === 'FEM') {
+                            normalizedGender = 'F';
+                        } else if (gender === 'M' || gender === 'MASCULINO' || gender === 'MALE' || gender === 'MASC') {
+                            normalizedGender = 'M';
+                        }
+                        
+                        importData.push({
+                            event_id: currentEvent.id,
+                            dorsal_number: dorsalNumber,
+                            full_name: name,
+                            email: email || null,
+                            phone: phone || null,
+                            birth_date: birthDate || null,
+                            gender: normalizedGender,
+                            team_name: team || null,
+                            category: category || null,
+                            payment_date: paymentDate || null,
+                            registration_status: registrationStatus || 'pending',
+                            payment_amount: paymentAmount || null
+                        });
                     }
                     
                     if (importData.length === 0) {
-                        showError('Nenhum dado válido no CSV');
+                        showError('Nenhum dado válido encontrado no ficheiro');
+                        if (errors.length > 0) {
+                            console.error('Erros encontrados:', errors);
+                        }
                         return;
                     }
+                    
+                    // Mostrar erros se houver
+                    if (errors.length > 0) {
+                        console.warn('⚠️ Erros encontrados durante importação:', errors);
+                        showError(`${errors.length} linha(s) ignorada(s). Ver console para detalhes.`);
+                    }
+                    
+                    console.log(`📊 Preparando para importar ${importData.length} participantes...`);
+                    console.log('📋 Dados de exemplo:', importData.slice(0, 3));
                     
                     // Import to Supabase
                     const { error } = await window.supabaseClient.supabase
                         .from('participants')
                         .insert(importData);
                     
-                    if (error) throw error;
+                    if (error) {
+                        console.error('❌ Erro ao importar:', error);
+                        throw error;
+                    }
                     
-                    showSuccess(`${importData.length} participantes importados!`);
+                    showSuccess(`${importData.length} participante(s) importado(s) com sucesso!`);
                     await loadParticipants();
                     
                 } catch (error) {
                     console.error('❌ Erro ao importar:', error);
-                    showError('Erro ao importar CSV');
+                    showError('Erro ao importar ficheiro: ' + (error.message || error));
                 }
             };
             input.click();

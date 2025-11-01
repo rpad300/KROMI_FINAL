@@ -499,13 +499,24 @@ class AuthClient {
             }
             
             // Obter URL da aplicação para redirect
-            let appUrl = 'https://192.168.1.219:1144';
+            let appUrl;
             try {
+                // Primeiro tentar da base de dados via API
                 const configResponse = await fetch('/api/config');
                 const config = await configResponse.json();
-                appUrl = config.APP_URL || `https://${window.location.hostname}:${window.location.port}`;
+                if (config.APP_URL) {
+                    appUrl = config.APP_URL;
+                }
             } catch (e) {
-                appUrl = `https://${window.location.hostname}:${window.location.port}`;
+                // Ignorar erro e continuar
+            }
+            
+            // Fallback: usar hostname atual da página
+            if (!appUrl) {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const port = window.location.port;
+                appUrl = port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
             }
             
             const redirectTo = `${appUrl}/auth/callback`;

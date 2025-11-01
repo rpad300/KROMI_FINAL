@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Tracking - Kromi.online</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#fc6b03">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kromi.online">
+    <meta name="description" content="GPS Tracking e cronometragem em tempo real">
+    
+    <!-- KROMI Design System -->
+    <link rel="stylesheet" href="/kromi-design-system.css">
+    <link rel="stylesheet" href="/kromi-layout-fixes.css">
+    
+    <!-- Sistema de Navegação Unificado -->
+    <link rel="stylesheet" href="/navigation-component.css?v=2025102601">
+    <link rel="stylesheet" href="/unified-sidebar-styles.css?v=2025102601">
+    <link rel="stylesheet" href="/logo-integration.css?v=2025012701">
+    
+    <!-- Google Maps API -->
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG-PbE7uymvTk-zWuZhTya_XawqLDTOiM&libraries=places,geometry,elevation"></script>
+    
+    <!-- QR Code Library (mesma dos devices) -->
+    <script>
+        // Carregar biblioteca QRCode dinamicamente
+        (function() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+            script.onload = function() {
+                console.log('✅ QRCode library carregada');
+                window.dispatchEvent(new Event('qrcodeLoaded'));
+            };
+            script.onerror = function() {
+                console.error('❌ Erro ao carregar QRCode library');
+                // Tentar alternativa
+                const altScript = document.createElement('script');
+                altScript.src = 'https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js';
+                altScript.onload = function() {
+                    console.log('✅ QRCode library alternativa carregada');
+                    window.dispatchEvent(new Event('qrcodeLoaded'));
+                };
+                document.head.appendChild(altScript);
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <style>
+        /* Layout with Sidebar Structure */
+        .layout-with-sidebar {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        
+        .layout-with-sidebar .main {
+            margin-left: 280px;
+            margin-top: 60px;
+            width: calc(100% - 280px);
+            min-height: calc(100vh - 60px);
+            transition: margin-left var(--transition-slow), width var(--transition-slow);
+        }
+        
+        @media (max-width: 1024px) {
+            .layout-with-sidebar .main {
+                margin-left: 0 !important;
+                margin-top: 60px !important;
+                width: 100% !important;
+                padding-bottom: 80px !important;
+            }
+        }
+
+        /* GPS Tracking Styles */
+        #map { 
+            height: 400px; 
+            width: 100%; 
+            border-radius: var(--radius-lg); 
+            border: 1px solid var(--border-color);
+        }
+
+        .gps-tabs {
+            display: flex;
+            gap: var(--spacing-2);
+            margin-bottom: var(--spacing-5);
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .gps-tab {
+            padding: var(--spacing-3) var(--spacing-5);
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+
+        .gps-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .gps-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .gps-tab-content {
+            display: none;
+        }
+
+        .gps-tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-4);
+            margin-bottom: var(--spacing-5);
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: var(--spacing-4);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-top: var(--spacing-1);
+        }
+
+        .route-card, .participant-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-3);
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-2);
+        }
+
+        .route-name {
+            font-weight: 600;
+            font-size: var(--font-size-lg);
+        }
+
+        .qr-canvas-container {
+            text-align: center;
+            padding: var(--spacing-5);
+        }
+
+        .qr-code-text {
+            font-family: monospace;
+            font-size: var(--font-size-xs);
+            word-break: break-all;
+            margin-top: var(--spacing-2);
+            color: var(--text-secondary);
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: var(--spacing-4) !important;
+        }
+
+        .modal.hidden {
+            display: none !important;
+        }
+
+        .modal-content {
+            background: var(--bg-primary, #1a1a1a) !important;
+            border-radius: 12px !important;
+            padding: 24px !important;
+            max-width: 500px !important;
+            width: 90% !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+            position: relative !important;
+            z-index: 100000 !important;
+            border: 1px solid var(--border-color, #374151) !important;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-4);
+            padding-bottom: var(--spacing-3);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            margin-bottom: var(--spacing-4);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-2);
+            justify-content: flex-end;
+            padding-top: var(--spacing-3);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-4);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-2);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(252, 107, 3, 0.1);
+        }
+
+        /* Botões e Badges */
+        .btn {
+            padding: var(--spacing-2) var(--spacing-4);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-sm {
+            padding: var(--spacing-1) var(--spacing-3);
+            font-size: var(--font-size-xs);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .badge-secondary {
+            background: rgba(107, 114, 128, 0.15);
+            color: #6b7280;
+        }
+
+        /* Utility classes */
+        .mb-4 { margin-bottom: var(--spacing-4); }
+        .mb-6 { margin-bottom: var(--spacing-6); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-sm { font-size: var(--font-size-sm); }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+    </style>
+</head>
+
+<body>
+    <div class="layout-with-sidebar">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <!-- Será preenchido por navigation-component.js -->
+        </aside>
+        
+        <!-- Header -->
+        <header id="header" class="header">
+            <!-- Será preenchido por navigation-component.js -->
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main" id="mainContent">
+            <div class="container-fluid p-4">
+                <!-- Header da Página -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold mb-2">📍 GPS Tracking</h1>
+                        <p class="text-secondary">Cronometragem GPS em tempo real</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="gps-tabs">
+                    <button class="gps-tab active" onclick="switchTab('routes')">
+                        📍 Rotas
+                    </button>
+                    <button class="gps-tab" onclick="switchTab('qrs')">
+                        🎫 QR Codes
+                    </button>
+                    <button class="gps-tab" onclick="switchTab('live')">
+                        🗺️ Mapa Live
+                    </button>
+                    <button class="gps-tab" onclick="switchTab('rankings')">
+                        🏆 Rankings
+                    </button>
+                </div>
+
+                <!-- Rotas Content -->
+                <div id="tab-routes" class="gps-tab-content active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-routes">0</div>
+                            <div class="stat-label">Rotas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-active-routes">0</div>
+                            <div class="stat-label">Ativas</div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary mb-4" onclick="console.log('Clique em Nova Rota'); try { openRouteModal(); } catch(e) { console.error('❌ Erro ao abrir modal:', e); }">
+                        <i class="fas fa-plus"></i> Nova Rota
+                    </button>
+
+                    <div id="routes-list"></div>
+                </div>
+
+                <!-- QR Codes Content -->
+                <div id="tab-qrs" class="gps-tab-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-qr-total">0</div>
+                            <div class="stat-label">Participantes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-qr-with-code">0</div>
+                            <div class="stat-label">Com Código</div>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+                        <strong style="color:#10b981;">ℹ️ Códigos de Participante</strong>
+                        <p style="margin:8px 0 0 0;font-size:13px;color:#d1d5db;">
+                            Cada participante já tem um código único (<code style="background:#374151;padding:2px 6px;border-radius:4px;">participant_code</code>).
+                            Use estes códigos para o tracking GPS.
+                        </p>
+                    </div>
+
+                    <div id="qrs-list"></div>
+                </div>
+
+                <!-- Mapa Live Content -->
+                <div id="tab-live" class="gps-tab-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-running">0</div>
+                            <div class="stat-label">Em Corrida</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-paused">0</div>
+                            <div class="stat-label">Pausados</div>
+                        </div>
+                    </div>
+
+                    <div id="map" class="mb-4"></div>
+                    <div id="runners-list"></div>
+                </div>
+
+                <!-- Rankings Content -->
+                <div id="tab-rankings" class="gps-tab-content">
+                    <select id="route-filter" class="form-control mb-4">
+                        <option value="">Selecione uma rota...</option>
+                    </select>
+
+                    <div id="rankings-list"></div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Nav será injetado pelo navigation-component.js -->
+        <nav class="app-bottom-nav" id="bottomNav">
+            <!-- Será preenchido por navigation.js -->
+        </nav>
+    </div>
+
+    <!-- Modal Rota -->
+    <div id="route-modal" class="modal hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;">
+        <div class="modal-content" style="background:#1a1a1a;padding:24px;border-radius:12px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div class="modal-header">
+                <h3 id="route-modal-title">Nova Rota</h3>
+                <button class="modal-close" onclick="closeRouteModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nome da Rota *</label>
+                    <input type="text" id="route-name" class="form-control" placeholder="Ex: 10K - Percurso Urbano">
+                </div>
+                
+                <div class="form-group">
+                    <label>📎 Ficheiro GPX</label>
+                    <input type="file" id="route-gpx-file" class="form-control" accept=".gpx" onchange="analyzeGPX(event)">
+                    <small class="text-secondary">Carregue um ficheiro GPX para análise automática</small>
+                </div>
+                
+                <div id="gpx-analysis" style="display:none;margin:12px 0;padding:12px;background:rgba(16,185,129,0.1);border-radius:8px;border:1px solid rgba(16,185,129,0.3);">
+                    <strong style="color:#10b981;">✅ GPX Analisado:</strong>
+                    <div id="gpx-info" style="margin-top:8px;font-size:13px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Distância (km) *</label>
+                    <input type="number" id="route-distance" class="form-control" step="0.1" placeholder="Auto-preenchido pelo GPX">
+                </div>
+                
+                <div class="form-group">
+                    <label>Elevação Positiva (m)</label>
+                    <input type="number" id="route-elev-gain" class="form-control" step="0.1" placeholder="Auto-preenchido pelo GPX">
+                </div>
+                
+                <div class="form-group">
+                    <label>Elevação Negativa (m)</label>
+                    <input type="number" id="route-elev-loss" class="form-control" step="0.1" placeholder="Auto-preenchido pelo GPX">
+                </div>
+                
+                <div class="form-group">
+                    <label>Velocidade Máxima Permitida (km/h)</label>
+                    <input type="number" id="route-max-speed" class="form-control" value="50" step="0.1">
+                    <small class="text-secondary">Limite anti-fraude (pontos acima serão rejeitados)</small>
+                </div>
+                
+                <input type="hidden" id="route-center-lat">
+                <input type="hidden" id="route-center-lng">
+                <input type="hidden" id="route-gpx-data">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRouteModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveRoute()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QR criado dinamicamente em JavaScript -->
+
+    <!-- Scripts de Autenticação -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/supabase.js?v=2025102605"></script>
+    <script src="/auth-client.js?v=2025102610"></script>
+    <script src="/auth-helper.js?v=2025102607"></script>
+    
+    <!-- Sistema de Navegação Unificado -->
+    <script src="/navigation-config.js?v=2025102601" defer></script>
+    <script src="/navigation-service.js?v=2025102601" defer></script>
+    <script src="/logo-loader.js?v=2025012702"></script>
+    <script src="/navigation-component.js?v=2025102601" defer></script>
+    <script src="/navigation-init.js?v=2025102601" defer></script>
+    
+    <script src="/universal-route-protection.js?v=2025102607"></script>
+
+    <script>
+        let currentEventId = null;
+        let map = null;
+        let markers = {};
+        let supabaseReady = false;
+        let currentGPXPoints = []; // Pontos do GPX atual com elevações
+
+        // Aguardar inicialização do Supabase
+        async function waitForSupabase() {
+            // Aguardar window.supabaseClient existir
+            while (!window.supabaseClient) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Inicializar Supabase
+            if (window.supabaseClient.init) {
+                await window.supabaseClient.init();
+            }
+            
+            // Aguardar cliente estar pronto
+            while (!window.supabaseClient.supabase) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            supabaseReady = true;
+            console.log('✅ Supabase pronto para GPS Tracking');
+        }
+
+        // Obter event ID da URL
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            currentEventId = params.get('event') || params.get('event_id');
+            
+            if (!currentEventId) {
+                console.error('Event ID não encontrado na URL');
+                return;
+            }
+
+            // Aguardar Supabase
+            await waitForSupabase();
+
+            initMap();
+            await loadRoutes();
+            await loadQRs();
+            
+            // Auto-refresh live positions a cada 5s
+            setInterval(() => {
+                const activeTab = document.querySelector('.gps-tab.active');
+                if (activeTab && activeTab.textContent.includes('Live')) {
+                    loadLivePositions();
+                }
+            }, 5000);
+        });
+
+        // Tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.gps-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.gps-tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'live') loadLivePositions();
+            if (tabName === 'rankings') loadRankings();
+        }
+
+        // Inicializar mapa Google
+        function initMap() {
+            // Aguardar Google Maps carregar
+            if (typeof google === 'undefined') {
+                setTimeout(initMap, 500);
+                return;
+            }
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 38.7223, lng: -9.1393 },
+                zoom: 13,
+                mapTypeControl: true,
+                streetViewControl: false,
+                fullscreenControl: true
+            });
+            
+            console.log('🗺️ Google Maps inicializado');
+        }
+
+        // Carregar rotas
+        async function loadRoutes() {
+            try {
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('track_routes')
+                    .select('*')
+                    .eq('event_id', currentEventId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                document.getElementById('stat-routes').textContent = data.length;
+                document.getElementById('stat-active-routes').textContent = data.filter(r => r.is_active).length;
+
+                const list = document.getElementById('routes-list');
+                list.innerHTML = data.map((r, index) => `
+                    <div class="route-card">
+                        <div class="route-header">
+                            <span class="route-name">${r.name}</span>
+                            <span class="badge ${r.is_active ? 'badge-success' : 'badge-secondary'}">
+                                ${r.is_active ? 'Ativa' : 'Inativa'}
+                            </span>
+                        </div>
+                        
+                        <div class="text-secondary text-sm" style="margin-top:8px;">
+                            📏 ${r.distance_km} km
+                            ${r.elev_gain_m ? ` • ⛰️ ↗${r.elev_gain_m.toFixed(0)}m` : ''}
+                            ${r.elev_loss_m ? ` ↘${r.elev_loss_m.toFixed(0)}m` : ''}
+                        </div>
+                        
+                        <div class="text-secondary text-sm" style="margin-top:4px;">
+                            🏃 Vel.Máx: ${r.max_speed_kmh} km/h • 📡 Precisão: ${r.max_accuracy_m}m
+                        </div>
+                        
+                        <!-- Mini Mapa da Rota -->
+                        <div id="route-map-${index}" style="height:200px;width:100%;margin-top:12px;border-radius:8px;border:1px solid var(--border-color);"></div>
+                        
+                        <!-- Perfil de Altimetria -->
+                        <div id="route-elevation-${index}" style="height:120px;width:100%;margin-top:12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);"></div>
+                        
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <button class="btn btn-sm" onclick="viewRouteDetails('${r.id}', ${index})">
+                                🔍 Ver Detalhes
+                            </button>
+                            <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="toggleRouteStatus('${r.id}', ${!r.is_active})">
+                                ${r.is_active ? '⏸️ Desativar' : '▶️ Ativar'}
+                            </button>
+                            <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="deleteRoute('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
+                                🗑️ Apagar
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Renderizar mapas e perfis para cada rota
+                data.forEach((r, index) => {
+                    if (r.metadata?.gpx_loaded) {
+                        setTimeout(() => renderRouteMiniMap(r, index), 100 * index);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar rotas:', error);
+            }
+        }
+        
+        // Renderizar mini mapa da rota
+        async function renderRouteMiniMap(route, index) {
+            const mapDiv = document.getElementById(`route-map-${index}`);
+            const elevDiv = document.getElementById(`route-elevation-${index}`);
+            
+            if (!mapDiv || typeof google === 'undefined') {
+                console.warn(`⚠️ Mapa ${index}: Google Maps não disponível`);
+                return;
+            }
+            
+            console.log(`🗺️ Renderizando rota ${index}:`, route.name);
+            console.log(`📊 Metadata:`, route.metadata);
+            
+            try {
+                // Buscar pontos do metadata
+                const points = route.metadata?.gpx_points || [];
+                
+                console.log(`📍 Pontos encontrados no metadata:`, points.length);
+                
+                // Se não tiver pontos, mostrar apenas centro
+                if (points.length === 0) {
+                    if (route.map_center_lat && route.map_center_lng) {
+                        const miniMap = new google.maps.Map(mapDiv, {
+                            center: { lat: route.map_center_lat, lng: route.map_center_lng },
+                            zoom: 12,
+                            disableDefaultUI: true,
+                            gestureHandling: 'none'
+                        });
+                        elevDiv.innerHTML = '<div style="padding:12px;text-align:center;color:#9ca3af;font-size:12px;">⚠️ GPX sem pontos salvos</div>';
+                    } else {
+                        mapDiv.innerHTML = '<div style="padding:12px;text-align:center;color:#9ca3af;font-size:12px;">Sem dados de mapa</div>';
+                        elevDiv.innerHTML = '<div style="padding:12px;text-align:center;color:#9ca3af;font-size:12px;">Sem dados de elevação</div>';
+                    }
+                    return;
+                }
+                
+                // Criar mapa
+                const center = points[Math.floor(points.length / 2)];
+                console.log(`📍 Centro do mapa:`, center);
+                
+                const miniMap = new google.maps.Map(mapDiv, {
+                    center: { lat: center.lat, lng: center.lng },
+                    zoom: 13,
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                    gestureHandling: 'cooperative'
+                });
+                
+                console.log(`✅ Mapa criado para rota ${index}`);
+                
+                // Desenhar polyline da rota
+                const path = points.map(p => ({ lat: p.lat, lng: p.lng }));
+                console.log(`📏 Path com ${path.length} pontos`);
+                
+                const polyline = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: '#fc6b03',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4,
+                    map: miniMap
+                });
+                
+                console.log(`✅ Polyline desenhada (laranja #fc6b03)`);
+                
+                // Marker de INÍCIO (verde)
+                new google.maps.Marker({
+                    position: path[0],
+                    map: miniMap,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: '#10b981',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 3
+                    },
+                    title: 'Início',
+                    label: {
+                        text: 'I',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                    }
+                });
+                
+                console.log(`🟢 Marker INÍCIO adicionado`);
+                
+                // Marker de FIM (vermelho)
+                new google.maps.Marker({
+                    position: path[path.length - 1],
+                    map: miniMap,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: '#ef4444',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 3
+                    },
+                    title: 'Fim',
+                    label: {
+                        text: 'F',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                    }
+                });
+                
+                console.log(`🔴 Marker FIM adicionado`);
+                
+                // Ajustar bounds
+                const bounds = new google.maps.LatLngBounds();
+                path.forEach(p => bounds.extend(p));
+                miniMap.fitBounds(bounds);
+                
+                console.log(`📐 Bounds ajustados`);
+                
+                // Desenhar perfil de altimetria
+                console.log(`📊 Desenhando perfil de elevação...`);
+                renderElevationProfile(points, elevDiv);
+                
+                console.log(`✅ Rota ${index} renderizada completamente!`);
+                
+            } catch (error) {
+                console.error('Erro ao renderizar mapa da rota:', error);
+            }
+        }
+        
+        // Desenhar perfil de altimetria (gráfico simples)
+        function renderElevationProfile(points, container) {
+            if (!container || points.length === 0) return;
+            
+            const elevations = points.map(p => p.ele || 0).filter(e => e > 0);
+            if (elevations.length === 0) {
+                container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-secondary);font-size:12px;">Sem dados de elevação</div>';
+                return;
+            }
+            
+            const minElev = Math.min(...elevations);
+            const maxElev = Math.max(...elevations);
+            const range = maxElev - minElev;
+            
+            // Criar SVG
+            const width = container.offsetWidth;
+            const height = 120;
+            const padding = 20;
+            
+            let svg = `<svg width="${width}" height="${height}" style="display:block;">`;
+            
+            // Fundo
+            svg += `<rect width="${width}" height="${height}" fill="#111827"/>`;
+            
+            // Grid horizontal
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (height - 2 * padding) * i / 4;
+                svg += `<line x1="${padding}" y1="${y}" x2="${width - padding}" y2="${y}" stroke="#374151" stroke-width="1" stroke-dasharray="2,2"/>`;
+            }
+            
+            // Perfil
+            const step = Math.ceil(elevations.length / (width - 2 * padding));
+            const sampledElevs = elevations.filter((_, i) => i % step === 0);
+            
+            const pathData = sampledElevs.map((elev, i) => {
+                const x = padding + (width - 2 * padding) * i / (sampledElevs.length - 1);
+                const y = height - padding - ((elev - minElev) / range) * (height - 2 * padding);
+                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+            
+            // Área preenchida
+            svg += `<path d="${pathData} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z" fill="rgba(252, 107, 3, 0.2)" stroke="none"/>`;
+            
+            // Linha do perfil
+            svg += `<path d="${pathData}" fill="none" stroke="#fc6b03" stroke-width="2"/>`;
+            
+            // Labels
+            svg += `<text x="${padding}" y="15" fill="#9ca3af" font-size="10">${maxElev.toFixed(0)}m</text>`;
+            svg += `<text x="${padding}" y="${height - 5}" fill="#9ca3af" font-size="10">${minElev.toFixed(0)}m</text>`;
+            svg += `<text x="${width / 2}" y="${height - 5}" fill="#9ca3af" font-size="10" text-anchor="middle">Perfil de Altimetria</text>`;
+            
+            svg += `</svg>`;
+            
+            container.innerHTML = svg;
+        }
+
+        // Ver detalhes da rota
+        function viewRouteDetails(routeId, index) {
+            alert(`Funcionalidade em desenvolvimento\n\nRota ID: ${routeId}\nÍndice: ${index}`);
+            // TODO: Abrir modal com detalhes completos, edição, etc.
+        }
+        
+        // Ativar/Desativar rota
+        async function toggleRouteStatus(routeId, activate) {
+            const action = activate ? 'ativar' : 'desativar';
+            if (!confirm(`Tem certeza que deseja ${action} esta rota?`)) return;
+            
+            try {
+                console.log(`🔄 ${activate ? 'Ativando' : 'Desativando'} rota ${routeId}...`);
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('track_routes')
+                    .update({ is_active: activate })
+                    .eq('id', routeId);
+                
+                if (error) throw error;
+                
+                console.log(`✅ Rota ${activate ? 'ativada' : 'desativada'}!`);
+                await loadRoutes();
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                alert('Erro ao atualizar rota: ' + error.message);
+            }
+        }
+        
+        // Apagar rota
+        async function deleteRoute(routeId, routeName) {
+            if (!confirm(`⚠️ ATENÇÃO!\n\nTem certeza que deseja APAGAR permanentemente a rota "${routeName}"?\n\nEsta ação NÃO pode ser desfeita!`)) {
+                return;
+            }
+            
+            try {
+                console.log(`🗑️ Apagando rota ${routeId}...`);
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('track_routes')
+                    .delete()
+                    .eq('id', routeId);
+                
+                if (error) throw error;
+                
+                console.log(`✅ Rota "${routeName}" apagada com sucesso!`);
+                await loadRoutes();
+            } catch (error) {
+                console.error('❌ Erro ao apagar:', error);
+                alert('Erro ao apagar rota: ' + error.message);
+            }
+        }
+
+        // Carregar QR Codes (usando participant_code existente)
+        async function loadQRs() {
+            try {
+                // Buscar participantes com seus códigos
+                const { data: participants, error } = await window.supabaseClient.supabase
+                    .from('participants')
+                    .select('id, full_name, dorsal_number, participant_code, email, category')
+                    .eq('event_id', currentEventId)
+                    .order('dorsal_number');
+
+                if (error) throw error;
+
+                const withCode = participants.filter(p => p.participant_code).length;
+                
+                document.getElementById('stat-qr-total').textContent = participants.length;
+                document.getElementById('stat-qr-with-code').textContent = withCode;
+
+                const list = document.getElementById('qrs-list');
+                list.innerHTML = participants.map(p => `
+                    <div class="participant-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <div>
+                                <strong style="color:#fc6b03;">#${p.dorsal_number}</strong> 
+                                <span style="color:#e5e7eb;">${p.full_name}</span>
+                                ${p.category ? `<span class="badge badge-secondary" style="margin-left:8px;">${p.category}</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${p.participant_code ? `
+                            <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+                                <div style="flex:1;">
+                                    <div style="font-size:11px;color:#9ca3af;margin-bottom:4px;">Código:</div>
+                                    <div style="font-family:monospace;font-size:16px;font-weight:700;color:#fc6b03;background:#111827;padding:6px 12px;border-radius:6px;display:inline-block;">
+                                        ${p.participant_code}
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="showParticipantQR('${p.participant_code}', '${p.full_name}', '${p.dorsal_number}')">
+                                    📱 Ver QR
+                                </button>
+                                <button class="btn btn-sm" onclick="copyCode('${p.participant_code}')">
+                                    📋 Copiar
+                                </button>
+                            </div>
+                        ` : `
+                            <div style="padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;border:1px solid rgba(239,68,68,0.3);margin-top:8px;">
+                                <span style="color:#ef4444;font-size:12px;">⚠️ Sem código de participante</span>
+                            </div>
+                        `}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar participantes:', error);
+            }
+        }
+        
+        // Mostrar QR do participante (mesma implementação dos devices)
+        async function showParticipantQR(code, name, dorsal) {
+            // Criar modal dinamicamente
+            const oldModal = document.getElementById('dynamic-qr-modal');
+            if (oldModal) oldModal.remove();
+            
+            const modalHTML = `
+                <div id="dynamic-qr-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;">
+                    <div style="background:#1a1a1a;padding:24px;border-radius:12px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+                        <h3 style="margin:0 0 16px 0;color:white;font-size:20px;">QR Code do Participante</h3>
+                        
+                        <div style="margin-bottom:16px;">
+                            <strong style="font-size:18px;color:#e5e7eb;">${name}</strong><br>
+                            <span style="color:#fc6b03;font-weight:600;">Dorsal #${dorsal}</span>
+                        </div>
+                        
+                        <div id="qr-code-container-${code}" style="display:inline-block;padding:16px;background:white;border-radius:8px;margin:16px 0;"></div>
+                        
+                        <div style="font-family:monospace;font-size:16px;font-weight:700;color:#fc6b03;background:#111827;padding:12px;border-radius:6px;letter-spacing:2px;margin-bottom:16px;">
+                            ${code}
+                        </div>
+                        
+                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                            <button onclick="copyCode('${code}')" style="padding:10px 20px;background:#374151;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;">
+                                📋 Copiar
+                            </button>
+                            <button onclick="document.getElementById('dynamic-qr-modal').remove()" style="padding:10px 20px;background:#fc6b03;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Gerar QR Code (mesma lógica dos devices)
+            function generateQR() {
+                const container = document.getElementById(`qr-code-container-${code}`);
+                if (!container) {
+                    setTimeout(generateQR, 100);
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                if (typeof QRCode !== 'undefined') {
+                    try {
+                        console.log('📱 Gerando QR Code...');
+                        new QRCode(container, {
+                            text: code,
+                            width: 256,
+                            height: 256,
+                            colorDark: '#000000',
+                            colorLight: '#ffffff',
+                            correctLevel: QRCode.CorrectLevel.L
+                        });
+                        console.log('✅ QR Code gerado!');
+                    } catch (error) {
+                        console.error('❌ Erro ao gerar QR:', error);
+                        container.innerHTML = `<p style="color:#ef4444;padding:20px;">Erro: ${error.message}</p>`;
+                    }
+                } else {
+                    console.warn('⚠️ QRCode library não disponível, aguardando...');
+                    let attempts = 0;
+                    const checkQRCode = () => {
+                        attempts++;
+                        if (typeof QRCode !== 'undefined') {
+                            generateQR();
+                        } else if (attempts < 30) {
+                            setTimeout(checkQRCode, 200);
+                        } else {
+                            container.innerHTML = '<p style="color:#ef4444;padding:20px;">QR Code não carregou. Recarregue a página.</p>';
+                        }
+                    };
+                    
+                    window.addEventListener('qrcodeLoaded', generateQR, { once: true });
+                    setTimeout(checkQRCode, 200);
+                }
+            }
+            
+            setTimeout(generateQR, 500);
+        }
+        
+        // Copiar código
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                alert(`✅ Código "${code}" copiado!`);
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+                alert('Código: ' + code);
+            });
+        }
+
+
+        // Mapa Live
+        async function loadLivePositions() {
+            try {
+                const { data, error } = await window.supabaseClient.supabase.rpc('track_get_live_positions', {
+                    p_event_id: currentEventId
+                });
+
+                if (error) throw error;
+
+                document.getElementById('stat-running').textContent = data.filter(r => r.status === 'running').length;
+                document.getElementById('stat-paused').textContent = data.filter(r => r.status === 'paused').length;
+
+                updateMapMarkers(data);
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        function updateMapMarkers(runners) {
+            // Limpar markers antigos
+            Object.values(markers).forEach(m => m.setMap(null));
+            markers = {};
+
+            if (!map) return;
+
+            runners.forEach(r => {
+                if (!r.lat || !r.lng) return;
+                
+                // Criar marker do Google Maps
+                const marker = new google.maps.Marker({
+                    position: { lat: r.lat, lng: r.lng },
+                    map: map,
+                    title: `#${r.dorsal_number} - ${r.participant_name}`,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 16,
+                        fillColor: '#10b981',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 3
+                    },
+                    label: {
+                        text: String(r.dorsal_number),
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                    }
+                });
+
+                // InfoWindow
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <div style="padding:8px;">
+                            <strong>${r.participant_name}</strong><br>
+                            Dorsal: #${r.dorsal_number}<br>
+                            Velocidade: ${r.speed_kmh ? r.speed_kmh.toFixed(1) + ' km/h' : '-'}
+                        </div>
+                    `
+                });
+
+                marker.addListener('click', () => {
+                    infoWindow.open(map, marker);
+                });
+
+                markers[r.activity_id] = marker;
+            });
+
+            // Ajustar zoom para mostrar todos os markers
+            if (runners.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                runners.forEach(r => {
+                    if (r.lat && r.lng) {
+                        bounds.extend({ lat: r.lat, lng: r.lng });
+                    }
+                });
+                map.fitBounds(bounds);
+            }
+        }
+
+        // Rankings
+        async function loadRankings() {
+            const { data: routes } = await window.supabaseClient.supabase
+                .from('track_routes')
+                .select('id, name')
+                .eq('event_id', currentEventId)
+                .eq('is_active', true);
+
+            const select = document.getElementById('route-filter');
+            select.innerHTML = '<option value="">Selecione uma rota...</option>' + 
+                routes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+            select.onchange = async () => {
+                if (!select.value) return;
+
+                const { data } = await window.supabaseClient.supabase.rpc('track_get_rankings', {
+                    p_event_id: currentEventId,
+                    p_route_id: select.value,
+                    p_limit: 100
+                });
+
+                document.getElementById('rankings-list').innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Dorsal</th>
+                                    <th>Nome</th>
+                                    <th>Tempo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(r => `
+                                    <tr>
+                                        <td><strong>${r.rank}º</strong></td>
+                                        <td>#${r.dorsal_number}</td>
+                                        <td>${r.participant_name}</td>
+                                        <td>${r.formatted_time}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            };
+        }
+
+        // Obter elevações do Google Maps Elevation API
+        async function getElevationsFromGoogle(points) {
+            return new Promise((resolve, reject) => {
+                if (typeof google === 'undefined' || !google.maps || !google.maps.ElevationService) {
+                    console.warn('Google Maps Elevation API não disponível');
+                    resolve(null);
+                    return;
+                }
+                
+                const elevator = new google.maps.ElevationService();
+                
+                // Amostrar pontos (API permite max 512 por request)
+                const maxPoints = 512;
+                const step = Math.ceil(points.length / maxPoints);
+                const sampledPoints = points.filter((_, i) => i % step === 0);
+                
+                console.log(`⛰️ Buscando elevação para ${sampledPoints.length} pontos (amostra de ${points.length})...`);
+                
+                const locations = sampledPoints.map(p => ({ lat: p.lat, lng: p.lng }));
+                
+                elevator.getElevationForLocations({ locations }, (results, status) => {
+                    if (status === 'OK' && results) {
+                        // Interpolar elevações para todos os pontos
+                        const elevations = [];
+                        let sampleIdx = 0;
+                        
+                        for (let i = 0; i < points.length; i++) {
+                            if (i % step === 0 && sampleIdx < results.length) {
+                                elevations[i] = results[sampleIdx].elevation;
+                                sampleIdx++;
+                            } else {
+                                // Interpolação linear
+                                const prevIdx = Math.floor(i / step) * step;
+                                const nextIdx = Math.min(prevIdx + step, points.length - 1);
+                                const prevElev = elevations[prevIdx] || 0;
+                                const nextElev = results[Math.min(sampleIdx, results.length - 1)]?.elevation || prevElev;
+                                const ratio = (i - prevIdx) / step;
+                                elevations[i] = prevElev + (nextElev - prevElev) * ratio;
+                            }
+                        }
+                        
+                        console.log('✅ Elevações obtidas do Google Maps!');
+                        resolve(elevations);
+                    } else {
+                        console.error('❌ Google Elevation API erro:', status);
+                        resolve(null);
+                    }
+                });
+            });
+        }
+        
+        // Análise de GPX
+        async function analyzeGPX(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('📂 Analisando GPX:', file.name);
+            
+            try {
+                const text = await file.text();
+                const parser = new DOMParser();
+                const gpx = parser.parseFromString(text, 'text/xml');
+                
+                // Extrair pontos (trackpoints)
+                const trkpts = gpx.querySelectorAll('trkpt');
+                console.log('📍 Pontos encontrados:', trkpts.length);
+                
+                if (trkpts.length === 0) {
+                    alert('GPX não contém pontos de trilha (trkpt)');
+                    return;
+                }
+                
+                const points = [];
+                trkpts.forEach(pt => {
+                    points.push({
+                        lat: parseFloat(pt.getAttribute('lat')),
+                        lng: parseFloat(pt.getAttribute('lon')),
+                        ele: parseFloat(pt.querySelector('ele')?.textContent || 0)
+                    });
+                });
+                
+                // Calcular distância total (Haversine)
+                let totalDistance = 0;
+                for (let i = 1; i < points.length; i++) {
+                    totalDistance += haversineDistance(
+                        points[i-1].lat, points[i-1].lng,
+                        points[i].lat, points[i].lng
+                    );
+                }
+                
+                // Calcular elevação acumulada
+                let elevGain = 0;
+                let elevLoss = 0;
+                let hasElevation = points.some(p => p.ele && p.ele !== 0);
+                
+                if (!hasElevation) {
+                    // GPX sem elevação - usar Google Elevation API
+                    console.log('⛰️ GPX sem elevação, usando Google Maps Elevation API...');
+                    
+                    try {
+                        const elevations = await getElevationsFromGoogle(points);
+                        if (elevations) {
+                            points.forEach((p, i) => p.ele = elevations[i]);
+                            hasElevation = true;
+                            console.log('✅ Elevações obtidas do Google Maps!');
+                        }
+                    } catch (elevError) {
+                        console.warn('⚠️ Erro ao obter elevações do Google:', elevError);
+                    }
+                }
+                
+                if (hasElevation) {
+                    for (let i = 1; i < points.length; i++) {
+                        const diff = points[i].ele - points[i-1].ele;
+                        if (diff > 0) {
+                            elevGain += diff;
+                        } else {
+                            elevLoss += Math.abs(diff);
+                        }
+                    }
+                }
+                
+                // Calcular centro do mapa (média das coordenadas)
+                const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+                const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+                
+                // Preencher campos
+                document.getElementById('route-distance').value = (totalDistance / 1000).toFixed(2);
+                document.getElementById('route-elev-gain').value = elevGain.toFixed(1);
+                document.getElementById('route-elev-loss').value = elevLoss.toFixed(1);
+                document.getElementById('route-center-lat').value = centerLat.toFixed(6);
+                document.getElementById('route-center-lng').value = centerLng.toFixed(6);
+                document.getElementById('route-gpx-data').value = text;
+                
+                // Mostrar resumo
+                document.getElementById('gpx-analysis').style.display = 'block';
+                document.getElementById('gpx-info').innerHTML = `
+                    📏 Distância: <strong>${(totalDistance / 1000).toFixed(2)} km</strong><br>
+                    ⛰️ Elevação ↗: <strong>${elevGain.toFixed(0)} m</strong><br>
+                    ⛰️ Elevação ↘: <strong>${elevLoss.toFixed(0)} m</strong><br>
+                    📍 Pontos GPS: <strong>${points.length}</strong>
+                `;
+                
+                console.log('✅ GPX analisado:', {
+                    distancia_km: (totalDistance / 1000).toFixed(2),
+                    elev_gain_m: elevGain.toFixed(1),
+                    elev_loss_m: elevLoss.toFixed(1),
+                    pontos: points.length,
+                    centro: [centerLat, centerLng]
+                });
+                
+            } catch (error) {
+                console.error('Erro ao analisar GPX:', error);
+                alert('Erro ao analisar ficheiro GPX: ' + error.message);
+            }
+        }
+        
+        // Fórmula de Haversine para calcular distância entre 2 coordenadas
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Raio da Terra em metros
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            
+            return R * c; // Distância em metros
+        }
+
+        // Rotas
+        function openRouteModal() {
+            console.log('✅ openRouteModal() CHAMADA!');
+            
+            try {
+                // Remover modal antigo se existir
+                const oldModal = document.getElementById('dynamic-route-modal');
+                if (oldModal) oldModal.remove();
+                
+                // Criar modal dinamicamente e adicionar ao BODY (fora do layout)
+                const modalHTML = `
+                    <div id="dynamic-route-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;">
+                        <div style="background:#1a1a1a;padding:24px;border-radius:12px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #374151;">
+                                <h3 style="margin:0;color:white;font-size:18px;">Nova Rota</h3>
+                                <button onclick="document.getElementById('dynamic-route-modal').remove()" style="background:none;border:none;font-size:24px;color:#9ca3af;cursor:pointer;">×</button>
+                            </div>
+                            
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block;margin-bottom:8px;color:#e5e7eb;font-weight:500;">Nome da Rota *</label>
+                                <input type="text" id="dynamic-route-name" style="width:100%;padding:10px;border:1px solid #374151;border-radius:6px;background:#111827;color:white;font-size:14px;" placeholder="Ex: 10K - Percurso Urbano">
+                            </div>
+                            
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block;margin-bottom:8px;color:#e5e7eb;font-weight:500;">📎 Ficheiro GPX</label>
+                                <input type="file" id="dynamic-route-gpx" accept=".gpx" onchange="analyzeGPXDynamic(event)" style="width:100%;padding:10px;border:1px solid #374151;border-radius:6px;background:#111827;color:white;">
+                                <small style="color:#9ca3af;font-size:12px;">Análise automática de distância e elevação</small>
+                            </div>
+                            
+                            <div id="dynamic-gpx-analysis" style="display:none;margin:12px 0;padding:12px;background:rgba(16,185,129,0.1);border-radius:8px;border:1px solid rgba(16,185,129,0.3);"></div>
+                            
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block;margin-bottom:8px;color:#e5e7eb;font-weight:500;">Distância (km) *</label>
+                                <input type="number" id="dynamic-route-distance" step="0.1" style="width:100%;padding:10px;border:1px solid #374151;border-radius:6px;background:#111827;color:white;">
+                            </div>
+                            
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block;margin-bottom:8px;color:#e5e7eb;font-weight:500;">Elevação ↗ (m)</label>
+                                <input type="number" id="dynamic-route-elev-gain" step="0.1" style="width:100%;padding:10px;border:1px solid #374151;border-radius:6px;background:#111827;color:white;">
+                            </div>
+                            
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block;margin-bottom:8px;color:#e5e7eb;font-weight:500;">Velocidade Máx (km/h)</label>
+                                <input type="number" id="dynamic-route-max-speed" value="50" step="0.1" style="width:100%;padding:10px;border:1px solid #374151;border-radius:6px;background:#111827;color:white;">
+                            </div>
+                            
+                            <input type="hidden" id="dynamic-route-gpx-data">
+                            <input type="hidden" id="dynamic-route-center-lat">
+                            <input type="hidden" id="dynamic-route-center-lng">
+                            <input type="hidden" id="dynamic-route-elev-loss">
+                            
+                            <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:1px solid #374151;">
+                                <button onclick="document.getElementById('dynamic-route-modal').remove()" style="padding:10px 20px;background:#374151;color:white;border:none;border-radius:6px;cursor:pointer;">Cancelar</button>
+                                <button onclick="saveDynamicRoute()" style="padding:10px 20px;background:#fc6b03;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                console.log('✅ Modal dinâmico criado e adicionado ao body!');
+                
+            } catch (error) {
+                console.error('❌ ERRO em openRouteModal:', error);
+            }
+        }
+
+        function closeRouteModal() {
+            const modal = document.getElementById('route-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.add('hidden');
+            }
+        });
+
+        // Análise GPX para modal dinâmico
+        async function analyzeGPXDynamic(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('📂 Analisando GPX:', file.name);
+            
+            try {
+                const text = await file.text();
+                const parser = new DOMParser();
+                const gpx = parser.parseFromString(text, 'text/xml');
+                
+                const trkpts = gpx.querySelectorAll('trkpt');
+                if (trkpts.length === 0) {
+                    alert('GPX não contém pontos de trilha');
+                    return;
+                }
+                
+                const points = [];
+                trkpts.forEach(pt => {
+                    points.push({
+                        lat: parseFloat(pt.getAttribute('lat')),
+                        lng: parseFloat(pt.getAttribute('lon')),
+                        ele: parseFloat(pt.querySelector('ele')?.textContent || 0)
+                    });
+                });
+                
+                // Calcular distância
+                let totalDistance = 0;
+                for (let i = 1; i < points.length; i++) {
+                    totalDistance += haversineDistance(
+                        points[i-1].lat, points[i-1].lng,
+                        points[i].lat, points[i].lng
+                    );
+                }
+                
+                // Calcular elevação
+                let elevGain = 0, elevLoss = 0;
+                let hasElevation = points.some(p => p.ele && p.ele !== 0);
+                
+                if (!hasElevation && typeof google !== 'undefined') {
+                    console.log('⛰️ Buscando elevação via Google...');
+                    const elevations = await getElevationsFromGoogle(points);
+                    if (elevations) {
+                        points.forEach((p, i) => p.ele = elevations[i]);
+                        hasElevation = true;
+                    }
+                }
+                
+                if (hasElevation) {
+                    for (let i = 1; i < points.length; i++) {
+                        const diff = points[i].ele - points[i-1].ele;
+                        if (diff > 0) elevGain += diff;
+                        else elevLoss += Math.abs(diff);
+                    }
+                }
+                
+                // Centro
+                const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+                const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+                
+                // Salvar pontos globalmente (com elevações do Google)
+                currentGPXPoints = points;
+                
+                // Preencher
+                document.getElementById('dynamic-route-distance').value = (totalDistance / 1000).toFixed(2);
+                document.getElementById('dynamic-route-elev-gain').value = elevGain.toFixed(1);
+                document.getElementById('dynamic-route-elev-loss').value = elevLoss.toFixed(1);
+                document.getElementById('dynamic-route-center-lat').value = centerLat;
+                document.getElementById('dynamic-route-center-lng').value = centerLng;
+                document.getElementById('dynamic-route-gpx-data').value = text;
+                
+                // Mostrar resumo
+                document.getElementById('dynamic-gpx-analysis').innerHTML = `
+                    <strong style="color:#10b981;">✅ GPX Analisado:</strong><br>
+                    <div style="margin-top:8px;color:#d1d5db;">
+                        📏 Distância: <strong>${(totalDistance / 1000).toFixed(2)} km</strong><br>
+                        ⛰️ Elevação ↗: <strong>${elevGain.toFixed(0)} m</strong><br>
+                        ⛰️ Elevação ↘: <strong>${elevLoss.toFixed(0)} m</strong><br>
+                        📍 Pontos GPS: <strong>${points.length}</strong>
+                    </div>
+                `;
+                document.getElementById('dynamic-gpx-analysis').style.display = 'block';
+                
+                console.log('✅ GPX analisado com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro ao analisar GPX:', error);
+                alert('Erro: ' + error.message);
+            }
+        }
+
+        async function saveDynamicRoute() {
+            const name = document.getElementById('dynamic-route-name').value;
+            const distance = document.getElementById('dynamic-route-distance').value;
+            
+            if (!name || !distance) {
+                alert('Nome e Distância são obrigatórios!');
+                return;
+            }
+            
+            const data = {
+                event_id: currentEventId,
+                name: name,
+                distance_km: parseFloat(distance),
+                elev_gain_m: parseFloat(document.getElementById('dynamic-route-elev-gain').value) || null,
+                elev_loss_m: parseFloat(document.getElementById('dynamic-route-elev-loss').value) || null,
+                map_center_lat: parseFloat(document.getElementById('dynamic-route-center-lat').value) || null,
+                map_center_lng: parseFloat(document.getElementById('dynamic-route-center-lng').value) || null,
+                max_speed_kmh: parseFloat(document.getElementById('dynamic-route-max-speed').value) || 50,
+                max_accuracy_m: 50,
+                is_active: true
+            };
+            
+            const gpxData = document.getElementById('dynamic-route-gpx-data').value;
+            
+            console.log(`🔍 gpxData existe?`, !!gpxData);
+            console.log(`🔍 currentGPXPoints.length:`, currentGPXPoints.length);
+            
+            if (gpxData && currentGPXPoints.length > 0) {
+                // Usar pontos já processados (com elevações do Google se aplicável)
+                const maxPoints = 500;
+                const step = Math.ceil(currentGPXPoints.length / maxPoints);
+                const sampledPoints = currentGPXPoints.filter((_, i) => i % step === 0);
+                
+                data.metadata = {
+                    gpx_loaded: true,
+                    gpx_size: gpxData.length,
+                    gpx_points: sampledPoints,
+                    total_points: currentGPXPoints.length,
+                    has_google_elevation: sampledPoints.some(p => p.ele > 0)
+                };
+                
+                console.log(`📊 Salvando ${sampledPoints.length} pontos no metadata (de ${currentGPXPoints.length} total)`);
+                console.log(`📊 Exemplo de ponto salvo:`, sampledPoints[0]);
+            } else {
+                console.warn(`⚠️ Não salvando pontos GPX: gpxData=${!!gpxData}, points=${currentGPXPoints.length}`);
+                
+                if (gpxData) {
+                    // Tentar parsear do GPX raw
+                    try {
+                        const parser = new DOMParser();
+                        const gpx = parser.parseFromString(gpxData, 'text/xml');
+                        const trkpts = gpx.querySelectorAll('trkpt');
+                        
+                        const maxPoints = 500;
+                        const step = Math.ceil(trkpts.length / maxPoints);
+                        const points = [];
+                        
+                        trkpts.forEach((pt, i) => {
+                            if (i % step === 0) {
+                                points.push({
+                                    lat: parseFloat(pt.getAttribute('lat')),
+                                    lng: parseFloat(pt.getAttribute('lon')),
+                                    ele: parseFloat(pt.querySelector('ele')?.textContent || 0)
+                                });
+                            }
+                        });
+                        
+                        data.metadata = {
+                            gpx_loaded: true,
+                            gpx_size: gpxData.length,
+                            gpx_points: points,
+                            total_points: trkpts.length
+                        };
+                        
+                        console.log(`✅ Pontos extraídos do GPX raw: ${points.length}`);
+                    } catch (err) {
+                        console.error('Erro ao parsear GPX:', err);
+                    }
+                }
+            }
+
+            try {
+                console.log('💾 Salvando rota:', data);
+                const { error } = await window.supabaseClient.supabase.from('track_routes').insert([data]);
+                if (error) throw error;
+                
+                console.log('✅ Rota salva com sucesso!');
+                document.getElementById('dynamic-route-modal').remove();
+                await loadRoutes();
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                alert('Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function saveRoute() {
+            const name = document.getElementById('route-name').value;
+            const distance = document.getElementById('route-distance').value;
+            
+            if (!name || !distance) {
+                alert('Nome e Distância são obrigatórios!');
+                return;
+            }
+            
+            const data = {
+                event_id: currentEventId,
+                name: name,
+                distance_km: parseFloat(distance),
+                elev_gain_m: parseFloat(document.getElementById('route-elev-gain').value) || null,
+                elev_loss_m: parseFloat(document.getElementById('route-elev-loss').value) || null,
+                map_center_lat: parseFloat(document.getElementById('route-center-lat').value) || null,
+                map_center_lng: parseFloat(document.getElementById('route-center-lng').value) || null,
+                max_speed_kmh: parseFloat(document.getElementById('route-max-speed').value) || 50,
+                max_accuracy_m: 50,
+                is_active: true
+            };
+            
+            // GPX data (se houver)
+            const gpxData = document.getElementById('route-gpx-data').value;
+            if (gpxData) {
+                // Aqui você pode fazer upload do GPX para storage
+                // Por enquanto, salvar como JSON metadata
+                data.metadata = { gpx_loaded: true, gpx_size: gpxData.length };
+                // TODO: Upload para Supabase Storage e salvar gpx_url
+            }
+
+            try {
+                console.log('💾 Salvando rota:', data);
+                const { error } = await window.supabaseClient.supabase.from('track_routes').insert([data]);
+                if (error) throw error;
+                
+                console.log('✅ Rota salva com sucesso!');
+                closeRouteModal();
+                await loadRoutes();
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                alert('Erro ao salvar rota: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
+

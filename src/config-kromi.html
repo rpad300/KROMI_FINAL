@@ -472,6 +472,26 @@
             font-size: var(--font-size-sm);
             color: var(--text-secondary);
         }
+        
+        .nomenclature-option {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            padding: var(--spacing-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .nomenclature-option:hover {
+            border-color: var(--primary);
+            background: rgba(252, 107, 3, 0.05);
+        }
+        
+        .nomenclature-option input[type="radio"]:checked + div {
+            color: var(--primary);
+        }
     </style>
 </head>
 <body data-theme="dark">
@@ -611,6 +631,236 @@
                             <button class="btn btn-sm btn-secondary" id="addCustomCategory">
                                 <i>➕</i> Adicionar Categoria Personalizada
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Nomenclatura/Formato dos Dorsais (UNIFICADO) -->
+                    <div class="config-section">
+                        <h3>🏷️ Nomenclatura dos Dorsais (Formato para IA)</h3>
+                        <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                            Configure o formato dos números de dorsal usados no evento. Isto ajuda a IA a detectar corretamente os diferentes tipos de numeração.
+                        </p>
+                        
+                        <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: var(--radius-lg); padding: var(--spacing-4); color: white; margin-bottom: var(--spacing-4);">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-2); margin-bottom: var(--spacing-3);">
+                                <span style="font-size: var(--font-size-xl);">💡</span>
+                                <h4 style="margin: 0; font-size: var(--font-size-lg);">Importante</h4>
+                            </div>
+                            <div style="font-size: var(--font-size-sm); line-height: 1.6;">
+                                <p style="margin: 0 0 var(--spacing-2) 0;">
+                                    <strong>Para Calibração:</strong> A IA usará estas configurações para detectar dorsais com mais precisão.
+                                </p>
+                                <p style="margin: 0;">
+                                    <strong>Para GPS Tracking:</strong> Os QR codes usarão o código do participante (participant_code).
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo de Nomenclatura -->
+                        <div style="margin-bottom: var(--spacing-5);">
+                            <label style="display: block; margin-bottom: var(--spacing-3); font-weight: 600;">
+                                Tipo de Nomenclatura:
+                            </label>
+                            
+                            <div style="display: grid; gap: var(--spacing-3);">
+                                <label class="nomenclature-option" data-type="numeric">
+                                    <input type="radio" name="nomenclatureType" value="numeric" checked onchange="handleNomenclatureChange('numeric')">
+                                    <div>
+                                        <div style="font-weight: 600;">🔢 Numérico (Padrão)</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Números simples: 1, 2, 3, ..., 9999</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="nomenclature-option" data-type="prefix">
+                                    <input type="radio" name="nomenclatureType" value="prefix" onchange="handleNomenclatureChange('prefix')">
+                                    <div>
+                                        <div style="font-weight: 600;">📝 Com Prefixo</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407, F-156, PRO-023</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="nomenclature-option" data-type="suffix">
+                                    <input type="radio" name="nomenclatureType" value="suffix" onchange="handleNomenclatureChange('suffix')">
+                                    <div>
+                                        <div style="font-weight: 600;">📝 Com Sufixo</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: 407-M, 156-F, 023-PRO</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="nomenclature-option" data-type="prefix-suffix">
+                                    <input type="radio" name="nomenclatureType" value="prefix-suffix" onchange="handleNomenclatureChange('prefix-suffix')">
+                                    <div>
+                                        <div style="font-weight: 600;">📝 Prefixo + Sufixo</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Ex: M-407-F, PRO-023-ELITE</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="nomenclature-option" data-type="markers">
+                                    <input type="radio" name="nomenclatureType" value="markers" onchange="handleNomenclatureChange('markers')">
+                                    <div>
+                                        <div style="font-weight: 600;">🎨 Marcadores de Cor</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Cores antes/depois: 🟢407🔴</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="nomenclature-option" data-type="custom">
+                                    <input type="radio" name="nomenclatureType" value="custom" onchange="handleNomenclatureChange('custom')">
+                                    <div>
+                                        <div style="font-weight: 600;">⚙️ Personalizado (Regex)</div>
+                                        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">Padrão customizado com expressão regular</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Config Numérico -->
+                        <div id="numericNomenclatureConfig" style="display:block;">
+                            <h4 style="margin-bottom: var(--spacing-3);">📊 Configuração Numérica</h4>
+                            
+                            <!-- Modo de Atribuição -->
+                            <div class="form-group" style="background:rgba(252,107,3,0.1);border:1px solid rgba(252,107,3,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+                                <label class="form-label" style="color:#fc6b03;font-weight:600;">🎯 Modo de Atribuição:</label>
+                                <select id="nomenclatureNumericMode" class="form-select">
+                                    <option value="sequential">Sequencial (1, 2, 3...)</option>
+                                    <option value="random">Aleatório (sorteia dentro do range)</option>
+                                </select>
+                                <small class="text-secondary">Como novos dorsais são atribuídos via formulário</small>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Número Mínimo:</label>
+                                    <input type="number" id="nomenclatureNumericMin" class="form-input" value="1" min="1" max="9999">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Máximo:</label>
+                                    <input type="number" id="nomenclatureNumericMax" class="form-input" value="9999" min="1" max="9999">
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: var(--spacing-2);">
+                                        <input type="checkbox" id="nomenclatureUsePadding">
+                                        Usar zeros à esquerda (001, 002, 003)
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Dígitos (com padding):</label>
+                                    <input type="number" id="nomenclatureNumericDigits" class="form-input" value="3" min="1" max="6">
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                <strong>Exemplo:</strong> <span id="nomenclatureNumericPreview">1, 2, 3, ..., 9999</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Config Prefixo -->
+                        <div id="prefixNomenclatureConfig" style="display:none;">
+                            <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Prefixo</h4>
+                            
+                            <!-- Modo de Atribuição -->
+                            <div class="form-group" style="background:rgba(252,107,3,0.1);border:1px solid rgba(252,107,3,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+                                <label class="form-label" style="color:#fc6b03;font-weight:600;">🎯 Modo de Atribuição:</label>
+                                <select id="nomenclaturePrefixMode" class="form-select">
+                                    <option value="sequential">Sequencial (M-1, M-2, F-1, F-2...)</option>
+                                    <option value="random">Aleatório (sorteia prefixo e número)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Prefixo(s) Permitidos:</label>
+                                    <input type="text" id="nomenclaturePrefixText" class="form-input" placeholder="Ex: M, F, PRO" value="M,F">
+                                    <small class="text-secondary">Separar múltiplos com vírgula</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Separador:</label>
+                                    <input type="text" id="nomenclaturePrefixSeparator" class="form-input" value="-" maxlength="3">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Mínimo:</label>
+                                    <input type="number" id="nomenclaturePrefixMin" class="form-input" value="1" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Máximo:</label>
+                                    <input type="number" id="nomenclaturePrefixMax" class="form-input" value="999" max="9999">
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                <strong>Exemplo:</strong> <span id="nomenclaturePrefixPreview">M-1, M-2, F-1, F-2</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Config Sufixo -->
+                        <div id="suffixNomenclatureConfig" style="display:none;">
+                            <h4 style="margin-bottom: var(--spacing-3);">📝 Configuração com Sufixo</h4>
+                            
+                            <!-- Modo de Atribuição -->
+                            <div class="form-group" style="background:rgba(252,107,3,0.1);border:1px solid rgba(252,107,3,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+                                <label class="form-label" style="color:#fc6b03;font-weight:600;">🎯 Modo de Atribuição:</label>
+                                <select id="nomenclatureSuffixMode" class="form-select">
+                                    <option value="sequential">Sequencial (1-M, 2-M, 1-F, 2-F...)</option>
+                                    <option value="random">Aleatório (sorteia número e sufixo)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Sufixo(s) Permitidos:</label>
+                                    <input type="text" id="nomenclatureSuffixText" class="form-input" placeholder="Ex: M, F, PRO" value="M,F">
+                                    <small class="text-secondary">Separar múltiplos com vírgula</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Separador:</label>
+                                    <input type="text" id="nomenclatureSuffixSeparator" class="form-input" value="-" maxlength="3">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Mínimo:</label>
+                                    <input type="number" id="nomenclatureSuffixMin" class="form-input" value="1" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Máximo:</label>
+                                    <input type="number" id="nomenclatureSuffixMax" class="form-input" value="999" max="9999">
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                <strong>Exemplo:</strong> <span id="nomenclatureSuffixPreview">1-M, 2-M, 1-F, 2-F</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Config Marcadores -->
+                        <div id="markersNomenclatureConfig" style="display:none;">
+                            <h4 style="margin-bottom: var(--spacing-3);">🎨 Configuração com Marcadores de Cor</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Cor de Início:</label>
+                                    <input type="color" id="nomenclatureStartColor" class="form-input" value="#10b981" style="height:50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Cor de Fim:</label>
+                                    <input type="color" id="nomenclatureEndColor" class="form-input" value="#ef4444" style="height:50px;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tolerância de Cor (%):</label>
+                                    <input type="range" id="nomenclatureColorTolerance" class="form-input" min="5" max="50" value="20">
+                                    <div class="text-secondary text-center"><span id="nomenclatureToleranceValue">20</span>%</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--bg-secondary); border-radius: var(--radius-base);">
+                                <strong>Exemplo:</strong> <span style="color:#10b981;">🟢</span> 407 <span style="color:#ef4444;">🔴</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Config Custom Regex -->
+                        <div id="customNomenclatureConfig" style="display:none;">
+                            <h4 style="margin-bottom: var(--spacing-3);">⚙️ Configuração Personalizada (Regex)</h4>
+                            <div class="form-group">
+                                <label class="form-label">Expressão Regular:</label>
+                                <input type="text" id="nomenclatureCustomRegex" class="form-input" placeholder="Ex: ^[A-Z]\\d{3}$" style="font-family:monospace;">
+                                <small class="text-secondary">Padrão para validar dorsais</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Exemplos (separar com vírgula):</label>
+                                <input type="text" id="nomenclatureCustomExamples" class="form-input" placeholder="Ex: A001, B002, C003">
+                            </div>
                         </div>
                     </div>
                     
@@ -1070,6 +1320,12 @@
                 hasLapCounter.addEventListener('change', handleLapCounterToggle);
             }
             
+            // Dorsal assignment configuration
+            const dorsalMode = document.getElementById('dorsalMode');
+            if (dorsalMode) {
+                dorsalMode.addEventListener('change', handleDorsalModeChange);
+            }
+            
             // Menu toggle mobile
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
@@ -1175,6 +1431,8 @@
                 // Load event-specific configurations
                 const categoryConfig = await loadEventCategoryConfig(eventId);
                 const modalityConfig = await loadEventModalityConfig(eventId);
+                // Nota: loadDorsalConfig removido - a atribuição agora está dentro da nomenclatura
+                await loadDorsalNomenclatureConfig(eventId);
                 
                 // Update checkboxes based on event configuration
                 updateCategoryCheckboxes(categoryConfig);
@@ -1193,16 +1451,54 @@
                 
                 if (eventInfoPanel) eventInfoPanel.style.display = 'block';
                 if (currentEventInfo) {
-                    currentEventInfo.innerHTML = `
-                        <strong>${event.name}</strong><br>
-                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
-                        Local: ${event.location || 'Não definido'}
-                    `;
+                    // Verificar se existe calibração
+                    await updateCalibrationStatus(eventId, event, currentEventInfo);
                 }
                 
             } catch (error) {
                 console.error('Erro ao carregar evento:', error);
                 showError('Erro ao carregar evento');
+            }
+        }
+        
+        // Verificar status da calibração e atualizar display
+        async function updateCalibrationStatus(eventId, event, container) {
+            try {
+                let calibrationStatus = '❌ Calibração ainda não foi definida';
+                
+                if (window.supabaseClient && window.supabaseClient.supabase) {
+                    // Usar RPC get_active_calibration em vez de event_configurations
+                    const { data: calibrationData, error } = await window.supabaseClient.supabase
+                        .rpc('get_active_calibration', { event_uuid: eventId });
+                    
+                    if (!error && calibrationData && calibrationData.length > 0) {
+                        const calibration = calibrationData[0];
+                        if (calibration.is_complete) {
+                            calibrationStatus = '✅ Calibração completa';
+                        } else {
+                            calibrationStatus = '⏳ Calibração em progresso';
+                        }
+                    }
+                }
+                
+                if (container) {
+                    container.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        Local: ${event.location || 'Não definido'}<br>
+                        ${calibrationStatus}
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao verificar status da calibração:', error);
+                // Em caso de erro, mostrar info básica
+                if (container) {
+                    container.innerHTML = `
+                        <strong>${event.name}</strong><br>
+                        Data: ${event.event_date ? new Date(event.event_date).toLocaleDateString('pt-PT') : 'Não definida'}<br>
+                        Local: ${event.location || 'Não definido'}
+                    `;
+                }
             }
         }
         
@@ -1233,7 +1529,10 @@
             
             if (eventName) eventName.value = event.name || '';
             if (eventDate) eventDate.value = event.event_date ? event.event_date.split('T')[0] : '';
-            if (eventTime) eventTime.value = event.event_date ? event.event_date.split('T')[1]?.substring(0, 5) : '';
+            if (eventTime) {
+                const timePart = event.event_date ? event.event_date.split('T')[1] : null;
+                eventTime.value = timePart ? timePart.substring(0, 5) : '';
+            }
             if (eventLocation) eventLocation.value = event.location || '';
             if (eventType) eventType.value = event.event_type || 'running';
             if (eventDistance) eventDistance.value = event.distance_km || '';
@@ -1505,7 +1804,7 @@
         }
         
         async function saveEventConfig() {
-            if (!currentEvent) {
+            if (!currentEvent || !currentEvent.id) {
                 showError('Nenhum evento selecionado');
                 return;
             }
@@ -1564,6 +1863,10 @@
                 
                 // Save lap counter configuration
                 await saveLapCounterConfig(currentEvent.id);
+                
+                // Save dorsal nomenclature configuration (includes assignment mode)
+                // Nota: saveDorsalConfig foi removido porque a atribuição agora está dentro da nomenclatura
+                await saveDorsalNomenclatureConfig(currentEvent.id);
                 
                 showSuccess('Configurações salvas com sucesso!');
                 
@@ -2347,6 +2650,378 @@
             }
         }
         
+        // Alternar visualização conforme modo de dorsais
+        function handleDorsalModeChange() {
+            const mode = document.getElementById('dorsalMode').value;
+            
+            document.getElementById('dorsalSequentialConfig').style.display = 
+                mode === 'sequential' ? 'block' : 'none';
+            document.getElementById('dorsalCategoryConfig').style.display = 
+                mode === 'per_category' ? 'block' : 'none';
+            document.getElementById('dorsalRandomConfig').style.display = 
+                mode === 'random' ? 'block' : 'none';
+            
+            console.log('🔢 Modo de dorsais alterado:', mode);
+        }
+        
+        // Salvar configuração de dorsais
+        async function saveDorsalConfig(eventId) {
+            try {
+                const modeEl = document.getElementById('dorsalMode');
+                const startEl = document.getElementById('dorsalStartFrom');
+                
+                if (!modeEl || !startEl) {
+                    console.warn('⚠️ Elementos de config de dorsais não encontrados');
+                    return;
+                }
+                
+                const mode = modeEl.value;
+                const startFrom = parseInt(startEl.value) || 1;
+                
+                const dorsalConfig = {
+                    mode: mode,
+                    start_from: startFrom
+                };
+                
+                // Configurações específicas por modo
+                if (mode === 'random') {
+                    const maxEl = document.getElementById('dorsalRandomMax');
+                    dorsalConfig.end_at = parseInt(maxEl?.value) || 999;
+                } else if (mode === 'per_category') {
+                    // TODO: Ler category_ranges dos inputs
+                    dorsalConfig.category_ranges = {};
+                }
+                
+                // Atualizar settings do evento
+                const { data: event, error: fetchError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('settings')
+                    .eq('id', eventId)
+                    .maybeSingle();
+                
+                if (fetchError) throw fetchError;
+                if (!event) {
+                    console.warn('⚠️ Evento não encontrado');
+                    return;
+                }
+                
+                const newSettings = {
+                    ...(event.settings || {}),
+                    dorsal_assignment: dorsalConfig
+                };
+                
+                const { error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .update({ settings: newSettings })
+                    .eq('id', eventId);
+                
+                if (error) throw error;
+                
+                console.log('✅ Configuração de dorsais salva:', dorsalConfig);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar config de dorsais:', error);
+                throw error;
+            }
+        }
+        
+        // Carregar configuração de dorsais
+        async function loadDorsalConfig(eventId) {
+            try {
+                const { data: event, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('settings')
+                    .eq('id', eventId)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                if (!event) {
+                    console.warn('⚠️ Evento não encontrado para carregar config de dorsais');
+                    return;
+                }
+                
+                const dorsalConfig = event.settings?.dorsal_assignment || {
+                    mode: 'sequential',
+                    start_from: 1
+                };
+                
+                // Preencher form
+                const modeSelect = document.getElementById('dorsalMode');
+                const startFromInput = document.getElementById('dorsalStartFrom');
+                
+                if (modeSelect) modeSelect.value = dorsalConfig.mode || 'sequential';
+                if (startFromInput) startFromInput.value = dorsalConfig.start_from || 1;
+                
+                if (dorsalConfig.mode === 'random') {
+                    const randomMaxInput = document.getElementById('dorsalRandomMax');
+                    if (randomMaxInput) randomMaxInput.value = dorsalConfig.end_at || 999;
+                }
+                
+                // Atualizar visualização
+                handleDorsalModeChange();
+                
+                console.log('✅ Configuração de dorsais carregada:', dorsalConfig);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar config de dorsais:', error);
+            }
+        }
+        
+        // Adicionar range de categoria
+        function addCategoryRange() {
+            alert('Funcionalidade em desenvolvimento');
+            // TODO: Adicionar inputs para categoria, start, end
+        }
+        
+        // Alternar configuração de nomenclatura
+        function handleNomenclatureChange(type) {
+            const configs = [
+                'numericNomenclatureConfig', 
+                'prefixNomenclatureConfig', 
+                'suffixNomenclatureConfig', 
+                'markersNomenclatureConfig',
+                'customNomenclatureConfig'
+            ];
+            
+            configs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            
+            const targetConfig = type === 'prefix' ? 'prefixNomenclatureConfig' :
+                                type === 'suffix' ? 'suffixNomenclatureConfig' :
+                                type === 'prefix-suffix' ? 'prefixNomenclatureConfig' : // Mesmo que prefixo por enquanto
+                                type === 'markers' ? 'markersNomenclatureConfig' :
+                                type === 'custom' ? 'customNomenclatureConfig' :
+                                'numericNomenclatureConfig';
+            
+            const el = document.getElementById(targetConfig);
+            if (el) el.style.display = 'block';
+            
+            console.log('🏷️ Nomenclatura alterada:', type);
+        }
+        
+        // Salvar configuração de nomenclatura (junto com dorsais)
+        async function saveDorsalNomenclatureConfig(eventId) {
+            try {
+                if (!eventId) {
+                    console.warn('⚠️ EventId não fornecido para salvar nomenclatura');
+                    return;
+                }
+                
+                console.log('💾 Salvando nomenclatura para evento:', eventId);
+                
+                const nomenclatureType = document.querySelector('input[name="nomenclatureType"]:checked')?.value || 'numeric';
+                console.log('📋 Tipo de nomenclatura:', nomenclatureType);
+                
+                const nomenclatureConfig = {
+                    type: nomenclatureType
+                };
+                
+                // Configurações por tipo (com modo de atribuição)
+                if (nomenclatureType === 'numeric') {
+                    nomenclatureConfig.numeric = {
+                        mode: document.getElementById('nomenclatureNumericMode')?.value || 'sequential',
+                        min: parseInt(document.getElementById('nomenclatureNumericMin')?.value) || 1,
+                        max: parseInt(document.getElementById('nomenclatureNumericMax')?.value) || 9999,
+                        use_padding: document.getElementById('nomenclatureUsePadding')?.checked || false,
+                        digits: parseInt(document.getElementById('nomenclatureNumericDigits')?.value) || 3
+                    };
+                } else if (nomenclatureType === 'prefix') {
+                    nomenclatureConfig.prefix = {
+                        mode: document.getElementById('nomenclaturePrefixMode')?.value || 'sequential',
+                        prefixes: document.getElementById('nomenclaturePrefixText')?.value || 'M,F',
+                        separator: document.getElementById('nomenclaturePrefixSeparator')?.value || '-',
+                        min: parseInt(document.getElementById('nomenclaturePrefixMin')?.value) || 1,
+                        max: parseInt(document.getElementById('nomenclaturePrefixMax')?.value) || 999
+                    };
+                } else if (nomenclatureType === 'suffix') {
+                    nomenclatureConfig.suffix = {
+                        mode: document.getElementById('nomenclatureSuffixMode')?.value || 'sequential',
+                        suffixes: document.getElementById('nomenclatureSuffixText')?.value || 'M,F',
+                        separator: document.getElementById('nomenclatureSuffixSeparator')?.value || '-',
+                        min: parseInt(document.getElementById('nomenclatureSuffixMin')?.value) || 1,
+                        max: parseInt(document.getElementById('nomenclatureSuffixMax')?.value) || 999
+                    };
+                } else if (nomenclatureType === 'markers') {
+                    nomenclatureConfig.markers = {
+                        start_color: document.getElementById('nomenclatureStartColor')?.value || '#10b981',
+                        end_color: document.getElementById('nomenclatureEndColor')?.value || '#ef4444',
+                        tolerance: parseInt(document.getElementById('nomenclatureColorTolerance')?.value) || 20
+                    };
+                } else if (nomenclatureType === 'custom') {
+                    nomenclatureConfig.custom = {
+                        regex: document.getElementById('nomenclatureCustomRegex')?.value || '',
+                        examples: document.getElementById('nomenclatureCustomExamples')?.value || ''
+                    };
+                }
+                
+                // Buscar settings atuais diretamente do Supabase antes de atualizar
+                // (porque currentEvent.settings pode estar desatualizado)
+                console.log('🔍 Buscando settings atuais do evento antes de atualizar...');
+                const { data: currentEventData, error: fetchError } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('settings')
+                    .eq('id', eventId)
+                    .maybeSingle();
+                
+                if (fetchError) {
+                    console.error('❌ Erro ao buscar settings atuais:', fetchError);
+                    // Continuar mesmo assim, usar currentEvent ou objeto vazio
+                }
+                
+                const currentSettings = (currentEventData?.settings && typeof currentEventData.settings === 'object') 
+                    ? currentEventData.settings 
+                    : (currentEvent?.settings || {});
+                
+                console.log('✅ Settings atual (do Supabase):', currentSettings);
+                console.log('✅ Settings atual (do currentEvent):', currentEvent?.settings);
+                console.log('✅ Settings que será usado:', currentSettings);
+                
+                // Garantir que currentSettings é um objeto válido
+                const validCurrentSettings = (currentSettings && typeof currentSettings === 'object' && !Array.isArray(currentSettings))
+                    ? currentSettings 
+                    : {};
+                
+                let newSettings = {
+                    ...validCurrentSettings,
+                    dorsal_nomenclature: nomenclatureConfig
+                };
+                
+                console.log('💾 Novos settings a guardar:', JSON.stringify(newSettings, null, 2));
+                console.log('💾 Tipo de newSettings:', typeof newSettings);
+                console.log('💾 Keys em newSettings:', Object.keys(newSettings));
+                
+                // Atualizar settings via API REST (bypassa RLS)
+                console.log('🔄 Executando UPDATE via API REST...');
+                
+                try {
+                    const response = await fetch(`/api/events/${eventId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include', // Incluir cookies para autenticação
+                        body: JSON.stringify({
+                            // Apenas enviar settings (nome não é obrigatório se só atualizarmos settings)
+                            settings: newSettings
+                        })
+                    });
+                    
+                    const apiResult = await response.json();
+                    
+                    if (!response.ok || !apiResult.success) {
+                        const errorMsg = apiResult.error || 'Erro ao atualizar via API';
+                        console.error('❌ Erro na API:', errorMsg);
+                        throw new Error(errorMsg);
+                    }
+                    
+                    console.log('✅ Resultado do UPDATE via API:', apiResult);
+                    console.log('✅ Settings após UPDATE (confirmação):', apiResult.event?.settings);
+                    
+                    // Verificar se realmente foi guardado e usar os settings retornados pela API
+                    if (apiResult.event?.settings && Object.keys(apiResult.event.settings).length > 0) {
+                        // Usar os settings retornados pela API (são os confirmados guardados)
+                        newSettings = apiResult.event.settings;
+                        console.log('✅ Usando settings confirmados da API');
+                    } else {
+                        console.warn('⚠️ UPDATE via API não retornou settings. Verificando diretamente...');
+                        const verifyResponse = await fetch(`/api/events/${eventId}`, {
+                            credentials: 'include'
+                        });
+                        const verifyResult = await verifyResponse.json();
+                        
+                        if (verifyResult.success && verifyResult.event?.settings && Object.keys(verifyResult.event.settings).length > 0) {
+                            console.log('✅ Verificação direta - settings guardado:', verifyResult.event.settings);
+                            newSettings = verifyResult.event.settings;
+                        } else {
+                            console.error('❌ ATENÇÃO: Settings não foi guardado corretamente!');
+                        }
+                    }
+                    
+                } catch (apiError) {
+                    console.error('❌ Erro ao atualizar via API REST:', apiError);
+                    // Tentar fallback para Supabase direto
+                    console.log('🔄 Tentando fallback para Supabase direto...');
+                    
+                    const { data: updateResult, error } = await window.supabaseClient.supabase
+                        .from('events')
+                        .update({ 
+                            settings: newSettings,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', eventId)
+                        .select('id, settings');
+                    
+                    if (error) {
+                        console.error('❌ Erro no fallback Supabase:', error);
+                        throw error;
+                    }
+                    
+                    console.log('✅ Fallback Supabase - resultado:', updateResult);
+                    if (updateResult && updateResult[0]?.settings) {
+                        newSettings = updateResult[0].settings;
+                    }
+                }
+                
+                // Atualizar currentEvent também
+                if (currentEvent) {
+                    currentEvent.settings = newSettings;
+                    console.log('✅ currentEvent.settings atualizado localmente');
+                }
+                
+                console.log('✅ Nomenclatura de dorsais salva com sucesso:', nomenclatureConfig);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar nomenclatura:', error);
+                throw error;
+            }
+        }
+        
+        // Carregar configuração de nomenclatura
+        async function loadDorsalNomenclatureConfig(eventId) {
+            try {
+                const { data: event, error } = await window.supabaseClient.supabase
+                    .from('events')
+                    .select('settings')
+                    .eq('id', eventId)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                if (!event) return;
+                
+                const nomenclatureConfig = event.settings?.dorsal_nomenclature || {
+                    type: 'numeric',
+                    numeric: { min: 1, max: 9999, use_padding: false, digits: 3 }
+                };
+                
+                // Selecionar tipo
+                const radioInput = document.querySelector(`input[name="nomenclatureType"][value="${nomenclatureConfig.type}"]`);
+                if (radioInput) {
+                    radioInput.checked = true;
+                    handleNomenclatureChange(nomenclatureConfig.type);
+                }
+                
+                // Preencher campos numéricos
+                if (nomenclatureConfig.numeric) {
+                    const minInput = document.getElementById('nomenclatureNumericMin');
+                    const maxInput = document.getElementById('nomenclatureNumericMax');
+                    const paddingInput = document.getElementById('nomenclatureUsePadding');
+                    const digitsInput = document.getElementById('nomenclatureNumericDigits');
+                    
+                    if (minInput) minInput.value = nomenclatureConfig.numeric.min || 1;
+                    if (maxInput) maxInput.value = nomenclatureConfig.numeric.max || 9999;
+                    if (paddingInput) paddingInput.checked = nomenclatureConfig.numeric.use_padding || false;
+                    if (digitsInput) digitsInput.value = nomenclatureConfig.numeric.digits || 3;
+                }
+                
+                console.log('✅ Nomenclatura carregada:', nomenclatureConfig);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar nomenclatura:', error);
+            }
+        }
+        
         function handleLapCounterToggle() {
             const hasLapCounter = document.getElementById('hasLapCounter');
             const lapDistance = document.getElementById('lapDistance');
@@ -2453,14 +3128,23 @@
                 const totalLapsValue = totalLaps && totalLaps.value ? parseInt(totalLaps.value) : null;
                 const minLaps = minLapsForClassification && minLapsForClassification.value ? parseInt(minLapsForClassification.value) : 1;
                 
-                // Usar função SQL para configurar
-                const { data, error } = await window.supabaseClient.supabase.rpc('configure_lap_counter', {
-                    p_event_id: eventId,
-                    p_has_lap_counter: isEnabled,
-                    p_lap_distance_km: distance,
-                    p_total_laps: totalLapsValue,
-                    p_min_laps_for_classification: minLaps
-                });
+                // Usar UPSERT para criar ou atualizar configuração
+                const configData = {
+                    event_id: eventId,
+                    has_lap_counter: isEnabled,
+                    lap_distance_km: distance,
+                    total_laps: totalLapsValue,
+                    min_laps_for_classification: minLaps,
+                    updated_at: new Date().toISOString()
+                };
+                
+                // UPSERT: se já existe (por event_id), atualiza; caso contrário, insere
+                const { data, error } = await window.supabaseClient.supabase
+                    .from('event_lap_config')
+                    .upsert(configData, {
+                        onConflict: 'event_id'
+                    })
+                    .select();
                 
                 if (error) {
                     console.error('❌ Erro ao salvar configuração de voltas:', error);

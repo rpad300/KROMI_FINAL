@@ -176,6 +176,24 @@ const NavigationConfig = {
             description: 'Gestão de participantes'
         },
         {
+            id: 'form-builder',
+            label: 'Formulários',
+            icon: '📋',
+            route: 'form-builder-kromi.html',
+            type: 'event',
+            roles: ['admin', 'moderator', 'event_manager'],
+            description: 'Formulários de inscrição dinâmicos'
+        },
+        {
+            id: 'gps-tracking',
+            label: 'GPS Tracking',
+            icon: '📍',
+            route: 'gps-tracking-kromi.html',
+            type: 'event',
+            roles: ['admin', 'moderator', 'event_manager'],
+            description: 'Cronometragem GPS em tempo real'
+        },
+        {
             id: 'devices',
             label: 'Dispositivos',
             icon: '📲',
