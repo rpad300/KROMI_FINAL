@@ -683,20 +683,37 @@
                             const eventStatusEl = document.getElementById('eventStatus');
                             if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
                             
-                            // Mostrar data/hora de início
+                            // Mostrar data/hora de início (usar scheduled_start_time que é a hora programada na configuração)
                             const eventStartTimeEl = document.getElementById('eventStartTime');
                             if (eventStartTimeEl) {
-                                const startTime = event.event_started_at || event.event_date;
+                                // Priorizar scheduled_start_time (hora programada) sobre event_started_at (hora real de início) ou event_date
+                                const startTime = event.scheduled_start_time || event.event_started_at || event.event_date;
                                 if (startTime) {
-                                    const startDate = new Date(startTime);
-                                    eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        hour: '2-digit', 
-                                        minute: '2-digit'
-                                    });
+                                    try {
+                                        const startDate = new Date(startTime);
+                                        if (!isNaN(startDate.getTime())) {
+                                            eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                hour: '2-digit', 
+                                                minute: '2-digit'
+                                            });
+                                            console.log('📅 Hora de início exibida:', {
+                                                scheduled_start_time: event.scheduled_start_time,
+                                                event_started_at: event.event_started_at,
+                                                event_date: event.event_date,
+                                                usado: startTime,
+                                                formatado: eventStartTimeEl.textContent
+                                            });
+                                        } else {
+                                            eventStartTimeEl.textContent = 'Data inválida';
+                                        }
+                                    } catch (error) {
+                                        console.error('❌ Erro ao formatar data de início:', error);
+                                        eventStartTimeEl.textContent = 'Erro ao carregar';
+                                    }
                                 } else {
-                                    eventStartTimeEl.textContent = 'Não iniciado';
+                                    eventStartTimeEl.textContent = 'Não configurado';
                                 }
                             }
                             
@@ -801,20 +818,37 @@
                 const eventStatusEl = document.getElementById('eventStatus');
                 if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
                 
-                // Mostrar data/hora de início
+                // Mostrar data/hora de início (usar scheduled_start_time que é a hora programada na configuração)
                 const eventStartTimeEl = document.getElementById('eventStartTime');
                 if (eventStartTimeEl) {
-                    const startTime = event.event_started_at || event.event_date;
+                    // Priorizar scheduled_start_time (hora programada) sobre event_started_at (hora real de início) ou event_date
+                    const startTime = event.scheduled_start_time || event.event_started_at || event.event_date;
                     if (startTime) {
-                        const startDate = new Date(startTime);
-                        eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit', 
-                            minute: '2-digit'
-                        });
+                        try {
+                            const startDate = new Date(startTime);
+                            if (!isNaN(startDate.getTime())) {
+                                eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                });
+                                console.log('📅 Hora de início exibida:', {
+                                    scheduled_start_time: event.scheduled_start_time,
+                                    event_started_at: event.event_started_at,
+                                    event_date: event.event_date,
+                                    usado: startTime,
+                                    formatado: eventStartTimeEl.textContent
+                                });
+                            } else {
+                                eventStartTimeEl.textContent = 'Data inválida';
+                            }
+                        } catch (error) {
+                            console.error('❌ Erro ao formatar data de início:', error);
+                            eventStartTimeEl.textContent = 'Erro ao carregar';
+                        }
                     } else {
-                        eventStartTimeEl.textContent = 'Não iniciado';
+                        eventStartTimeEl.textContent = 'Não configurado';
                     }
                 }
                 
@@ -1203,14 +1237,36 @@
             const durationElement = document.getElementById('eventDuration');
             if (!durationElement) return;
             
-            if (!currentEvent || !currentEvent.event_started_at) {
+            if (!currentEvent) {
                 durationElement.textContent = '00:00:00';
                 return;
             }
             
-            const startTime = new Date(currentEvent.event_started_at);
-            const endTime = currentEvent.event_ended_at ? new Date(currentEvent.event_ended_at) : new Date();
+            // Determinar hora de início:
+            // 1. Se o evento foi iniciado manualmente, usar event_started_at
+            // 2. Se não, mas está ativo e tem scheduled_start_time, usar scheduled_start_time (se já passou)
+            // 3. Caso contrário, não calcular duração
+            let startTime = null;
+            const now = new Date();
             
+            if (currentEvent.event_started_at) {
+                // Evento foi iniciado manualmente - usar hora real de início
+                startTime = new Date(currentEvent.event_started_at);
+            } else if (currentEvent.is_active && currentEvent.scheduled_start_time) {
+                // Evento está ativo mas não foi iniciado manualmente
+                // Usar scheduled_start_time apenas se já passou da hora programada
+                const scheduledTime = new Date(currentEvent.scheduled_start_time);
+                if (scheduledTime <= now) {
+                    startTime = scheduledTime;
+                }
+            }
+            
+            if (!startTime) {
+                durationElement.textContent = '00:00:00';
+                return;
+            }
+            
+            const endTime = currentEvent.event_ended_at ? new Date(currentEvent.event_ended_at) : now;
             const diff = endTime - startTime;
             
             if (diff < 0) {
@@ -1406,23 +1462,105 @@ Tem certeza que deseja resetar o evento "${currentEvent.name}"?`;
                     console.log('✅ Contadores de sessões resetados');
                 }
                 
-                // 4. Resetar status do evento
-                const { error: eventError } = await window.supabaseClient.supabase
-                    .from('events')
-                    .update({ 
-                        status: 'active',
-                        event_started_at: null,
-                        event_ended_at: null,
-                        is_active: false
-                    })
-                    .eq('id', currentEvent.id);
-                
-                if (eventError) {
-                    console.error('Erro ao resetar status:', eventError);
+                // 4. Resetar status do evento (colocar como se ainda não tivesse iniciado) via API REST
+                console.log('🔄 Resetando status do evento (como não iniciado) via API REST...');
+                try {
+                    const resetStatusResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            status: 'active',
+                            event_started_at: null,
+                            event_ended_at: null,
+                            is_active: false
+                        })
+                    });
+                    
+                    if (resetStatusResponse.ok) {
+                        const resetStatusResult = await resetStatusResponse.json();
+                        console.log('✅ Status do evento resetado via API REST (como não iniciado):', resetStatusResult);
+                        // Atualizar objeto local
+                        if (currentEvent) {
+                            currentEvent.event_started_at = null;
+                            currentEvent.event_ended_at = null;
+                            currentEvent.is_active = false;
+                            if (resetStatusResult.event) {
+                                Object.assign(currentEvent, resetStatusResult.event);
+                            }
+                        }
+                    } else {
+                        const errorData = await resetStatusResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
+                        console.error('❌ Erro ao resetar status via API REST:', errorData);
+                        // Tentar via Supabase direto como fallback
+                        console.log('🔄 Tentando resetar status via Supabase direto (fallback)...');
+                        const { error: eventError } = await window.supabaseClient.supabase
+                            .from('events')
+                            .update({ 
+                                status: 'active',
+                                event_started_at: null,
+                                event_ended_at: null,
+                                is_active: false
+                            })
+                            .eq('id', currentEvent.id);
+                        
+                        if (eventError) {
+                            console.error('❌ Erro ao resetar status (fallback Supabase):', eventError);
+                        } else {
+                            console.log('✅ Status do evento resetado via Supabase (fallback)');
+                            if (currentEvent) {
+                                currentEvent.event_started_at = null;
+                                currentEvent.event_ended_at = null;
+                                currentEvent.is_active = false;
+                            }
+                        }
+                    }
+                } catch (resetStatusErr) {
+                    console.error('❌ Erro ao resetar status (exceção):', resetStatusErr);
                     // Continuar mesmo com erro
                 }
                 
-                console.log('✅ Status do evento resetado');
+                // 5. Resetar duração na UI
+                console.log('🔄 Resetando duração na UI...');
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                }
+                
+                const durationElement = document.getElementById('eventDuration');
+                if (durationElement) {
+                    durationElement.textContent = '00:00:00';
+                    console.log('✅ Duração resetada para 00:00:00');
+                }
+                
+                // Resetar também o campo de hora de início (mostrar "Não configurado")
+                const eventStartTimeEl = document.getElementById('eventStartTime');
+                if (eventStartTimeEl && currentEvent) {
+                    // Se tem scheduled_start_time, manter mostrando (é a hora programada)
+                    // Mas não mostrar como se tivesse iniciado
+                    const startTime = currentEvent.scheduled_start_time || currentEvent.event_date;
+                    if (startTime) {
+                        try {
+                            const startDate = new Date(startTime);
+                            if (!isNaN(startDate.getTime())) {
+                                eventStartTimeEl.textContent = startDate.toLocaleString('pt-PT', { 
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                });
+                            } else {
+                                eventStartTimeEl.textContent = 'Não configurado';
+                            }
+                        } catch (error) {
+                            eventStartTimeEl.textContent = 'Não configurado';
+                        }
+                    } else {
+                        eventStartTimeEl.textContent = 'Não configurado';
+                    }
+                }
                 
                 // Verificar se realmente apagou via API REST
                 const verifyRes = await fetch(`/api/events/${currentEvent.id}/stats`, {
@@ -1448,8 +1586,23 @@ Tem certeza que deseja resetar o evento "${currentEvent.name}"?`;
                 // Limpar UI local
                 eventStatus = 'stopped';
                 classifications = [];
+                
+                // Garantir que contador de duração está parado e zerado
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                    console.log('✅ Contador de duração parado');
+                }
+                updateDuration(); // Atualizar para mostrar 00:00:00
+                
                 updateControls();
                 renderClassifications();
+                
+                // Atualizar exibição do status do evento
+                const eventStatusEl = document.getElementById('eventStatus');
+                if (eventStatusEl) {
+                    eventStatusEl.textContent = 'Inativo';
+                }
                 
                 // Esconder tabela, mostrar empty state
                 const table = document.getElementById('classificationsTable');

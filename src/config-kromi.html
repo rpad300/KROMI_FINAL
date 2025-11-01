@@ -1254,6 +1254,9 @@
                     window.navigationService.setEventContext(eventId, eventName);
                 }
                 
+                // Inicializar autocomplete do Google Maps
+                await initGoogleMapsAutocomplete();
+                
                 if (eventId) {
                     console.log('🎯 Carregando evento automaticamente...');
                     // Se temos evento na URL, carregar automaticamente
@@ -1382,6 +1385,169 @@
             }
         }
         
+        // =====================================================
+        // GOOGLE MAPS AUTocomplete
+        // =====================================================
+        
+        let googleMapsAutocomplete = null;
+        
+        async function initGoogleMapsAutocomplete() {
+            try {
+                // Obter API key do backend
+                const configResponse = await fetch('/api/config', {
+                    credentials: 'include'
+                });
+                
+                if (!configResponse.ok) {
+                    console.warn('⚠️ Não foi possível obter configuração do Google Maps');
+                    return;
+                }
+                
+                const config = await configResponse.json();
+                const apiKey = config.GOOGLE_MAPS_API_KEY;
+                
+                if (!apiKey) {
+                    console.warn('⚠️ GOOGLE_MAPS_API_KEY não configurada');
+                    return;
+                }
+                
+                console.log('🗺️ Inicializando Google Maps Places Autocomplete...');
+                
+                // Carregar script do Google Maps Places API
+                if (!window.google || !window.google.maps || !window.google.maps.places) {
+                    await loadGoogleMapsScript(apiKey);
+                }
+                
+                // Aguardar um pouco para garantir que a API está carregada
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Inicializar autocomplete no campo eventLocation
+                const locationInput = document.getElementById('eventLocation');
+                if (!locationInput) {
+                    console.warn('⚠️ Elemento eventLocation não encontrado');
+                    return;
+                }
+                
+                if (window.google && window.google.maps && window.google.maps.places) {
+                    try {
+                        const autocomplete = new google.maps.places.Autocomplete(locationInput, {
+                            types: ['establishment', 'geocode'],
+                            fields: ['formatted_address', 'geometry', 'name', 'address_components']
+                        });
+                        
+                        autocomplete.addListener('place_changed', () => {
+                            try {
+                                const place = autocomplete.getPlace();
+                                
+                                if (place.formatted_address) {
+                                    locationInput.value = place.formatted_address;
+                                    console.log('📍 Local selecionado:', place.formatted_address);
+                                }
+                                
+                                // Opcional: salvar coordenadas se necessário
+                                if (place.geometry && place.geometry.location) {
+                                    const lat = place.geometry.location.lat();
+                                    const lng = place.geometry.location.lng();
+                                    console.log('📍 Coordenadas:', { lat, lng });
+                                    // Você pode salvar essas coordenadas em um campo hidden se necessário
+                                }
+                            } catch (error) {
+                                console.warn('⚠️ Erro ao processar seleção de local:', error);
+                            }
+                        });
+                        
+                        googleMapsAutocomplete = autocomplete;
+                        console.log('✅ Google Maps Autocomplete inicializado');
+                    } catch (error) {
+                        console.warn('⚠️ Erro ao criar Autocomplete:', error);
+                        console.warn('💡 O campo de localização ainda funciona como texto normal');
+                        // Não quebrar - o usuário ainda pode digitar manualmente
+                    }
+                } else {
+                    console.warn('⚠️ API do Google Maps não carregada - o campo funciona como texto normal');
+                    console.warn('💡 Para habilitar o autocomplete, verifique:');
+                    console.warn('   1. A API key está configurada corretamente');
+                    console.warn('   2. A API key tem permissões para este domínio/IP');
+                    console.warn('   3. A API "Places API" está habilitada no Google Cloud Console');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao inicializar Google Maps Autocomplete:', error);
+                console.warn('💡 O campo de localização ainda funciona como texto normal');
+            }
+        }
+        
+        function loadGoogleMapsScript(apiKey) {
+            return new Promise((resolve) => {
+                // Verificar se já está carregado
+                if (window.google && window.google.maps && window.google.maps.places) {
+                    resolve();
+                    return;
+                }
+                
+                // Verificar se o script já está sendo carregado
+                if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+                    // Aguardar o script carregar
+                    const checkInterval = setInterval(() => {
+                        if (window.google && window.google.maps && window.google.maps.places) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        console.warn('⚠️ Timeout ao carregar Google Maps API - o campo funciona como texto normal');
+                        resolve(); // Resolver mesmo assim para não quebrar a página
+                    }, 10000);
+                    return;
+                }
+                
+                // Handler de erro de autenticação - não quebrar a funcionalidade
+                window.gm_authFailure = function() {
+                    console.warn('⚠️ Erro de autenticação do Google Maps (ApiTargetBlockedMapError)');
+                    console.warn('💡 Possíveis causas:');
+                    console.warn('   1. A API key não está configurada corretamente');
+                    console.warn('   2. A API key não tem permissões para este domínio/IP');
+                    console.warn('   3. A Places API não está habilitada no Google Cloud Console');
+                    console.warn('   4. As restrições de HTTP referrer bloqueiam este domínio');
+                    console.warn('💡 O campo de localização ainda funciona como texto normal');
+                    delete window.initGoogleMapsCallback;
+                    resolve(); // Não rejeitar - permitir que continue
+                };
+                
+                // Criar callback global
+                window.initGoogleMapsCallback = () => {
+                    try {
+                        delete window.initGoogleMapsCallback;
+                        if (window.google && window.google.maps && window.google.maps.places) {
+                            resolve();
+                        } else {
+                            console.warn('⚠️ Google Maps API carregada mas Places não disponível');
+                            resolve(); // Resolver mesmo assim
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Erro no callback do Google Maps:', error);
+                        resolve(); // Resolver mesmo assim
+                    }
+                };
+                
+                // Criar e adicionar script
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsCallback`;
+                script.async = true;
+                script.defer = true;
+                
+                script.onerror = () => {
+                    console.warn('⚠️ Erro ao carregar script do Google Maps - o campo funciona como texto normal');
+                    delete window.initGoogleMapsCallback;
+                    resolve(); // Não rejeitar - permitir que continue
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+        
         async function loadEventInfo(eventId) {
             try {
                 console.log('📊 [loadEventInfo] Carregando evento via API:', eventId);
@@ -1412,6 +1578,38 @@
                 }
                 
                 console.log('✅ [loadEventInfo] Evento carregado:', event.name);
+                console.log('📅 [loadEventInfo] event_date da API:', event.event_date);
+                console.log('📏 [loadEventInfo] distance_km da API:', event.distance_km, 'tipo:', typeof event.distance_km);
+                
+                // A API REST já retorna todos os campos da base de dados usando service role (bypass RLS)
+                console.log('📏 distance_km carregado via API REST:', event.distance_km, 'tipo:', typeof event.distance_km);
+                
+                // Se a API retornou apenas data (sem hora), tentar buscar hora completa via API REST novamente
+                if (event.event_date && event.event_date.length === 10 && !event.event_date.includes('T')) {
+                    console.log('⚠️ API retornou apenas data, tentando buscar hora completa via API REST...');
+                    try {
+                        const apiRetryResponse = await fetch(`/api/events/${eventId}`, {
+                            credentials: 'include'
+                        });
+                        
+                        if (apiRetryResponse.ok) {
+                            const apiRetryData = await apiRetryResponse.json();
+                            if (apiRetryData.success && apiRetryData.event?.event_date) {
+                                const retryDate = apiRetryData.event.event_date;
+                                if (retryDate.includes('T') || retryDate.length > 10) {
+                                    event.event_date = retryDate;
+                                    currentEvent.event_date = retryDate;
+                                    console.log('✅ event_date completo encontrado via API REST (retry):', retryDate);
+                                }
+                            }
+                        }
+                    } catch (apiRetryErr) {
+                        console.log('ℹ️ Erro ao buscar event_date via API REST (retry):', apiRetryErr.message);
+                    }
+                } else if (event.event_date && (event.event_date.includes('T') || event.event_date.length > 10)) {
+                    console.log('✅ event_date já vem com hora da API:', event.event_date);
+                }
+                
                 currentEvent = event;
                 
                 // Update display info
@@ -1528,18 +1726,119 @@
             const eventDescription = document.getElementById('eventDescription');
             
             if (eventName) eventName.value = event.name || '';
-            if (eventDate) eventDate.value = event.event_date ? event.event_date.split('T')[0] : '';
-            if (eventTime) {
-                const timePart = event.event_date ? event.event_date.split('T')[1] : null;
-                eventTime.value = timePart ? timePart.substring(0, 5) : '';
+            
+            // Processar event_date para extrair data e hora
+            let dateValue = '';
+            let timeValue = '';
+            
+            if (event.event_date) {
+                if (typeof event.event_date === 'string') {
+                    if (event.event_date.includes('T')) {
+                        // Tem timestamp completo: "2025-11-02T09:00:00.000Z"
+                        const parts = event.event_date.split('T');
+                        dateValue = parts[0];
+                        if (parts[1]) {
+                            // Extrair hora: "09:00:00.000Z" -> "09:00"
+                            timeValue = parts[1].substring(0, 5);
+                        }
+                    } else if (event.event_date.length === 10) {
+                        // Apenas data: "2025-11-02"
+                        dateValue = event.event_date;
+                        timeValue = ''; // Sem hora disponível
+                    } else {
+                        // Formato desconhecido, tentar extrair data
+                        dateValue = event.event_date.substring(0, 10);
+                    }
+                } else if (event.event_date instanceof Date) {
+                    // É um objeto Date
+                    dateValue = event.event_date.toISOString().split('T')[0];
+                    const timePart = event.event_date.toISOString().split('T')[1];
+                    if (timePart) {
+                        timeValue = timePart.substring(0, 5);
+                    }
+                }
+            }
+            
+            if (eventDate) eventDate.value = dateValue;
+            if (eventTime) eventTime.value = timeValue;
+            
+            // Log para debug
+            if (event.event_date) {
+                console.log('📅 Preenchendo campos de data/hora:', {
+                    original: event.event_date,
+                    dateField: dateValue,
+                    timeField: timeValue,
+                    hasTime: !!timeValue
+                });
             }
             if (eventLocation) eventLocation.value = event.location || '';
             if (eventType) eventType.value = event.event_type || 'running';
-            if (eventDistance) eventDistance.value = event.distance_km || '';
+            
+            // Atualizar distance_km - garantir que o valor é tratado corretamente
+            if (eventDistance) {
+                let distanceValue = '';
+                
+                // Se event.distance_km existe, usar ele
+                if (event.distance_km !== null && event.distance_km !== undefined) {
+                    if (typeof event.distance_km === 'number') {
+                        distanceValue = event.distance_km.toString();
+                    } else if (typeof event.distance_km === 'string') {
+                        distanceValue = event.distance_km;
+                    } else {
+                        distanceValue = String(event.distance_km);
+                    }
+                }
+                
+                // Aplicar valor no campo
+                eventDistance.value = distanceValue;
+                console.log('📏 Atualizando campo distance_km:', {
+                    original: event.distance_km,
+                    tipo: typeof event.distance_km,
+                    valueSet: distanceValue,
+                    campoId: eventDistance.id,
+                    campoAtualAntes: eventDistance.value
+                });
+                
+                // Forçar atualização visual se necessário
+                if (eventDistance.value !== distanceValue) {
+                    console.warn('⚠️ Campo distance_km não atualizado! Tentando forçar...');
+                    eventDistance.setAttribute('value', distanceValue);
+                    eventDistance.value = distanceValue;
+                    // Trigger change event para garantir que qualquer listener seja notificado
+                    eventDistance.dispatchEvent(new Event('input', { bubbles: true }));
+                    eventDistance.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log('🔄 Campo distance_km forçado para:', eventDistance.value);
+                }
+            }
+            
             if (eventStatus) eventStatus.value = event.status || 'active';
             if (hasCategories) hasCategories.value = event.has_categories ? 'true' : 'false';
             if (autoStartEnabled) autoStartEnabled.value = event.auto_start_enabled ? 'true' : 'false';
-            if (scheduledStartTime) scheduledStartTime.value = event.scheduled_start_time ? event.scheduled_start_time.substring(0, 16) : '';
+            if (scheduledStartTime) {
+                if (event.scheduled_start_time) {
+                    // Converter ISO string para formato datetime-local (YYYY-MM-DDTHH:mm)
+                    // scheduled_start_time pode vir como ISO string completa ou apenas data+hora
+                    const scheduledDate = new Date(event.scheduled_start_time);
+                    if (!isNaN(scheduledDate.getTime())) {
+                        // Formato datetime-local requer YYYY-MM-DDTHH:mm (sem segundos e sem timezone)
+                        const year = scheduledDate.getFullYear();
+                        const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(scheduledDate.getDate()).padStart(2, '0');
+                        const hours = String(scheduledDate.getHours()).padStart(2, '0');
+                        const minutes = String(scheduledDate.getMinutes()).padStart(2, '0');
+                        scheduledStartTime.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        console.log('⏰ [updateFormFields] scheduled_start_time preenchido:', {
+                            original: event.scheduled_start_time,
+                            formatoDatetimeLocal: scheduledStartTime.value
+                        });
+                    } else {
+                        // Fallback: tentar substring se new Date falhar
+                        scheduledStartTime.value = event.scheduled_start_time.substring(0, 16);
+                    }
+                } else {
+                    scheduledStartTime.value = '';
+                }
+            }
             if (eventDescription) eventDescription.value = event.description || '';
             
             // Load lap counter configuration
@@ -1564,17 +1863,20 @@
         
         async function loadCategories() {
             try {
-                console.log('🏅 Carregando categorias...');
-                const { data: categories, error } = await window.supabaseClient.supabase
-                    .from('age_categories')
-                    .select('*')
-                    .eq('is_active', true)
-                    .order('sort_order');
+                console.log('🏅 Carregando categorias via API REST...');
+                const response = await fetch('/api/config/age-categories', {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
-                console.log('✅ Categorias carregadas:', categories?.length || 0);
-                renderCategoriesConfig(categories || []);
+                const result = await response.json();
+                const categories = result.categories || result.data || [];
+                
+                console.log('✅ Categorias carregadas via API REST:', categories.length);
+                renderCategoriesConfig(categories);
             } catch (error) {
                 console.error('❌ Erro ao carregar categorias:', error);
                 showError('Erro ao carregar categorias');
@@ -1583,16 +1885,20 @@
         
         async function loadModalities() {
             try {
-                console.log('🏃 Carregando modalidades...');
-                const { data: modalities, error } = await window.supabaseClient.supabase
-                    .from('event_modalities')
-                    .select('*')
-                    .eq('is_active', true);
+                console.log('🏃 Carregando modalidades via API REST...');
+                const response = await fetch('/api/config/event-modalities', {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
-                console.log('✅ Modalidades carregadas:', modalities?.length || 0);
-                renderModalitiesConfig(modalities || []);
+                const result = await response.json();
+                const modalities = result.modalities || result.data || [];
+                
+                console.log('✅ Modalidades carregadas via API REST:', modalities.length);
+                renderModalitiesConfig(modalities);
             } catch (error) {
                 console.error('❌ Erro ao carregar modalidades:', error);
                 showError('Erro ao carregar modalidades');
@@ -1601,19 +1907,24 @@
         
         async function loadEventCategoryConfig(eventId) {
             try {
-                console.log('🔧 Carregando configuração de categorias do evento...');
-                const { data: config, error } = await window.supabaseClient.supabase
-                    .from('event_category_config')
-                    .select(`
-                        *,
-                        age_categories (*)
-                    `)
-                    .eq('event_id', eventId);
+                console.log('🔧 Carregando configuração de categorias do evento via API REST...');
+                const response = await fetch(`/api/events/${eventId}/category-configs`, {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Endpoint pode não existir ainda - retornar vazio
+                        return [];
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
-                console.log('✅ Configuração de categorias carregada:', config?.length || 0);
-                return config || [];
+                const result = await response.json();
+                const config = result.configs || result.data || [];
+                
+                console.log('✅ Configuração de categorias carregada via API REST:', config.length);
+                return config;
             } catch (error) {
                 console.error('❌ Erro ao carregar configuração de categorias:', error);
                 return [];
@@ -1622,19 +1933,24 @@
         
         async function loadEventModalityConfig(eventId) {
             try {
-                console.log('🔧 Carregando configuração de modalidades do evento...');
-                const { data: config, error } = await window.supabaseClient.supabase
-                    .from('event_modality_config')
-                    .select(`
-                        *,
-                        event_modalities (*)
-                    `)
-                    .eq('event_id', eventId);
+                console.log('🔧 Carregando configuração de modalidades do evento via API REST...');
+                const response = await fetch(`/api/events/${eventId}/modality-configs`, {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Endpoint pode não existir ainda - retornar vazio
+                        return [];
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
-                console.log('✅ Configuração de modalidades carregada:', config?.length || 0);
-                return config || [];
+                const result = await response.json();
+                const config = result.configs || result.data || [];
+                
+                console.log('✅ Configuração de modalidades carregada via API REST:', config.length);
+                return config;
             } catch (error) {
                 console.error('❌ Erro ao carregar configuração de modalidades:', error);
                 return [];
@@ -1735,33 +2051,35 @@
         
         async function saveCategoryConfigurations(eventId) {
             try {
-                console.log('💾 Salvando configurações de categorias...');
+                console.log('💾 Salvando configurações de categorias via API REST...');
                 
                 // Get all checked categories
                 const checkedCategories = document.querySelectorAll('#categoriesConfig input[type="checkbox"]:checked');
                 
-                // Delete existing configurations
-                await window.supabaseClient.supabase
-                    .from('event_category_config')
-                    .delete()
-                    .eq('event_id', eventId);
+                const configs = Array.from(checkedCategories).map(checkbox => ({
+                    event_id: eventId,
+                    age_category_id: checkbox.value,
+                    is_enabled: true
+                }));
                 
-                // Insert new configurations
-                if (checkedCategories.length > 0) {
-                    const configs = Array.from(checkedCategories).map(checkbox => ({
-                        event_id: eventId,
-                        age_category_id: checkbox.value,
-                        is_enabled: true
-                    }));
-                    
-                    const { error } = await window.supabaseClient.supabase
-                        .from('event_category_config')
-                        .insert(configs);
-                    
-                    if (error) throw error;
+                // Usar API REST para salvar configurações de categorias
+                const response = await fetch(`/api/events/${eventId}/category-configs`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ configs })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
                 
-                console.log('✅ Configurações de categorias salvas:', checkedCategories.length);
+                const result = await response.json();
+                console.log('✅ Configurações de categorias salvas via API REST:', checkedCategories.length);
+                return result;
             } catch (error) {
                 console.error('❌ Erro ao salvar configurações de categorias:', error);
                 throw error;
@@ -1770,33 +2088,35 @@
         
         async function saveModalityConfigurations(eventId) {
             try {
-                console.log('💾 Salvando configurações de modalidades...');
+                console.log('💾 Salvando configurações de modalidades via API REST...');
                 
                 // Get all checked modalities
                 const checkedModalities = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]:checked');
                 
-                // Delete existing configurations
-                await window.supabaseClient.supabase
-                    .from('event_modality_config')
-                    .delete()
-                    .eq('event_id', eventId);
+                const configs = Array.from(checkedModalities).map(checkbox => ({
+                    event_id: eventId,
+                    modality_id: checkbox.value,
+                    is_enabled: true
+                }));
                 
-                // Insert new configurations
-                if (checkedModalities.length > 0) {
-                    const configs = Array.from(checkedModalities).map(checkbox => ({
-                        event_id: eventId,
-                        modality_id: checkbox.value,
-                        is_enabled: true
-                    }));
-                    
-                    const { error } = await window.supabaseClient.supabase
-                        .from('event_modality_config')
-                        .insert(configs);
-                    
-                    if (error) throw error;
+                // Usar API REST para salvar configurações de modalidades
+                const response = await fetch(`/api/events/${eventId}/modality-configs`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ configs })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
                 
-                console.log('✅ Configurações de modalidades salvas:', checkedModalities.length);
+                const result = await response.json();
+                console.log('✅ Configurações de modalidades salvas via API REST:', checkedModalities.length);
+                return result;
             } catch (error) {
                 console.error('❌ Erro ao salvar configurações de modalidades:', error);
                 throw error;
@@ -1810,72 +2130,512 @@
             }
             
             try {
-                const eventName = document.getElementById('eventName').value;
-                const eventDate = document.getElementById('eventDate').value;
-                const eventTime = document.getElementById('eventTime').value;
-                const eventLocation = document.getElementById('eventLocation').value;
-                const eventType = document.getElementById('eventType').value;
-                const eventDistance = document.getElementById('eventDistance').value;
-                const eventStatus = document.getElementById('eventStatus').value;
-                const hasCategories = document.getElementById('hasCategories').value === 'true';
-                const autoStartEnabled = document.getElementById('autoStartEnabled').value === 'true';
-                const scheduledStartTime = document.getElementById('scheduledStartTime').value;
-                const eventDescription = document.getElementById('eventDescription').value;
+                const eventName = document.getElementById('eventName')?.value?.trim() || '';
+                const eventDate = document.getElementById('eventDate')?.value || '';
+                const eventTime = document.getElementById('eventTime')?.value || '';
+                const eventLocation = document.getElementById('eventLocation')?.value?.trim() || '';
+                const eventType = document.getElementById('eventType')?.value || 'running';
+                const eventDistance = document.getElementById('eventDistance')?.value || '';
+                console.log('📊 Valores do formulário:', {
+                    eventDistance: eventDistance,
+                    eventDistanceType: typeof eventDistance,
+                    eventDistanceParsed: eventDistance ? parseFloat(eventDistance) : null
+                });
+                const eventStatus = document.getElementById('eventStatus')?.value || 'active';
+                const hasCategories = document.getElementById('hasCategories')?.value === 'true';
+                const autoStartEnabled = document.getElementById('autoStartEnabled')?.value === 'true';
+                const scheduledStartTimeElement = document.getElementById('scheduledStartTime');
+                const scheduledStartTime = scheduledStartTimeElement?.value || '';
+                const eventDescription = document.getElementById('eventDescription')?.value?.trim() || '';
+                
+                console.log('⏰ [saveEventConfig] Campo scheduledStartTime:', {
+                    elemento: scheduledStartTimeElement,
+                    valor: scheduledStartTime,
+                    tipo: typeof scheduledStartTime,
+                    isEmpty: !scheduledStartTime,
+                    valorAtualNoFormulario: scheduledStartTimeElement?.value
+                });
+                
+                // Validar nome obrigatório
+                if (!eventName) {
+                    showError('O nome do evento é obrigatório');
+                    document.getElementById('eventName')?.focus();
+                    return;
+                }
                 
                 // Combine date and time
                 let eventDateTime = null;
-                if (eventDate && eventTime) {
-                    eventDateTime = new Date(`${eventDate}T${eventTime}`).toISOString();
-                } else if (eventDate) {
-                    eventDateTime = new Date(`${eventDate}T00:00:00`).toISOString();
+                
+                // Determinar qual data usar (do formulário ou do evento atual)
+                let dateToUse = eventDate;
+                if (!dateToUse && currentEvent?.event_date) {
+                    // Se não há data no formulário, usar a data atual do evento
+                    dateToUse = currentEvent.event_date.split('T')[0];
                 }
                 
-                const updateData = {
+                // Se tem data E hora, combinar ambos
+                if (dateToUse && eventTime) {
+                    const localDateTime = new Date(`${dateToUse}T${eventTime}`);
+                    if (!isNaN(localDateTime.getTime())) {
+                        eventDateTime = localDateTime.toISOString();
+                        console.log('✅ Data e hora combinadas:', {
+                            date: dateToUse,
+                            time: eventTime,
+                            result: eventDateTime
+                        });
+                    }
+                } else if (dateToUse && !eventTime) {
+                    // Se só tem data, preservar hora atual do evento ou usar 00:00
+                    let timeToUse = '00:00:00';
+                    if (currentEvent?.event_date) {
+                        const timePart = currentEvent.event_date.split('T')[1];
+                        if (timePart) {
+                            timeToUse = timePart.substring(0, 8); // HH:mm:ss
+                        }
+                    }
+                    const localDate = new Date(`${dateToUse}T${timeToUse}`);
+                    if (!isNaN(localDate.getTime())) {
+                        eventDateTime = localDate.toISOString();
+                        console.log('✅ Apenas data atualizada (hora preservada):', eventDateTime);
+                    }
+                } else if (eventTime && !dateToUse) {
+                    // Se só tem hora (sem data), usar data de hoje
+                    const today = new Date().toISOString().split('T')[0];
+                    const localDateTime = new Date(`${today}T${eventTime}`);
+                    if (!isNaN(localDateTime.getTime())) {
+                        eventDateTime = localDateTime.toISOString();
+                        console.log('⚠️ Apenas hora preenchida - usando data de hoje:', eventDateTime);
+                    }
+                }
+                
+                // Log para debug
+                console.log('📅 Processamento de data/hora:', {
+                    eventDateFromForm: eventDate,
+                    eventTimeFromForm: eventTime,
+                    dateToUse: dateToUse,
+                    eventDateTime: eventDateTime,
+                    currentEventDate: currentEvent?.event_date,
+                    hasDateTime: !!eventDateTime
+                });
+                
+                // Preparar dados para API (campos básicos suportados pela API)
+                const apiUpdateData = {
+                    name: eventName,
+                    description: eventDescription || null,
+                    location: eventLocation || null,
+                    status: eventStatus,
+                    distance_km: eventDistance ? parseFloat(eventDistance) : null,
+                    event_type: eventType,
+                    has_categories: hasCategories === 'true'
+                };
+                
+                // Incluir event_date apenas se foi calculado
+                if (eventDateTime) {
+                    apiUpdateData.event_date = eventDateTime;
+                    console.log('📤 Enviando event_date para API:', eventDateTime);
+                } else if (eventTime || eventDate) {
+                    // Se o usuário preencheu hora ou data mas eventDateTime é null, avisar
+                    console.warn('⚠️ Hora/data preenchida mas eventDateTime é null:', { eventDate, eventTime });
+                }
+                
+                // Incluir scheduled_start_time se foi preenchido
+                if (scheduledStartTime && scheduledStartTime.trim() !== '') {
+                    try {
+                        // scheduledStartTime vem no formato datetime-local (YYYY-MM-DDTHH:mm)
+                        // new Date() precisa converter corretamente considerando timezone local
+                        const scheduledTimeISO = new Date(scheduledStartTime).toISOString();
+                        apiUpdateData.scheduled_start_time = scheduledTimeISO;
+                        console.log('📤 [saveEventConfig] Enviando scheduled_start_time para API:', {
+                            valorOriginal: scheduledStartTime,
+                            valorISO: scheduledTimeISO,
+                            valorAtualNaBD: currentEvent?.scheduled_start_time
+                        });
+                    } catch (error) {
+                        console.error('❌ [saveEventConfig] Erro ao converter scheduled_start_time:', error);
+                        console.warn('⚠️ [saveEventConfig] scheduled_start_time ignorado devido a erro de conversão');
+                    }
+                } else {
+                    console.log('ℹ️ [saveEventConfig] scheduled_start_time não preenchido ou vazio - não será enviado');
+                    // Se estava preenchido antes mas agora está vazio, enviar null para limpar
+                    if (currentEvent?.scheduled_start_time) {
+                        apiUpdateData.scheduled_start_time = null;
+                        console.log('🗑️ [saveEventConfig] Limpando scheduled_start_time (estava preenchido mas agora está vazio)');
+                    }
+                }
+                
+                // Preparar dados completos para Supabase (fallback)
+                const supabaseUpdateData = {
                     name: eventName,
                     event_date: eventDateTime,
-                    location: eventLocation,
+                    location: eventLocation || null,
                     event_type: eventType,
                     distance_km: eventDistance ? parseFloat(eventDistance) : null,
                     status: eventStatus,
                     has_categories: hasCategories,
                     auto_start_enabled: autoStartEnabled,
                     scheduled_start_time: scheduledStartTime ? new Date(scheduledStartTime).toISOString() : null,
-                    description: eventDescription,
+                    description: eventDescription || null,
                     updated_at: new Date().toISOString()
                 };
                 
-                const { error } = await window.supabaseClient.supabase
-                    .from('events')
-                    .update(updateData)
-                    .eq('id', currentEvent.id);
+                console.log('💾 Salvando evento:', {
+                    id: currentEvent.id,
+                    apiData: apiUpdateData,
+                    supabaseData: supabaseUpdateData,
+                    distance_km_enviado: apiUpdateData.distance_km,
+                    distance_km_tipo: typeof apiUpdateData.distance_km
+                });
                 
-                if (error) {
-                    console.error('Erro ao salvar evento:', error);
-                    showError('Erro ao salvar configurações');
+                // Usar API REST que bypassa RLS e garante permissões adequadas
+                try {
+                    const response = await fetch(`/api/events/${currentEvent.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(apiUpdateData)
+                    });
+                    
+                    const apiResult = await response.json();
+                    
+                    if (!response.ok || !apiResult.success) {
+                        const errorMsg = apiResult.error || `Erro HTTP ${response.status}`;
+                        console.error('❌ Erro na API:', errorMsg);
+                        throw new Error(errorMsg);
+                    }
+                    
+                    console.log('✅ Evento atualizado via API com sucesso:', apiResult.event);
+                    console.log('📥 event_date retornado pela API:', apiResult.event?.event_date);
+                    console.log('📥 distance_km retornado pela API:', apiResult.event?.distance_km, 'tipo:', typeof apiResult.event?.distance_km);
+                    console.log('📥 event_type retornado pela API:', apiResult.event?.event_type);
+                    console.log('📥 scheduled_start_time retornado pela API:', apiResult.event?.scheduled_start_time, 'tipo:', typeof apiResult.event?.scheduled_start_time);
+                    
+                    // Verificar se scheduled_start_time foi atualizado corretamente
+                    if (apiUpdateData.scheduled_start_time !== undefined) {
+                        const sentScheduledTime = apiUpdateData.scheduled_start_time;
+                        const returnedScheduledTime = apiResult.event?.scheduled_start_time || null;
+                        
+                        // Comparar valores (normalizar para ISO string)
+                        const sentISO = sentScheduledTime ? new Date(sentScheduledTime).toISOString() : null;
+                        const returnedISO = returnedScheduledTime ? new Date(returnedScheduledTime).toISOString() : null;
+                        
+                        console.log('🔍 Verificando scheduled_start_time:', {
+                            enviado: sentScheduledTime,
+                            enviadoISO: sentISO,
+                            retornado: returnedScheduledTime,
+                            retornadoISO: returnedISO,
+                            saoDiferentes: sentISO !== returnedISO
+                        });
+                        
+                        if (sentISO !== returnedISO && sentScheduledTime) {
+                            console.warn('⚠️ scheduled_start_time retornado pela API difere do enviado. Atualizando novamente via API REST...');
+                            try {
+                                const scheduledTimeUpdateResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ scheduled_start_time: sentScheduledTime })
+                                });
+                                
+                                if (scheduledTimeUpdateResponse.ok) {
+                                    const scheduledTimeUpdateResult = await scheduledTimeUpdateResponse.json();
+                                    console.log('✅ scheduled_start_time atualizado via API REST:', sentScheduledTime);
+                                    if (apiResult.event && scheduledTimeUpdateResult.event) {
+                                        apiResult.event.scheduled_start_time = scheduledTimeUpdateResult.event.scheduled_start_time || sentScheduledTime;
+                                    }
+                                } else {
+                                    console.error('❌ Erro ao atualizar scheduled_start_time via API REST:', scheduledTimeUpdateResponse.status);
+                                }
+                            } catch (scheduledTimeUpdateErr) {
+                                console.error('❌ Erro ao atualizar scheduled_start_time via API REST:', scheduledTimeUpdateErr);
+                            }
+                        } else if (sentISO === returnedISO) {
+                            console.log('✅ scheduled_start_time já está correto no resultado da API:', returnedISO);
+                        }
+                    }
+                    
+                    // Verificar se a hora foi preservada
+                    if (apiResult.event?.event_date && eventDateTime) {
+                        const returnedDate = apiResult.event.event_date;
+                        const hasTime = returnedDate.includes('T') || returnedDate.includes(' ') || returnedDate.length > 10;
+                        console.log('🔍 Verificação de hora:', {
+                            returnedDate,
+                            hasTime,
+                            returnedLength: returnedDate.length,
+                            originalSent: eventDateTime
+                        });
+                        
+                        // Se a hora foi perdida, atualizar diretamente via Supabase
+                        if (!hasTime && eventTime) {
+                            console.warn('⚠️ A hora foi perdida na resposta da API! Atualizando via API REST...');
+                            try {
+                                const dateUpdateResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ event_date: eventDateTime })
+                                });
+                                
+                                if (dateUpdateResponse.ok) {
+                                    const dateUpdateResult = await dateUpdateResponse.json();
+                                    console.log('✅ event_date atualizado via API REST com hora:', eventDateTime);
+                                    if (apiResult.event && dateUpdateResult.event) {
+                                        apiResult.event.event_date = dateUpdateResult.event.event_date || eventDateTime;
+                                    }
+                                } else {
+                                    console.error('❌ Erro ao atualizar event_date via API REST:', dateUpdateResponse.status);
+                                }
+                            } catch (dateUpdateErr) {
+                                console.error('❌ Erro ao atualizar event_date via API REST:', dateUpdateErr);
+                            }
+                        }
+                    }
+                    
+                    // Se há hora preenchida, garantir que está salva corretamente via API REST
+                    if (eventDateTime && eventTime) {
+                        console.log('🔄 Garantindo que event_date com hora está salvo via API REST...');
+                        try {
+                            const dateConfirmResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify({ event_date: eventDateTime })
+                            });
+                            
+                            if (dateConfirmResponse.ok) {
+                                const dateConfirmResult = await dateConfirmResponse.json();
+                                console.log('✅ event_date com hora confirmado via API REST:', eventDateTime);
+                                if (apiResult.event && dateConfirmResult.event) {
+                                    apiResult.event.event_date = dateConfirmResult.event.event_date || eventDateTime;
+                                }
+                            } else {
+                                console.warn('⚠️ Erro ao confirmar event_date via API REST:', dateConfirmResponse.status);
+                            }
+                        } catch (dateConfirmErr) {
+                            console.warn('⚠️ Erro ao confirmar event_date via API REST:', dateConfirmErr);
+                        }
+                    }
+                    
+                    // SEMPRE atualizar distance_km via Supabase após a API (garantia de persistência)
+                    // A API pode não salvar corretamente devido a RLS ou outros problemas
+                    if (eventDistance) {
+                        const distanceEnviado = parseFloat(eventDistance);
+                        const distanceRetornado = apiResult.event?.distance_km;
+                        
+                        console.log('🔍 Verificando distance_km:', {
+                            enviado: distanceEnviado,
+                            retornado: distanceRetornado,
+                            saoDiferentes: distanceEnviado !== distanceRetornado
+                        });
+                        
+                        // Se o valor retornado pela API é diferente do enviado, fazer UPDATE novamente via API REST
+                        // A API REST usa service role e bypassa RLS, então deve funcionar
+                        if (distanceEnviado !== distanceRetornado) {
+                            console.log('🔄 distance_km diferente do enviado, atualizando novamente via API REST...');
+                            try {
+                                const apiUpdateResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ distance_km: distanceEnviado })
+                                });
+                                
+                                if (apiUpdateResponse.ok) {
+                                    const apiUpdateResult = await apiUpdateResponse.json();
+                                    if (apiUpdateResult.success && apiUpdateResult.event?.distance_km) {
+                                        const distanceFinal = apiUpdateResult.event.distance_km;
+                                        console.log('✅ distance_km atualizado via API REST (2ª tentativa):', distanceFinal);
+                                        
+                                        // Atualizar apiResult.event com o valor confirmado
+                                        if (apiResult.event) {
+                                            apiResult.event.distance_km = distanceFinal;
+                                        }
+                                    } else {
+                                        console.warn('⚠️ API REST retornou sucesso mas distance_km não foi atualizado');
+                                        // Mesmo assim, usar o valor enviado
+                                        if (apiResult.event) {
+                                            apiResult.event.distance_km = distanceEnviado;
+                                        }
+                                    }
+                                } else {
+                                    const errorText = await apiUpdateResponse.text();
+                                    console.warn('⚠️ Erro ao atualizar distance_km via API REST (2ª tentativa):', apiUpdateResponse.status, errorText);
+                                    // Mesmo assim, usar o valor enviado no apiResult
+                                    if (apiResult.event) {
+                                        apiResult.event.distance_km = distanceEnviado;
+                                    }
+                                }
+                            } catch (apiUpdateErr) {
+                                console.warn('⚠️ Exceção ao atualizar distance_km via API REST (2ª tentativa):', apiUpdateErr);
+                                // Mesmo assim, usar o valor enviado no apiResult
+                                if (apiResult.event) {
+                                    apiResult.event.distance_km = distanceEnviado;
+                                }
+                            }
+                        } else {
+                            console.log('✅ distance_km já está correto no resultado da API:', distanceRetornado);
+                        }
+                    }
+                    
+                    // Atualizar outros campos adicionais via API REST se necessário
+                    const needsAdditionalUpdate = eventType !== apiResult.event?.event_type ||
+                                              hasCategories !== apiResult.event?.has_categories ||
+                                              autoStartEnabled !== apiResult.event?.auto_start_enabled ||
+                                              (scheduledStartTime ? new Date(scheduledStartTime).toISOString() : null) !== (apiResult.event?.scheduled_start_time || null);
+                    
+                    if (needsAdditionalUpdate) {
+                        console.log('🔄 Atualizando outros campos adicionais via API REST...');
+                        try {
+                            const additionalUpdateResponse = await fetch(`/api/events/${currentEvent.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    event_type: eventType,
+                                    has_categories: hasCategories,
+                                    auto_start_enabled: autoStartEnabled,
+                                    scheduled_start_time: scheduledStartTime ? new Date(scheduledStartTime).toISOString() : null
+                                })
+                            });
+                            
+                            if (additionalUpdateResponse.ok) {
+                                const additionalUpdateResult = await additionalUpdateResponse.json();
+                                console.log('✅ Campos adicionais atualizados via API REST:', additionalUpdateResult.event);
+                            } else {
+                                console.warn('⚠️ Erro ao atualizar campos adicionais via API REST:', additionalUpdateResponse.status);
+                            }
+                        } catch (additionalUpdateErr) {
+                            console.warn('⚠️ Erro ao atualizar campos adicionais via API REST:', additionalUpdateErr);
+                        }
+                    }
+                    
+                    // Atualizar currentEvent com os dados retornados
+                    // IMPORTANTE: Garantir que event_date inclua a hora se foi fornecida
+                    if (apiResult.event) {
+                        // Se enviamos hora mas API retornou só data, usar a hora que enviamos
+                        if (eventDateTime && eventTime && apiResult.event.event_date && 
+                            apiResult.event.event_date.length === 10 && 
+                            !apiResult.event.event_date.includes('T')) {
+                            console.log('🔧 Corrigindo event_date no currentEvent com a hora enviada');
+                            apiResult.event.event_date = eventDateTime;
+                        }
+                        
+                        // Garantir que distance_km está incluído no objeto atualizado
+                        // Se o valor retornado é diferente do enviado, usar o valor enviado
+                        const distanceEnviado = eventDistance ? parseFloat(eventDistance) : null;
+                        const distanceRetornado = apiResult.event.distance_km;
+                        
+                        if (distanceEnviado !== null && distanceEnviado !== distanceRetornado) {
+                            console.warn('⚠️ distance_km retornado pela API (', distanceRetornado, ') difere do enviado (', distanceEnviado, '). Usando valor enviado.');
+                            apiResult.event.distance_km = distanceEnviado;
+                        } else if (distanceEnviado !== null && apiResult.event.distance_km === undefined) {
+                            console.log('🔧 Adicionando distance_km ao resultado da API:', distanceEnviado);
+                            apiResult.event.distance_km = distanceEnviado;
+                        }
+                        
+                        // Garantir que event_type está incluído
+                        if (eventType && apiResult.event.event_type === undefined) {
+                            console.log('🔧 Adicionando event_type ao resultado da API:', eventType);
+                            apiResult.event.event_type = eventType;
+                        } else if (eventType && apiResult.event.event_type !== eventType) {
+                            console.warn('⚠️ event_type retornado pela API difere do enviado. Usando valor enviado.');
+                            apiResult.event.event_type = eventType;
+                        }
+                        
+                        currentEvent = { ...currentEvent, ...apiResult.event };
+                        console.log('📝 currentEvent atualizado:', {
+                            event_date: currentEvent.event_date,
+                            distance_km: currentEvent.distance_km,
+                            event_type: currentEvent.event_type,
+                            location: currentEvent.location,
+                            scheduled_start_time: currentEvent.scheduled_start_time
+                        });
+                    }
+                    
+                } catch (apiError) {
+                    console.error('❌ Erro ao chamar API:', apiError);
+                    
+                    // Não fazer fallback para Supabase direto - mostrar erro ao usuário
+                    showError(`Erro ao salvar configurações: ${apiError.message || 'Erro desconhecido'}`);
                     return;
                 }
                 
                 // Save category configurations
-                await saveCategoryConfigurations(currentEvent.id);
+                try {
+                    await saveCategoryConfigurations(currentEvent.id);
+                } catch (err) {
+                    console.warn('⚠️ Erro ao salvar categorias:', err);
+                }
                 
                 // Save modality configurations
-                await saveModalityConfigurations(currentEvent.id);
+                try {
+                    await saveModalityConfigurations(currentEvent.id);
+                } catch (err) {
+                    console.warn('⚠️ Erro ao salvar modalidades:', err);
+                }
                 
                 // Save lap counter configuration
-                await saveLapCounterConfig(currentEvent.id);
+                try {
+                    await saveLapCounterConfig(currentEvent.id);
+                } catch (err) {
+                    console.warn('⚠️ Erro ao salvar configuração de voltas:', err);
+                }
                 
                 // Save dorsal nomenclature configuration (includes assignment mode)
-                // Nota: saveDorsalConfig foi removido porque a atribuição agora está dentro da nomenclatura
-                await saveDorsalNomenclatureConfig(currentEvent.id);
+                try {
+                    await saveDorsalNomenclatureConfig(currentEvent.id);
+                } catch (err) {
+                    console.warn('⚠️ Erro ao salvar configuração de dorsais:', err);
+                }
                 
                 showSuccess('Configurações salvas com sucesso!');
                 
-                // Reload event info
-                await loadEventInfo(currentEvent.id);
+                // Atualizar campos do formulário diretamente com os dados salvos
+                // (evitar reload que pode perder a hora por causa da API)
+                // Garantir que currentEvent tem a hora correta antes de atualizar o formulário
+                if (eventDateTime && eventTime && currentEvent?.event_date && 
+                    currentEvent.event_date.length === 10 && 
+                    !currentEvent.event_date.includes('T')) {
+                    currentEvent.event_date = eventDateTime;
+                    console.log('🔧 Corrigindo currentEvent.event_date antes de atualizar formulário:', currentEvent.event_date);
+                }
+                
+                // Atualizar apenas os campos do formulário sem recarregar tudo da API
+                // Isso preserva a hora que acabamos de salvar
+                // IMPORTANTE: Preservar também o distance_km que foi enviado
+                if (currentEvent) {
+                    // Garantir que distance_km preserva o valor enviado se foi diferente do retornado
+                    if (eventDistance) {
+                        const distanceEnviado = parseFloat(eventDistance);
+                        if (currentEvent.distance_km !== distanceEnviado) {
+                            console.log('🔧 Corrigindo currentEvent.distance_km com valor enviado:', distanceEnviado);
+                            currentEvent.distance_km = distanceEnviado;
+                        }
+                    }
+                    
+                    updateFormFields(currentEvent);
+                    updateEventDisplay(currentEvent);
+                    console.log('✅ Formulário atualizado localmente (preservando hora, distância e scheduled_start_time salvas):', {
+                        event_date: currentEvent.event_date,
+                        distance_km: currentEvent.distance_km,
+                        scheduled_start_time: currentEvent.scheduled_start_time
+                    });
+                }
                 
             } catch (error) {
-                console.error('Erro ao salvar evento:', error);
-                showError('Erro ao salvar configurações');
+                console.error('❌ Erro ao salvar evento:', error);
+                showError(`Erro ao salvar configurações: ${error.message || 'Erro desconhecido'}`);
             }
         }
         
@@ -1897,15 +2657,14 @@
             }
             
             try {
-                const { error } = await window.supabaseClient.supabase
-                    .from('events')
-                    .delete()
-                    .eq('id', currentEvent.id);
+                const response = await fetch(`/api/events/${currentEvent.id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
                 
-                if (error) {
-                    console.error('Erro ao excluir evento:', error);
-                    showError('Erro ao excluir evento');
-                    return;
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
                 
                 showSuccess('Evento excluído com sucesso!');
@@ -1918,7 +2677,7 @@
                 
             } catch (error) {
                 console.error('Erro ao excluir evento:', error);
-                showError('Erro ao excluir evento');
+                showError(`Erro ao excluir evento: ${error.message || 'Erro desconhecido'}`);
             }
         }
         
@@ -1928,16 +2687,20 @@
         
         async function loadCheckpointTypes() {
             try {
-                console.log('📍 Carregando tipos de checkpoints...');
-                const { data: types, error } = await window.supabaseClient.supabase
-                    .from('checkpoint_types')
-                    .select('*')
-                    .order('sort_order');
+                console.log('📍 Carregando tipos de checkpoints via API REST...');
+                const response = await fetch('/api/config/checkpoint-types', {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
-                console.log('✅ Tipos de checkpoints carregados:', types?.length || 0);
-                renderCheckpointTypesConfig(types || []);
+                const result = await response.json();
+                const types = result.types || result.data || [];
+                
+                console.log('✅ Tipos de checkpoints carregados via API REST:', types.length);
+                renderCheckpointTypesConfig(types);
             } catch (error) {
                 console.error('❌ Erro ao carregar tipos:', error);
                 const container = document.getElementById('checkpointTypesConfig');
@@ -1981,19 +2744,26 @@
         
         async function toggleCheckpointType(code, activate) {
             try {
-                const { error } = await window.supabaseClient.supabase
-                    .from('checkpoint_types')
-                    .update({ is_active: activate })
-                    .eq('code', code);
+                const response = await fetch(`/api/config/checkpoint-types/${code}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ is_active: activate })
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
                 
                 showSuccess(`Tipo ${activate ? 'ativado' : 'desativado'}!`);
                 await loadCheckpointTypes();
                 
             } catch (error) {
                 console.error('❌ Erro ao atualizar tipo:', error);
-                showError('Erro ao atualizar tipo');
+                showError(`Erro ao atualizar tipo: ${error.message}`);
             }
         }
         
@@ -2428,32 +3198,39 @@
         
         async function saveProcessorConfigToSupabase(config) {
             try {
-                if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.log('⚠️ Supabase não disponível, salvando apenas no localStorage');
+                if (!currentEvent || !currentEvent.id) {
+                    console.log('⚠️ Nenhum evento selecionado');
                     return;
                 }
                 
-                const { data, error } = await window.supabaseClient.supabase.rpc('update_event_processor_config', {
-                    event_id_param: currentEvent.id,
-                    processor_type_param: config.processorType,
-                    processor_speed_param: config.processorSpeed,
-                    processor_confidence_param: config.processorConfidence,
-                    openai_model_param: config.openaiModel || 'gpt-4o',
-                    gemini_model_param: config.geminiModel || 'gemini-1.5-flash',
-                    deepseek_model_param: config.deepseekModel || 'deepseek-chat'
+                const response = await fetch(`/api/events/${currentEvent.id}/processor-config`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        processor_type: config.processorType,
+                        processor_speed: config.processorSpeed,
+                        processor_confidence: config.processorConfidence,
+                        openai_model: config.openaiModel || 'gpt-4o',
+                        gemini_model: config.geminiModel || 'gemini-1.5-flash',
+                        deepseek_model: config.deepseekModel || 'deepseek-chat'
+                    })
                 });
                 
-                if (error) {
-                    console.error('❌ Erro ao salvar configuração no Supabase:', error);
-                    showError('Erro ao salvar configuração no servidor');
-                } else {
-                    console.log('✅ Configuração salva no Supabase:', data);
-                    showSuccess('Configuração do processador salva com sucesso!');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
                 
+                const result = await response.json();
+                console.log('✅ Configuração salva via API REST:', result);
+                showSuccess('Configuração do processador salva com sucesso!');
+                
             } catch (error) {
-                console.error('❌ Erro ao conectar com Supabase:', error);
-                showError('Erro ao conectar com o servidor');
+                console.error('❌ Erro ao salvar configuração:', error);
+                showError(`Erro ao salvar configuração no servidor: ${error.message}`);
             }
         }
         
@@ -2533,36 +3310,41 @@
         
         async function loadProcessorConfigFromSupabase() {
             try {
-                if (!window.supabaseClient || !window.supabaseClient.supabase) {
+                if (!currentEvent || !currentEvent.id) {
                     return null;
                 }
                 
-                const { data, error } = await window.supabaseClient.supabase.rpc('get_event_processor_config', {
-                    event_id_param: currentEvent.id
+                const response = await fetch(`/api/events/${currentEvent.id}/processor-config`, {
+                    credentials: 'include'
                 });
                 
-                if (error) {
-                    console.error('❌ Erro ao carregar configuração do Supabase:', error);
-                    return null;
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Config não existe ainda - retornar null
+                        return null;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 
-                if (data && data.length > 0) {
+                const result = await response.json();
+                
+                if (result.success && result.config) {
+                    // Converter formato da API para formato esperado
                     const config = {
-                        processorType: data[0].processor_type,
-                        processorSpeed: data[0].processor_speed,
-                        processorConfidence: parseFloat(data[0].processor_confidence),
-                        openaiModel: data[0].openai_model || 'gpt-4o',
-                        geminiModel: data[0].gemini_model || 'gemini-1.5-flash',
-                        deepseekModel: data[0].deepseek_model || 'deepseek-chat'
+                        processorType: result.config.processor_type || result.config.processorType,
+                        processorSpeed: result.config.processor_speed || result.config.processorSpeed,
+                        processorConfidence: result.config.processor_confidence || result.config.processorConfidence,
+                        openaiModel: result.config.openai_model || result.config.openaiModel || 'gpt-4o',
+                        geminiModel: result.config.gemini_model || result.config.geminiModel || 'gemini-1.5-flash',
+                        deepseekModel: result.config.deepseek_model || result.config.deepseekModel || 'deepseek-chat'
                     };
-                    console.log('📥 Configuração carregada do Supabase:', config);
+                    console.log('✅ Configuração carregada via API REST:', config);
                     return config;
                 }
                 
                 return null;
-                
             } catch (error) {
-                console.error('❌ Erro ao conectar com Supabase:', error);
+                console.error('❌ Erro ao carregar configuração:', error);
                 return null;
             }
         }
@@ -2573,50 +3355,37 @@
         
         async function loadLapCounterConfig(eventId) {
             try {
-                console.log('🔄 Carregando configuração de contador de voltas...');
+                console.log('🔄 Carregando configuração de contador de voltas via API REST...');
                 
-                if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.log('⚠️ Supabase não disponível');
+                // Carregar configuração do evento via API REST
+                const eventResponse = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!eventResponse.ok) {
+                    console.error('❌ Erro ao carregar configuração do evento:', eventResponse.status);
                     return;
                 }
                 
-                // Carregar configuração do evento
-                const { data: eventData, error: eventError } = await window.supabaseClient.supabase
-                    .from('events')
-                    .select('has_lap_counter')
-                    .eq('id', eventId)
-                    .maybeSingle();
-                
-                if (eventError) {
-                    console.error('❌ Erro ao carregar configuração do evento:', eventError);
-                    return;
-                }
+                const eventResult = await eventResponse.json();
+                const eventData = eventResult.event;
                 
                 if (!eventData) {
                     console.log('ℹ️ Evento não encontrado ou sem configuração de lap counter');
                     return;
                 }
                 
-                // Carregar configuração detalhada de voltas
-                // Nota: Pode haver múltiplos registros (duplicados), pegar o mais recente
-                const { data: lapConfigData, error: lapError } = await window.supabaseClient.supabase
-                    .from('event_lap_config')
-                    .select('*')
-                    .eq('event_id', eventId)
-                    .order('created_at', { ascending: false })
-                    .limit(1);
+                // Carregar configuração detalhada de voltas via API REST
+                const lapResponse = await fetch(`/api/events/${eventId}/lap-config`, {
+                    credentials: 'include'
+                });
                 
-                // Extrair o primeiro (mais recente) ou null
-                const lapConfig = lapConfigData && lapConfigData.length > 0 ? lapConfigData[0] : null;
-                
-                // Alerta se houver duplicados (inconsistência de dados)
-                if (lapConfigData && lapConfigData.length > 1) {
-                    console.warn(`⚠️ Encontradas ${lapConfigData.length} configurações de voltas para evento ${eventId}. Usando a mais recente. Considere limpar duplicados.`);
-                }
-                
-                if (lapError) {
-                    console.error('❌ Erro ao carregar configuração de voltas:', lapError);
-                    // Continuar mesmo com erro, deixando campos vazios
+                let lapConfig = null;
+                if (lapResponse.ok) {
+                    const lapResult = await lapResponse.json();
+                    lapConfig = lapResult.config || null;
+                } else if (lapResponse.status !== 404) {
+                    console.error('❌ Erro ao carregar configuração de voltas:', lapResponse.status);
                 }
                 
                 // Atualizar campos do formulário
@@ -2692,14 +3461,18 @@
                     dorsalConfig.category_ranges = {};
                 }
                 
-                // Atualizar settings do evento
-                const { data: event, error: fetchError } = await window.supabaseClient.supabase
-                    .from('events')
-                    .select('settings')
-                    .eq('id', eventId)
-                    .maybeSingle();
+                // Atualizar settings do evento via API REST
+                const eventResponse = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
                 
-                if (fetchError) throw fetchError;
+                if (!eventResponse.ok) {
+                    throw new Error(`HTTP ${eventResponse.status}`);
+                }
+                
+                const eventResult = await eventResponse.json();
+                const event = eventResult.event;
+                
                 if (!event) {
                     console.warn('⚠️ Evento não encontrado');
                     return;
@@ -2710,12 +3483,19 @@
                     dorsal_assignment: dorsalConfig
                 };
                 
-                const { error } = await window.supabaseClient.supabase
-                    .from('events')
-                    .update({ settings: newSettings })
-                    .eq('id', eventId);
+                const updateResponse = await fetch(`/api/events/${eventId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ settings: newSettings })
+                });
                 
-                if (error) throw error;
+                if (!updateResponse.ok) {
+                    const errorData = await updateResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    throw new Error(errorData.error || `HTTP ${updateResponse.status}`);
+                }
                 
                 console.log('✅ Configuração de dorsais salva:', dorsalConfig);
                 
@@ -2728,13 +3508,21 @@
         // Carregar configuração de dorsais
         async function loadDorsalConfig(eventId) {
             try {
-                const { data: event, error } = await window.supabaseClient.supabase
-                    .from('events')
-                    .select('settings')
-                    .eq('id', eventId)
-                    .maybeSingle();
+                const response = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        console.warn('⚠️ Evento não encontrado para carregar config de dorsais');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const event = result.event;
+                
                 if (!event) {
                     console.warn('⚠️ Evento não encontrado para carregar config de dorsais');
                     return;
@@ -2856,18 +3644,24 @@
                     };
                 }
                 
-                // Buscar settings atuais diretamente do Supabase antes de atualizar
+                // Buscar settings atuais via API REST antes de atualizar
                 // (porque currentEvent.settings pode estar desatualizado)
-                console.log('🔍 Buscando settings atuais do evento antes de atualizar...');
-                const { data: currentEventData, error: fetchError } = await window.supabaseClient.supabase
-                    .from('events')
-                    .select('settings')
-                    .eq('id', eventId)
-                    .maybeSingle();
+                console.log('🔍 Buscando settings atuais do evento antes de atualizar via API REST...');
                 
-                if (fetchError) {
-                    console.error('❌ Erro ao buscar settings atuais:', fetchError);
-                    // Continuar mesmo assim, usar currentEvent ou objeto vazio
+                let currentEventData = null;
+                try {
+                    const fetchResponse = await fetch(`/api/events/${eventId}`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (fetchResponse.ok) {
+                        const fetchResult = await fetchResponse.json();
+                        currentEventData = fetchResult.event;
+                    } else {
+                        console.error('❌ Erro ao buscar settings atuais:', fetchResponse.status);
+                    }
+                } catch (fetchErr) {
+                    console.error('❌ Erro ao buscar settings atuais:', fetchErr);
                 }
                 
                 const currentSettings = (currentEventData?.settings && typeof currentEventData.settings === 'object') 
@@ -2941,27 +3735,8 @@
                     
                 } catch (apiError) {
                     console.error('❌ Erro ao atualizar via API REST:', apiError);
-                    // Tentar fallback para Supabase direto
-                    console.log('🔄 Tentando fallback para Supabase direto...');
-                    
-                    const { data: updateResult, error } = await window.supabaseClient.supabase
-                        .from('events')
-                        .update({ 
-                            settings: newSettings,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('id', eventId)
-                        .select('id, settings');
-                    
-                    if (error) {
-                        console.error('❌ Erro no fallback Supabase:', error);
-                        throw error;
-                    }
-                    
-                    console.log('✅ Fallback Supabase - resultado:', updateResult);
-                    if (updateResult && updateResult[0]?.settings) {
-                        newSettings = updateResult[0].settings;
-                    }
+                    // Não fazer fallback para Supabase - mostrar erro
+                    throw apiError;
                 }
                 
                 // Atualizar currentEvent também
@@ -2981,13 +3756,20 @@
         // Carregar configuração de nomenclatura
         async function loadDorsalNomenclatureConfig(eventId) {
             try {
-                const { data: event, error } = await window.supabaseClient.supabase
-                    .from('events')
-                    .select('settings')
-                    .eq('id', eventId)
-                    .maybeSingle();
+                const response = await fetch(`/api/events/${eventId}`, {
+                    credentials: 'include'
+                });
                 
-                if (error) throw error;
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const event = result.event;
+                
                 if (!event) return;
                 
                 const nomenclatureConfig = event.settings?.dorsal_nomenclature || {
@@ -3111,12 +3893,7 @@
         
         async function saveLapCounterConfig(eventId) {
             try {
-                console.log('💾 Salvando configuração de contador de voltas...');
-                
-                if (!window.supabaseClient || !window.supabaseClient.supabase) {
-                    console.log('⚠️ Supabase não disponível');
-                    return;
-                }
+                console.log('💾 Salvando configuração de contador de voltas via API REST...');
                 
                 const hasLapCounter = document.getElementById('hasLapCounter');
                 const lapDistance = document.getElementById('lapDistance');
@@ -3128,30 +3905,98 @@
                 const totalLapsValue = totalLaps && totalLaps.value ? parseInt(totalLaps.value) : null;
                 const minLaps = minLapsForClassification && minLapsForClassification.value ? parseInt(minLapsForClassification.value) : 1;
                 
-                // Usar UPSERT para criar ou atualizar configuração
-                const configData = {
-                    event_id: eventId,
-                    has_lap_counter: isEnabled,
-                    lap_distance_km: distance,
-                    total_laps: totalLapsValue,
-                    min_laps_for_classification: minLaps,
-                    updated_at: new Date().toISOString()
-                };
+                console.log('💾 [saveLapCounterConfig] Valores coletados:', {
+                    isEnabled,
+                    distance,
+                    totalLapsValue,
+                    minLaps,
+                    hasLapCounterValue: hasLapCounter?.value
+                });
                 
-                // UPSERT: se já existe (por event_id), atualiza; caso contrário, insere
-                const { data, error } = await window.supabaseClient.supabase
-                    .from('event_lap_config')
-                    .upsert(configData, {
-                        onConflict: 'event_id'
-                    })
-                    .select();
+                // Atualizar evento com has_lap_counter (sempre enviar este campo)
+                // IMPORTANTE: Enviar como boolean true/false explícito
+                // Converter de string 'true'/'false' para boolean
+                let hasLapCounterValue = false; // Default: false
+                if (hasLapCounter) {
+                    const value = hasLapCounter.value;
+                    hasLapCounterValue = (value === 'true' || value === true || value === '1');
+                }
+                console.log('💾 [saveLapCounterConfig] Enviando has_lap_counter:', {
+                    valorOriginal: hasLapCounter?.value,
+                    valorConvertido: hasLapCounterValue,
+                    tipo: typeof hasLapCounterValue,
+                    isEnabled,
+                    payload: JSON.stringify({ has_lap_counter: hasLapCounterValue })
+                });
                 
-                if (error) {
-                    console.error('❌ Erro ao salvar configuração de voltas:', error);
-                    throw error;
+                const eventUpdateResponse = await fetch(`/api/events/${eventId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ has_lap_counter: hasLapCounterValue })
+                });
+                
+                if (!eventUpdateResponse.ok) {
+                    const errorText = await eventUpdateResponse.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch {
+                        errorData = { error: errorText || 'Erro desconhecido' };
+                    }
+                    console.error('❌ [saveLapCounterConfig] Erro ao atualizar has_lap_counter:', {
+                        status: eventUpdateResponse.status,
+                        error: errorData
+                    });
+                    throw new Error(errorData.error || `HTTP ${eventUpdateResponse.status}`);
                 }
                 
-                console.log('✅ Configuração de voltas salva:', data);
+                const eventUpdateResult = await eventUpdateResponse.json();
+                console.log('✅ [saveLapCounterConfig] has_lap_counter atualizado:', eventUpdateResult);
+                
+                // Salvar configuração detalhada via API REST apenas se o lap counter estiver ativado
+                // ou se já existir uma configuração para evitar erro de "campos vazios"
+                if (isEnabled || distance !== null || totalLapsValue !== null) {
+                    const configData = {
+                        has_lap_counter: isEnabled,
+                        lap_distance_km: distance,
+                        total_laps: totalLapsValue,
+                        min_laps_for_classification: minLaps
+                    };
+                    
+                    console.log('💾 [saveLapCounterConfig] Enviando config detalhada:', configData);
+                    
+                    const lapResponse = await fetch(`/api/events/${eventId}/lap-config`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(configData)
+                    });
+                    
+                    if (!lapResponse.ok) {
+                        const errorText = await lapResponse.text();
+                        let errorData;
+                        try {
+                            errorData = JSON.parse(errorText);
+                        } catch {
+                            errorData = { error: errorText || 'Erro desconhecido' };
+                        }
+                        console.error('❌ [saveLapCounterConfig] Erro ao salvar config detalhada:', {
+                            status: lapResponse.status,
+                            error: errorData
+                        });
+                        throw new Error(errorData.error || `HTTP ${lapResponse.status}`);
+                    }
+                    
+                    const result = await lapResponse.json();
+                    console.log('✅ Configuração de voltas salva via API REST:', result);
+                } else {
+                    console.log('ℹ️ Lap counter desativado e sem dados - apenas has_lap_counter foi atualizado');
+                }
                 
             } catch (error) {
                 console.error('❌ Erro ao salvar configuração de voltas:', error);

@@ -168,9 +168,46 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
             
             console.log(`✅ [GET /api/events/list] ${data?.length || 0} evento(s) retornado(s) para ${userRole}`);
             if (data && data.length > 0) {
+                // Garantir que event_date e scheduled_start_time sejam retornados como string ISO completa (com hora se disponível)
+                data.forEach(event => {
+                    if (event.event_date) {
+                        let eventDateValue = event.event_date;
+                        
+                        // Se for Date object, converter para ISO string
+                        if (eventDateValue instanceof Date) {
+                            eventDateValue = eventDateValue.toISOString();
+                        } else if (typeof eventDateValue === 'string') {
+                            // Já é string, manter como está
+                            eventDateValue = eventDateValue;
+                        }
+                        
+                        event.event_date = eventDateValue;
+                    }
+                    
+                    if (event.scheduled_start_time) {
+                        let scheduledTimeValue = event.scheduled_start_time;
+                        
+                        // Se for Date object, converter para ISO string
+                        if (scheduledTimeValue instanceof Date) {
+                            scheduledTimeValue = scheduledTimeValue.toISOString();
+                        } else if (typeof scheduledTimeValue === 'string') {
+                            // Já é string, manter como está
+                            scheduledTimeValue = scheduledTimeValue;
+                        }
+                        
+                        event.scheduled_start_time = scheduledTimeValue;
+                    }
+                });
+                
                 console.log('📊 [GET /api/events/list] Primeiro evento:', {
                     id: data[0].id,
                     name: data[0].name,
+                    event_date: data[0].event_date,
+                    event_date_tipo: typeof data[0].event_date,
+                    event_date_com_hora: data[0].event_date && data[0].event_date.includes('T'),
+                    scheduled_start_time: data[0].scheduled_start_time,
+                    scheduled_start_time_tipo: typeof data[0].scheduled_start_time,
+                    scheduled_start_time_com_hora: data[0].scheduled_start_time && data[0].scheduled_start_time.includes('T'),
                     organizer_id: data[0].organizer_id
                 });
             }
@@ -349,6 +386,97 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
     });
 
     // ==========================================
+    // GET /api/config
+    // Retorna configurações públicas (API keys para frontend)
+    // Acesso: autenticado
+    // ==========================================
+    app.get('/api/config', requireAuth, (req, res) => {
+        try {
+            // Retornar apenas as chaves necessárias para o frontend
+            // Google Maps API Key para Places Autocomplete
+            const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GEMINI_API_KEY || null;
+            
+            // Configurações do Supabase para o frontend
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+            
+            res.json({
+                success: true,
+                GOOGLE_MAPS_API_KEY: googleMapsApiKey,
+                SUPABASE_URL: supabaseUrl,
+                SUPABASE_ANON_KEY: supabaseKey,
+                SUPABASE_PUBLISHABLE_KEY: supabasePublishableKey,
+                // Outras keys podem ser adicionadas aqui se necessário
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/config] Exceção:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao carregar configurações',
+                code: 'INTERNAL_ERROR'
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/config/age-categories
+    // Retornar categorias de idade ativas
+    // Acesso: autenticado
+    // ==========================================
+    app.get('/api/config/age-categories', requireAuth, async (req, res) => {
+        try {
+            const { data, error } = await supabase
+                .from('age_categories')
+                .select('*')
+                .eq('is_active', true)
+                .order('sort_order', { ascending: true });
+            
+            if (error) throw error;
+            
+            res.json({
+                success: true,
+                categories: data || [],
+                count: data?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/config/age-categories] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/config/event-modalities
+    // Retornar modalidades de evento ativas
+    // Acesso: autenticado
+    // ==========================================
+    app.get('/api/config/event-modalities', requireAuth, async (req, res) => {
+        try {
+            const { data, error } = await supabase
+                .from('event_modalities')
+                .select('*')
+                .eq('is_active', true);
+            
+            if (error) throw error;
+            
+            res.json({
+                success: true,
+                modalities: data || [],
+                count: data?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/config/event-modalities] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
     // GET /api/events/:id
     // Detalhes de um evento específico
     // Acesso: admin, moderator
@@ -359,9 +487,14 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
             
             console.log('📋 [GET /api/events/:id] ID:', eventId);
             
+            // Buscar evento - garantir que event_date seja retornado como timestamp completo
+            // Usar cast explícito para garantir que hora seja preservada mesmo se coluna for DATE
             const { data, error } = await supabase
                 .from('events')
-                .select('*')
+                .select(`
+                    *,
+                    event_date
+                `)
                 .eq('id', eventId)
                 .single();
             
@@ -382,6 +515,32 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
             }
             
             console.log('✅ [GET /api/events/:id] Evento encontrado:', data.name);
+            console.log('📅 [GET /api/events/:id] event_date raw do Supabase:', data.event_date, 'tipo:', typeof data.event_date);
+            console.log('📏 [GET /api/events/:id] distance_km do Supabase:', data.distance_km, 'tipo:', typeof data.distance_km);
+            console.log('⏰ [GET /api/events/:id] scheduled_start_time do Supabase:', data.scheduled_start_time, 'tipo:', typeof data.scheduled_start_time);
+            
+            // Garantir que event_date seja retornado como string ISO completa (com hora se disponível)
+            // O Supabase pode retornar como Date object ou string, precisamos normalizar
+            if (data.event_date) {
+                let eventDateValue = data.event_date;
+                
+                // Se for Date object, converter para ISO string
+                if (eventDateValue instanceof Date) {
+                    eventDateValue = eventDateValue.toISOString();
+                    console.log('📅 [GET /api/events/:id] event_date convertido de Date para ISO:', eventDateValue);
+                } else if (typeof eventDateValue === 'string') {
+                    // Se for string mas só tem data (10 chars), pode ser que o banco só armazene data
+                    // Nesse caso, manter como está, mas logar para debug
+                    if (eventDateValue.length === 10 && !eventDateValue.includes('T')) {
+                        console.log('⚠️ [GET /api/events/:id] event_date retornado apenas como data (sem hora):', eventDateValue);
+                    } else {
+                        console.log('✅ [GET /api/events/:id] event_date retornado com hora:', eventDateValue);
+                    }
+                }
+                
+                // Manter o valor original (Supabase já retorna correto)
+                data.event_date = eventDateValue;
+            }
             
             res.json({
                 success: true,
@@ -529,13 +688,23 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
     app.put('/api/events/:id', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
         try {
             const eventId = req.params.id;
-            const { name, description, event_date, location, status, settings } = req.body;
+            const { name, description, event_date, location, status, settings, distance_km, event_type, has_categories, has_lap_counter, scheduled_start_time, event_started_at, event_ended_at, is_active } = req.body;
             
             console.log('✏️ [PUT /api/events/:id] Editando evento:', eventId);
-            console.log('📋 [PUT /api/events/:id] Body recebido:', { 
+            console.log('📋 [PUT /api/events/:id] Body recebido (completo):', req.body);
+            console.log('📋 [PUT /api/events/:id] Body recebido (resumido):', { 
                 hasName: !!name, 
                 hasSettings: !!settings,
-                settingsKeys: settings ? Object.keys(settings) : []
+                settingsKeys: settings ? Object.keys(settings) : [],
+                distance_km: distance_km,
+                distance_km_tipo: typeof distance_km,
+                event_type: event_type,
+                has_categories: has_categories,
+                has_lap_counter: has_lap_counter,
+                has_lap_counter_tipo: typeof has_lap_counter,
+                has_lap_counter_undefined: has_lap_counter === undefined,
+                scheduled_start_time: scheduled_start_time,
+                scheduled_start_time_tipo: typeof scheduled_start_time
             });
             
             // Buscar evento atual para preservar campos não enviados
@@ -561,9 +730,32 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
             // Verificar se pelo menos um campo está a ser atualizado
             const hasUpdates = name !== undefined || description !== undefined || 
                               event_date !== undefined || location !== undefined || 
-                              status !== undefined || settings !== undefined;
+                              status !== undefined || settings !== undefined ||
+                              distance_km !== undefined || event_type !== undefined ||
+                              has_categories !== undefined || has_lap_counter !== undefined ||
+                              scheduled_start_time !== undefined || event_started_at !== undefined ||
+                              event_ended_at !== undefined || is_active !== undefined;
+            
+            console.log('🔍 [PUT /api/events/:id] Verificação de campos:', {
+                name: name !== undefined,
+                description: description !== undefined,
+                event_date: event_date !== undefined,
+                location: location !== undefined,
+                status: status !== undefined,
+                settings: settings !== undefined,
+                distance_km: distance_km !== undefined,
+                event_type: event_type !== undefined,
+                has_categories: has_categories !== undefined,
+                has_lap_counter: has_lap_counter !== undefined,
+                scheduled_start_time: scheduled_start_time !== undefined,
+                event_started_at: event_started_at !== undefined,
+                event_ended_at: event_ended_at !== undefined,
+                is_active: is_active !== undefined,
+                hasUpdates
+            });
             
             if (!hasUpdates) {
+                console.warn('⚠️ [PUT /api/events/:id] Nenhum campo válido fornecido para atualização');
                 return res.status(400).json({
                     success: false,
                     error: 'Pelo menos um campo deve ser fornecido para atualização',
@@ -612,7 +804,63 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
                 console.log('📋 [PUT /api/events/:id] Settings a guardar:', JSON.stringify(updateData.settings, null, 2));
             }
             
+            if (distance_km !== undefined) {
+                const parsedDistance = (distance_km === null || distance_km === '') ? null : parseFloat(distance_km);
+                updateData.distance_km = isNaN(parsedDistance) ? null : parsedDistance;
+                console.log('📏 [PUT /api/events/:id] distance_km processado:', {
+                    recebido: distance_km,
+                    tipo_recebido: typeof distance_km,
+                    processado: updateData.distance_km,
+                    tipo_processado: typeof updateData.distance_km
+                });
+            }
+            
+            if (event_type !== undefined) {
+                updateData.event_type = (event_type === null || event_type === '') ? null : event_type;
+            }
+            
+            if (has_categories !== undefined) {
+                updateData.has_categories = has_categories === true || has_categories === 'true';
+            }
+            
+            if (has_lap_counter !== undefined) {
+                updateData.has_lap_counter = has_lap_counter === true || has_lap_counter === 'true';
+            }
+            
+            if (scheduled_start_time !== undefined) {
+                // Aceitar tanto ISO string quanto null
+                updateData.scheduled_start_time = scheduled_start_time || null;
+                if (updateData.scheduled_start_time && !updateData.scheduled_start_time.includes('T')) {
+                    // Se for apenas data, converter para datetime
+                    updateData.scheduled_start_time = new Date(scheduled_start_time).toISOString();
+                }
+            }
+            
+            if (event_started_at !== undefined) {
+                // Aceitar tanto ISO string quanto null (para reset)
+                updateData.event_started_at = event_started_at || null;
+                if (updateData.event_started_at && !updateData.event_started_at.includes('T')) {
+                    // Se for apenas data, converter para datetime
+                    updateData.event_started_at = new Date(event_started_at).toISOString();
+                }
+            }
+            
+            if (event_ended_at !== undefined) {
+                // Aceitar tanto ISO string quanto null (para reset)
+                updateData.event_ended_at = event_ended_at || null;
+                if (updateData.event_ended_at && !updateData.event_ended_at.includes('T')) {
+                    // Se for apenas data, converter para datetime
+                    updateData.event_ended_at = new Date(event_ended_at).toISOString();
+                }
+            }
+            
+            if (is_active !== undefined) {
+                // Aceitar boolean (true/false) ou string 'true'/'false'
+                updateData.is_active = is_active === true || is_active === 'true';
+            }
+            
             console.log('📋 [PUT /api/events/:id] Campos a atualizar:', Object.keys(updateData));
+            console.log('📋 [PUT /api/events/:id] Valores a atualizar:', JSON.stringify(updateData, null, 2));
             
             const { data, error } = await supabase
                 .from('events')
@@ -622,6 +870,10 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
                 .single();
             
             if (error) {
+                console.error('❌ [PUT /api/events/:id] Erro no UPDATE:', error);
+                console.error('❌ [PUT /api/events/:id] Código do erro:', error.code);
+                console.error('❌ [PUT /api/events/:id] Mensagem:', error.message);
+                console.error('❌ [PUT /api/events/:id] Detalhes:', error.details);
                 if (error.code === 'PGRST116') {
                     return res.status(404).json({
                         success: false,
@@ -638,6 +890,51 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
             }
             
             console.log('✅ [PUT /api/events/:id] Evento atualizado:', data.name);
+            console.log('📋 [PUT /api/events/:id] Resultado do UPDATE:', {
+                hasData: !!data,
+                hasError: !!error,
+                distance_km_retornado: data?.distance_km,
+                event_type_retornado: data?.event_type,
+                distance_km_enviado: updateData.distance_km,
+                todos_campos: data ? Object.keys(data) : []
+            });
+            
+            // Verificar se distance_km foi realmente atualizado
+            if (updateData.distance_km !== undefined && data.distance_km !== updateData.distance_km) {
+                console.warn('⚠️ [PUT /api/events/:id] distance_km não foi atualizado corretamente!');
+                console.warn('⚠️ [PUT /api/events/:id] Enviado:', updateData.distance_km, 'Retornado:', data.distance_km);
+                console.warn('⚠️ [PUT /api/events/:id] Tentando atualizar novamente...');
+                
+                // Tentar atualizar novamente apenas o distance_km
+                try {
+                    const { data: retryData, error: retryError } = await supabase
+                        .from('events')
+                        .update({ distance_km: updateData.distance_km })
+                        .eq('id', eventId)
+                        .select('distance_km')
+                        .single();
+                    
+                    if (!retryError && retryData) {
+                        if (retryData.distance_km === updateData.distance_km) {
+                            console.log('✅ [PUT /api/events/:id] distance_km atualizado na 2ª tentativa:', retryData.distance_km);
+                            data.distance_km = retryData.distance_km;
+                        } else {
+                            console.error('❌ [PUT /api/events/:id] distance_km ainda não foi atualizado após 2ª tentativa!');
+                            console.error('❌ [PUT /api/events/:id] Esperado:', updateData.distance_km, 'Obtido:', retryData.distance_km);
+                            // Mesmo assim, usar o valor que foi enviado
+                            data.distance_km = updateData.distance_km;
+                        }
+                    } else {
+                        console.error('❌ [PUT /api/events/:id] Erro na 2ª tentativa:', retryError);
+                        // Mesmo assim, usar o valor que foi enviado
+                        data.distance_km = updateData.distance_km;
+                    }
+                } catch (retryErr) {
+                    console.error('❌ [PUT /api/events/:id] Exceção na 2ª tentativa:', retryErr);
+                    // Mesmo assim, usar o valor que foi enviado
+                    data.distance_km = updateData.distance_km;
+                }
+            }
             
             res.json({
                 success: true,
@@ -878,7 +1175,518 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
         }
     });
 
+    // ==========================================
+    // PUT /api/events/:id/category-configs
+    // Atualizar configurações de categorias de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.put('/api/events/:id/category-configs', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            const { configs } = req.body;
+            
+            console.log('🏷️ [PUT /api/events/:id/category-configs] Evento:', eventId, 'Configs:', configs?.length || 0);
+            
+            // Deletar configurações existentes
+            const { error: deleteError } = await supabase
+                .from('event_category_config')
+                .delete()
+                .eq('event_id', eventId);
+            
+            if (deleteError) throw deleteError;
+            
+            // Inserir novas configurações
+            let insertResult = null;
+            if (configs && configs.length > 0) {
+                const { data, error: insertError } = await supabase
+                    .from('event_category_config')
+                    .insert(configs)
+                    .select();
+                
+                if (insertError) throw insertError;
+                insertResult = data;
+            }
+            
+            console.log(`✅ [PUT /api/events/:id/category-configs] ${insertResult?.length || 0} configurações salvas`);
+            
+            res.json({
+                success: true,
+                configs: insertResult || [],
+                count: insertResult?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [PUT /api/events/:id/category-configs] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/events/:id/category-configs
+    // Obter configurações de categorias de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.get('/api/events/:id/category-configs', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            
+            console.log('🏷️ [GET /api/events/:id/category-configs] Evento:', eventId);
+            
+            const { data, error } = await supabase
+                .from('event_category_config')
+                .select(`
+                    *,
+                    age_categories (*)
+                `)
+                .eq('event_id', eventId);
+            
+            if (error) throw error;
+            
+            console.log(`✅ [GET /api/events/:id/category-configs] ${data?.length || 0} configurações`);
+            
+            res.json({
+                success: true,
+                configs: data || [],
+                count: data?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/events/:id/category-configs] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/events/:id/modality-configs
+    // Obter configurações de modalidades de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.get('/api/events/:id/modality-configs', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            
+            console.log('🏃 [GET /api/events/:id/modality-configs] Evento:', eventId);
+            
+            const { data, error } = await supabase
+                .from('event_modality_config')
+                .select(`
+                    *,
+                    event_modalities (*)
+                `)
+                .eq('event_id', eventId);
+            
+            if (error) throw error;
+            
+            console.log(`✅ [GET /api/events/:id/modality-configs] ${data?.length || 0} configurações`);
+            
+            res.json({
+                success: true,
+                configs: data || [],
+                count: data?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/events/:id/modality-configs] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // PUT /api/events/:id/modality-configs
+    // Atualizar configurações de modalidades de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.put('/api/events/:id/modality-configs', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            const { configs } = req.body;
+            
+            console.log('🏃 [PUT /api/events/:id/modality-configs] Evento:', eventId, 'Configs:', configs?.length || 0);
+            
+            // Deletar configurações existentes
+            const { error: deleteError } = await supabase
+                .from('event_modality_config')
+                .delete()
+                .eq('event_id', eventId);
+            
+            if (deleteError) throw deleteError;
+            
+            // Inserir novas configurações
+            let insertResult = null;
+            if (configs && configs.length > 0) {
+                const { data, error: insertError } = await supabase
+                    .from('event_modality_config')
+                    .insert(configs)
+                    .select();
+                
+                if (insertError) throw insertError;
+                insertResult = data;
+            }
+            
+            console.log(`✅ [PUT /api/events/:id/modality-configs] ${insertResult?.length || 0} configurações salvas`);
+            
+            res.json({
+                success: true,
+                configs: insertResult || [],
+                count: insertResult?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [PUT /api/events/:id/modality-configs] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/config/checkpoint-types
+    // Retornar tipos de checkpoint
+    // Acesso: autenticado
+    // ==========================================
+    app.get('/api/config/checkpoint-types', requireAuth, async (req, res) => {
+        try {
+            const { data, error } = await supabase
+                .from('checkpoint_types')
+                .select('*')
+                .order('sort_order', { ascending: true });
+            
+            if (error) throw error;
+            
+            res.json({
+                success: true,
+                types: data || [],
+                count: data?.length || 0
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/config/checkpoint-types] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // PUT /api/config/checkpoint-types/:code
+    // Atualizar tipo de checkpoint
+    // Acesso: admin, moderator
+    // ==========================================
+    app.put('/api/config/checkpoint-types/:code', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const { code } = req.params;
+            const { is_active } = req.body;
+            
+            const { data, error } = await supabase
+                .from('checkpoint_types')
+                .update({ is_active })
+                .eq('code', code)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            res.json({
+                success: true,
+                type: data
+            });
+        } catch (error) {
+            console.error('❌ [PUT /api/config/checkpoint-types/:code] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/events/:id/processor-config
+    // Obter configuração do processador de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.get('/api/events/:id/processor-config', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            
+            // Tentar buscar da tabela event_processor_config
+            const { data, error } = await supabase
+                .from('event_processor_config')
+                .select('*')
+                .eq('event_id', eventId)
+                .maybeSingle();
+            
+            if (error) {
+                // Se não existir (PGRST116 = no rows), retornar null graciosamente
+                if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+                    return res.json({
+                        success: true,
+                        config: null
+                    });
+                }
+                
+                // Se a tabela não existir ou houver outro erro, logar mas retornar null
+                console.warn('⚠️ [GET /api/events/:id/processor-config] Erro ao buscar config:', error.message);
+                return res.json({
+                    success: true,
+                    config: null
+                });
+            }
+            
+            res.json({
+                success: true,
+                config: data || null
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/events/:id/processor-config] Exceção:', error);
+            // Em caso de exceção, retornar null em vez de erro para não quebrar a UI
+            res.json({
+                success: true,
+                config: null
+            });
+        }
+    });
+
+    // ==========================================
+    // PUT /api/events/:id/processor-config
+    // Atualizar configuração do processador de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.put('/api/events/:id/processor-config', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            const {
+                processor_type,
+                processor_speed,
+                processor_confidence,
+                openai_model,
+                gemini_model,
+                deepseek_model
+            } = req.body;
+            
+            const updateData = {
+                event_id: eventId,
+                processor_type: processor_type || 'gemini',
+                processor_speed: processor_speed || 'balanced',
+                processor_confidence: processor_confidence !== undefined ? parseFloat(processor_confidence) : 0.7,
+                openai_model: openai_model || 'gpt-4o',
+                gemini_model: gemini_model || 'gemini-1.5-flash',
+                deepseek_model: deepseek_model || 'deepseek-chat',
+                updated_at: new Date().toISOString()
+            };
+            
+            // Verificar se já existe
+            const { data: existing, error: checkError } = await supabase
+                .from('event_processor_config')
+                .select('id')
+                .eq('event_id', eventId)
+                .maybeSingle();
+            
+            // Se houver erro na verificação (ex: tabela não existe), tentar criar
+            if (checkError && checkError.code !== 'PGRST116') {
+                console.warn('⚠️ [PUT /api/events/:id/processor-config] Erro ao verificar existência:', checkError.message);
+                // Tentar inserir mesmo assim (pode criar a primeira vez)
+            }
+            
+            let result;
+            if (existing) {
+                // Update
+                const { data, error } = await supabase
+                    .from('event_processor_config')
+                    .update(updateData)
+                    .eq('event_id', eventId)
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ [PUT /api/events/:id/processor-config] Erro no UPDATE:', error);
+                    throw error;
+                }
+                result = data;
+            } else {
+                // Insert
+                const { data, error } = await supabase
+                    .from('event_processor_config')
+                    .insert({
+                        ...updateData,
+                        created_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ [PUT /api/events/:id/processor-config] Erro no INSERT:', error);
+                    throw error;
+                }
+                result = data;
+            }
+            
+            res.json({
+                success: true,
+                config: result
+            });
+        } catch (error) {
+            console.error('❌ [PUT /api/events/:id/processor-config] Exceção:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Erro ao salvar configuração do processador'
+            });
+        }
+    });
+
+    // ==========================================
+    // GET /api/events/:id/lap-config
+    // Obter configuração de lap counter de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.get('/api/events/:id/lap-config', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            
+            // Buscar configuração mais recente
+            const { data, error } = await supabase
+                .from('event_lap_config')
+                .select('*')
+                .eq('event_id', eventId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return res.json({
+                        success: true,
+                        config: null
+                    });
+                }
+                throw error;
+            }
+            
+            res.json({
+                success: true,
+                config: data || null
+            });
+        } catch (error) {
+            console.error('❌ [GET /api/events/:id/lap-config] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // ==========================================
+    // PUT /api/events/:id/lap-config
+    // Salvar/atualizar configuração de lap counter de um evento
+    // Acesso: admin, moderator
+    // ==========================================
+    app.put('/api/events/:id/lap-config', requireAuth, requireRole(['admin', 'moderator']), async (req, res) => {
+        try {
+            const eventId = req.params.id;
+            const {
+                has_lap_counter,
+                lap_distance_km,
+                total_laps,
+                min_laps_for_classification
+            } = req.body;
+            
+            // Verificar se pelo menos um campo foi fornecido (exceto event_id)
+            const hasData = has_lap_counter !== undefined || 
+                          lap_distance_km !== undefined || 
+                          total_laps !== undefined || 
+                          min_laps_for_classification !== undefined;
+            
+            if (!hasData) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Pelo menos um campo deve ser fornecido para atualização'
+                });
+            }
+            
+            // Construir objeto de atualização apenas com campos fornecidos
+            const updateData = {
+                event_id: eventId,
+                updated_at: new Date().toISOString()
+            };
+            
+            if (has_lap_counter !== undefined) {
+                updateData.has_lap_counter = has_lap_counter;
+            }
+            if (lap_distance_km !== undefined) {
+                updateData.lap_distance_km = lap_distance_km !== null ? parseFloat(lap_distance_km) : null;
+            }
+            if (total_laps !== undefined) {
+                updateData.total_laps = total_laps !== null ? parseInt(total_laps) : null;
+            }
+            if (min_laps_for_classification !== undefined) {
+                updateData.min_laps_for_classification = min_laps_for_classification !== undefined ? parseInt(min_laps_for_classification) : 1;
+            }
+            
+            // Verificar se já existe
+            const { data: existing, error: checkError } = await supabase
+                .from('event_lap_config')
+                .select('id')
+                .eq('event_id', eventId)
+                .maybeSingle();
+            
+            let result;
+            if (existing) {
+                // Update
+                const { data, error } = await supabase
+                    .from('event_lap_config')
+                    .update(updateData)
+                    .eq('event_id', eventId)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                result = data;
+            } else {
+                // Insert - garantir que tem valores mínimos
+                const insertData = {
+                    ...updateData,
+                    event_id: eventId,
+                    has_lap_counter: has_lap_counter !== undefined ? has_lap_counter : false,
+                    lap_distance_km: lap_distance_km !== undefined ? (lap_distance_km !== null ? parseFloat(lap_distance_km) : null) : null,
+                    total_laps: total_laps !== undefined ? (total_laps !== null ? parseInt(total_laps) : null) : null,
+                    min_laps_for_classification: min_laps_for_classification !== undefined ? parseInt(min_laps_for_classification) : 1,
+                    created_at: new Date().toISOString()
+                };
+                
+                const { data, error } = await supabase
+                    .from('event_lap_config')
+                    .insert(insertData)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                result = data;
+            }
+            
+            res.json({
+                success: true,
+                config: result
+            });
+        } catch (error) {
+            console.error('❌ [PUT /api/events/:id/lap-config] Erro:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     console.log('✅ Rotas de eventos carregadas:');
+    console.log('   GET    /api/config');
+    console.log('   GET    /api/config/age-categories');
+    console.log('   GET    /api/config/event-modalities');
+    console.log('   GET    /api/config/checkpoint-types');
+    console.log('   PUT    /api/config/checkpoint-types/:code');
     console.log('   GET    /api/events/list');
     console.log('   GET    /api/events/stats');
     console.log('   GET    /api/events/:id');
@@ -886,8 +1694,16 @@ module.exports = function(app, sessionManager, supabaseAdmin = null, auditLogger
     console.log('   GET    /api/events/:id/participants');
     console.log('   GET    /api/events/:id/detections');
     console.log('   GET    /api/events/:id/classifications');
+    console.log('   GET    /api/events/:id/category-configs');
+    console.log('   GET    /api/events/:id/modality-configs');
+    console.log('   GET    /api/events/:id/processor-config');
+    console.log('   GET    /api/events/:id/lap-config');
     console.log('   POST   /api/events/create');
     console.log('   PUT    /api/events/:id');
+    console.log('   PUT    /api/events/:id/category-configs');
+    console.log('   PUT    /api/events/:id/modality-configs');
+    console.log('   PUT    /api/events/:id/processor-config');
+    console.log('   PUT    /api/events/:id/lap-config');
     console.log('   POST   /api/events/:id/reset');
     console.log('   DELETE /api/events/:id');
 };

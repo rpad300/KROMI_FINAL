@@ -224,21 +224,10 @@ app.get('/api/device-detections', async (req, res) => {
 });
 
 // Rota para fornecer configurações do ambiente
-app.get('/api/config', (req, res) => {
-    console.log('Solicitação de configuração recebida');
-    console.log('GOOGLE_VISION_API_KEY no processo:', process.env.GOOGLE_VISION_API_KEY ? 'CONFIGURADA' : 'NÃO CONFIGURADA');
-    console.log('SUPABASE_URL no processo:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'CONFIGURADA' : 'NÃO CONFIGURADA');
-    
-    res.json({
-        GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || null,
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY || null,
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || null,
-        DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || null,
-        SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || null,
-        SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null,
-        SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY || null
-    });
-});
+// REMOVIDA - Agora está em events-routes.js com autenticação
+// Mantendo comentado para referência:
+// app.get('/api/config', (req, res) => { ... });
+// Esta rota foi movida para src/events-routes.js para garantir autenticação e consistência
 
 // ==========================================
 // ROTAS DE AUTENTICAÇÃO
@@ -4138,6 +4127,7 @@ function createDefaultConfirmationEmail(userName, confirmationUrl) {
 // ==========================================
 // ROTAS DE EVENTOS (REST API)
 // ==========================================
+delete require.cache[require.resolve('./src/events-routes')];
 const setupEventsRoutes = require('./src/events-routes');
 setupEventsRoutes(app, sessionManager, supabaseAdmin, auditLogger);
 
