@@ -5204,9 +5204,15 @@ server.listen(PORT, '0.0.0.0', () => {
     imageProcessor.init().then(success => {
         if (success) {
             console.log('✅ Processador de imagens ativo e monitorando buffer');
+            console.log(`   - Tipo: ${imageProcessor.processorType}`);
+            console.log(`   - Verificação a cada: ${imageProcessor.checkInterval / 1000}s`);
+            console.log(`   - Tamanho do lote: ${imageProcessor.batchSize} imagens`);
         } else {
             console.log('❌ Falha ao iniciar processador de imagens');
+            console.log('   Verifique se as API keys estão configuradas no .env');
         }
+    }).catch(error => {
+        console.error('❌ Erro ao inicializar processador:', error);
     });
     
     // Iniciar processador de device detections (app nativa)

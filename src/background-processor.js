@@ -54,9 +54,312 @@ class BackgroundImageProcessor {
             return false;
         }
 
+        // Validar se as APIs estão realmente funcionais (fazer teste de conectividade)
+        this.log('🔍 Validando conectividade das APIs configuradas...', 'info');
+        
+        // Verificar se há pelo menos uma API key configurada
+        const hasAnyApiKey = this.geminiApiKey || this.openaiApiKey || this.deepseekApiKey || this.googleVisionApiKey;
+        
+        if (!hasAnyApiKey) {
+            this.log('⚠️ ATENÇÃO: Nenhuma API key configurada no .env', 'warning');
+            this.log('   O processador iniciará mas não poderá processar imagens', 'warning');
+        } else {
+            const validationResults = await this.validateApiConnectivity();
+            
+            // Verificar se pelo menos uma API funcional está disponível
+            const workingApis = Object.entries(validationResults)
+                .filter(([_, working]) => working)
+                .map(([api, _]) => api);
+            
+            const failedApis = Object.entries(validationResults)
+                .filter(([_, working]) => !working)
+                .map(([api, _]) => api);
+            
+            if (workingApis.length === 0) {
+                this.log('❌ ERRO CRÍTICO: Nenhuma API está funcionando!', 'error');
+                this.log(`   APIs testadas: ${Object.keys(validationResults).join(', ')}`, 'error');
+                this.log(`   Todas falharam. Verifique as API keys no .env`, 'error');
+                return false;
+            }
+            
+            this.log(`✅ APIs funcionais (${workingApis.length}): ${workingApis.join(', ')}`, 'success');
+            
+            if (failedApis.length > 0) {
+                this.log(`⚠️ APIs com problemas (${failedApis.length}): ${failedApis.join(', ')}`, 'warning');
+            }
+            
+            // Verificar se o processador principal está funcionando
+            const mainProcessorWorking = validationResults[this.processorType];
+            if (!mainProcessorWorking) {
+                this.log(`⚠️ ATENÇÃO: Processador principal (${this.processorType}) não está funcionando!`, 'warning');
+                this.log(`   Sistema usará fallbacks: ${workingApis.join(', ')}`, 'warning');
+            } else {
+                this.log(`✅ Processador principal (${this.processorType}) está funcionando`, 'success');
+            }
+        }
+
         this.log(`Processador de imagens iniciado com sucesso (${this.processorType})`, 'success');
         this.startAutoProcessor();
         return true;
+    }
+    
+    /**
+     * Valida conectividade das APIs fazendo uma requisição de teste
+     */
+    async validateApiConnectivity() {
+        const results = {};
+        
+        // Testar Gemini
+        if (this.geminiApiKey) {
+            this.log('   Testando Gemini API...', 'info');
+            try {
+                await this.testGeminiConnection();
+                results.gemini = true;
+                this.log('   ✅ Gemini: OK', 'success');
+            } catch (error) {
+                results.gemini = false;
+                this.log(`   ❌ Gemini: FALHOU - ${error.message}`, 'error');
+            }
+        }
+        
+        // Testar OpenAI
+        if (this.openaiApiKey) {
+            this.log('   Testando OpenAI API...', 'info');
+            try {
+                await this.testOpenAIConnection();
+                results.openai = true;
+                this.log('   ✅ OpenAI: OK', 'success');
+            } catch (error) {
+                results.openai = false;
+                this.log(`   ❌ OpenAI: FALHOU - ${error.message}`, 'error');
+            }
+        }
+        
+        // Testar DeepSeek
+        if (this.deepseekApiKey) {
+            this.log('   Testando DeepSeek API...', 'info');
+            try {
+                await this.testDeepSeekConnection();
+                results.deepseek = true;
+                this.log('   ✅ DeepSeek: OK', 'success');
+            } catch (error) {
+                results.deepseek = false;
+                this.log(`   ❌ DeepSeek: FALHOU - ${error.message}`, 'error');
+            }
+        }
+        
+        // Testar Google Vision
+        if (this.googleVisionApiKey) {
+            this.log('   Testando Google Vision API...', 'info');
+            try {
+                await this.testGoogleVisionConnection();
+                results['google-vision'] = true;
+                this.log('   ✅ Google Vision: OK', 'success');
+            } catch (error) {
+                results['google-vision'] = false;
+                this.log(`   ❌ Google Vision: FALHOU - ${error.message}`, 'error');
+            }
+        }
+        
+        return results;
+    }
+    
+    /**
+     * Testa conexão com Gemini fazendo uma requisição simples
+     */
+    async testGeminiConnection() {
+        return new Promise((resolve, reject) => {
+            const testBody = JSON.stringify({
+                contents: [{
+                    parts: [{ text: 'Say "OK" if you can read this.' }]
+                }]
+            });
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
+            const urlObj = new URL(url);
+            
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(testBody)
+                },
+                timeout: 10000 // 10 segundos timeout
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve();
+                    } else {
+                        try {
+                            const error = JSON.parse(data);
+                            reject(new Error(`${res.statusCode}: ${error.error?.message || data.substring(0, 100)}`));
+                        } catch {
+                            reject(new Error(`${res.statusCode}: ${data.substring(0, 100)}`));
+                        }
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout - API não respondeu em 10s'));
+            });
+            
+            req.write(testBody);
+            req.end();
+        });
+    }
+    
+    /**
+     * Testa conexão com OpenAI
+     */
+    async testOpenAIConnection() {
+        return new Promise((resolve, reject) => {
+            const testBody = JSON.stringify({
+                model: this.openaiModel,
+                messages: [{ role: 'user', content: 'Say OK' }],
+                max_tokens: 5
+            });
+            
+            const urlObj = new URL('https://api.openai.com/v1/chat/completions');
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.openaiApiKey}`,
+                    'Content-Length': Buffer.byteLength(testBody)
+                },
+                timeout: 10000
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve();
+                    } else {
+                        reject(new Error(`${res.statusCode}: ${data.substring(0, 100)}`));
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout'));
+            });
+            
+            req.write(testBody);
+            req.end();
+        });
+    }
+    
+    /**
+     * Testa conexão com DeepSeek
+     */
+    async testDeepSeekConnection() {
+        return new Promise((resolve, reject) => {
+            const testBody = JSON.stringify({
+                model: this.deepseekModel,
+                messages: [{ role: 'user', content: 'Say OK' }],
+                max_tokens: 5
+            });
+            
+            const urlObj = new URL('https://api.deepseek.com/v1/chat/completions');
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.deepseekApiKey}`,
+                    'Content-Length': Buffer.byteLength(testBody)
+                },
+                timeout: 10000
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve();
+                    } else {
+                        reject(new Error(`${res.statusCode}: ${data.substring(0, 100)}`));
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout'));
+            });
+            
+            req.write(testBody);
+            req.end();
+        });
+    }
+    
+    /**
+     * Testa conexão com Google Vision
+     */
+    async testGoogleVisionConnection() {
+        return new Promise((resolve, reject) => {
+            // Teste simples - imagem pequena em base64 (1x1 pixel)
+            const testImage = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAKAAoDAREAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCKAAf/2Q==';
+            
+            const testBody = JSON.stringify({
+                requests: [{
+                    image: { content: testImage },
+                    features: [{ type: 'TEXT_DETECTION', maxResults: 1 }]
+                }]
+            });
+            
+            const urlObj = new URL(`https://vision.googleapis.com/v1/images:annotate?key=${this.googleVisionApiKey}`);
+            const options = {
+                hostname: urlObj.hostname,
+                path: urlObj.pathname + urlObj.search,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(testBody)
+                },
+                timeout: 10000
+            };
+            
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        resolve();
+                    } else {
+                        const error = JSON.parse(data);
+                        reject(new Error(`${res.statusCode}: ${error.error?.message || data.substring(0, 100)}`));
+                    }
+                });
+            });
+            
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Timeout'));
+            });
+            
+            req.write(testBody);
+            req.end();
+        });
     }
     
     async loadConfigurationFromDatabase() {
@@ -436,6 +739,7 @@ class BackgroundImageProcessor {
 
     async processImageBuffer() {
         if (this.isProcessing) {
+            this.log('Processamento já em andamento, aguardando...', 'info');
             return;
         }
 
@@ -446,6 +750,11 @@ class BackgroundImageProcessor {
             const pendingImages = await this.fetchPendingImages();
             
             if (!pendingImages || pendingImages.length === 0) {
+                // Log apenas de vez em quando para não poluir (a cada 10 verificações = 100 segundos)
+                const shouldLog = Math.random() < 0.1;
+                if (shouldLog) {
+                    this.log('Nenhuma imagem pendente no buffer', 'info');
+                }
                 return;
             }
             
@@ -457,7 +766,7 @@ class BackgroundImageProcessor {
                 return;
             }
             
-            this.log(`Processando ${validImages.length} de ${pendingImages.length} imagens`, 'info');
+            this.log(`📸 Encontradas ${validImages.length} imagens pendentes - iniciando processamento com ${this.processorType}...`, 'info');
 
             // Agrupar por evento para aplicar configurações específicas
             const eventGroups = {};
@@ -565,21 +874,28 @@ class BackgroundImageProcessor {
         // Definir ordem de fallback baseado no processador principal
         const fallbackChain = this.getFallbackChain();
         
+        this.log(`🚀 Iniciando processamento com cadeia: ${fallbackChain.join(' → ')}`, 'info');
+        
         // Tentar cada processador na cadeia
         for (let i = 0; i < fallbackChain.length; i++) {
             const processorType = fallbackChain[i];
             const isPrimary = i === 0;
             
-            if (!isPrimary) {
-                this.log(`🔄 Tentando fallback para ${processorType}...`, 'info');
+            if (isPrimary) {
+                this.log(`🎯 Tentando processador principal: ${processorType.toUpperCase()}...`, 'info');
+            } else {
+                this.log(`🔄 Tentando fallback ${i + 1}/${fallbackChain.length}: ${processorType.toUpperCase()}...`, 'info');
             }
             
             try {
                 switch (processorType) {
                     case 'gemini':
+                        this.log(`📞 Chamando Gemini API...`, 'info');
                         await this.processImagesWithGemini(images);
                         if (!isPrimary) {
                             this.log(`✅ Fallback ${processorType} bem-sucedido`, 'success');
+                        } else {
+                            this.log(`✅ Processamento Gemini concluído com sucesso`, 'success');
                         }
                         return; // Sucesso! Sair do loop
                         
@@ -630,24 +946,36 @@ class BackgroundImageProcessor {
                         throw new Error(`Tipo de processador desconhecido: ${processorType}`);
                 }
             } catch (error) {
-                this.log(`❌ Falha com ${processorType}: ${error.message}`, 'error');
+                const errorDetails = error.message || error.toString();
+                this.log(`❌ Falha com ${processorType.toUpperCase()}: ${errorDetails}`, 'error');
+                
+                // Log mais detalhado para Gemini (principal)
+                if (processorType === 'gemini' && isPrimary) {
+                    this.log(`🔍 Detalhes do erro Gemini:`, 'error');
+                    this.log(`   - Mensagem: ${errorDetails}`, 'error');
+                    if (error.stack) {
+                        this.log(`   - Stack trace (primeiras linhas): ${error.stack.split('\n').slice(0, 3).join('\n   ')}`, 'error');
+                    }
+                }
                 
                 // Se não é o último da cadeia, continuar para o próximo
                 if (i < fallbackChain.length - 1) {
-                    this.log(`⏭️ Tentando próximo serviço na cadeia...`, 'info');
+                    this.log(`⏭️ Tentando próximo serviço na cadeia... (restam ${fallbackChain.length - i - 1})`, 'info');
                     continue;
                 } else {
                     // Último da cadeia falhou, marcar imagens como erro
-                    this.log(`❌ Todos os serviços na cadeia falharam`, 'error');
+                    this.log(`❌ ❌ ❌ TODOS OS SERVIÇOS FALHARAM ❌ ❌ ❌`, 'error');
+                    this.log(`   Tried: ${fallbackChain.join(', ')}`, 'error');
+                    this.log(`   Last error: ${errorDetails}`, 'error');
                     
                     // Marcar todas as imagens como erro
                     for (const image of images) {
                         await this.updateImageStatus(image.id, 'error', { 
-                            error: `Todos os fallbacks falharam: ${error.message}` 
+                            error: `Todos os fallbacks falharam (${fallbackChain.join(', ')}) - Último erro: ${errorDetails}` 
                         });
                     }
                     
-                    throw new Error(`Todos os fallbacks falharam: ${error.message}`);
+                    throw new Error(`Todos os fallbacks falharam: ${errorDetails}`);
                 }
             }
         }
@@ -711,6 +1039,11 @@ class BackgroundImageProcessor {
         this.log(`🔗 Cadeia de fallback (baseada no .env): ${fallbackChain.join(' → ')}`, 'info');
         this.log(`📊 ${availableProcessors.length} API(s) configurada(s): ${availableProcessors.join(', ')}`, 'info');
         
+        // Aviso se Google Vision está na cadeia (keys expiradas podem causar erros)
+        if (fallbackChain.includes('google-vision')) {
+            this.log(`⚠️ ATENÇÃO: Google Vision na cadeia - se a API key estiver expirada, remova GOOGLE_VISION_API_KEY do .env`, 'warning');
+        }
+        
         return fallbackChain;
     }
     
@@ -733,6 +1066,10 @@ class BackgroundImageProcessor {
     }
     
     async processImagesWithGemini(images) {
+        this.log(`🤖 processImagesWithGemini chamado com ${images.length} imagem(ns)`, 'info');
+        this.log(`   Modelo: ${this.geminiModel}`, 'info');
+        this.log(`   API Key configurada: ${this.geminiApiKey ? 'SIM (***' + this.geminiApiKey.slice(-4) + ')' : 'NÃO'}`, 'info');
+        
         // Marcar como processando
         for (const image of images) {
             await this.updateImageStatus(image.id, 'processing');
@@ -939,7 +1276,15 @@ NENHUM
 
     async callGeminiAPI(requestBody) {
         return new Promise((resolve, reject) => {
+            if (!this.geminiApiKey) {
+                reject(new Error('GEMINI_API_KEY não configurada'));
+                return;
+            }
+            
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
+            
+            this.log(`🔗 Gemini API URL: ${url.replace(this.geminiApiKey, '***')}`, 'info');
+            this.log(`📦 Tamanho do request: ${(Buffer.byteLength(requestBody) / 1024).toFixed(2)} KB`, 'info');
             
             const urlObj = new URL(url);
             const options = {
@@ -961,19 +1306,30 @@ NENHUM
 
                 res.on('end', () => {
                     if (res.statusCode === 200) {
-                        resolve(JSON.parse(data));
+                        this.log(`✅ Gemini API respondeu com sucesso (200)`, 'success');
+                        try {
+                            const parsed = JSON.parse(data);
+                            resolve(parsed);
+                        } catch (parseError) {
+                            this.log(`❌ Erro ao parsear resposta Gemini: ${parseError.message}`, 'error');
+                            reject(new Error(`Erro ao parsear resposta Gemini: ${parseError.message}`));
+                        }
                     } else {
+                        this.log(`❌ Gemini API retornou erro ${res.statusCode}`, 'error');
+                        this.log(`   Resposta: ${data.substring(0, 500)}...`, 'error');
                         reject(new Error(`Gemini API ${res.statusCode}: ${data}`));
                     }
                 });
             });
 
             req.on('error', (error) => {
+                this.log(`❌ Erro na requisição Gemini: ${error.message}`, 'error');
                 reject(error);
             });
 
             req.write(requestBody);
             req.end();
+            this.log(`📤 Requisição Gemini enviada...`, 'info');
         });
     }
 

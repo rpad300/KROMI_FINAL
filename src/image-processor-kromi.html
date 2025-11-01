@@ -1176,8 +1176,6 @@
         
         async function loadBufferQueue() {
             try {
-                console.log('🔍 Carregando fila de buffer...');
-                
                 // Buscar imagens pendentes E com erro (para debugging)
                 const { data: pendingImages, error: pendingError } = await window.supabaseClient.supabase
                     .from('image_buffer')
@@ -1196,23 +1194,15 @@
                 const combinedImages = [...(pendingImages || []), ...(errorImages || [])];
                 const error = pendingError || errorError;
                 
-                console.log('📊 Resultado da query:', { 
-                    error, 
-                    pendingCount: pendingImages?.length || 0,
-                    errorCount: errorImages?.length || 0,
-                    combinedCount: combinedImages?.length || 0
-                });
-                
                 if (error) {
                     console.error('❌ Erro ao carregar fila:', error);
                     addLog(`Erro ao carregar fila: ${error.message}`, 'error');
                     throw error;
                 }
                 
+                // Apenas logar quando há imagens na fila (evitar spam quando a fila está vazia)
                 if (combinedImages && combinedImages.length > 0) {
                     console.log(`✅ Imagens encontradas: ${pendingImages?.length || 0} pendentes, ${errorImages?.length || 0} com erro`);
-                } else {
-                    console.warn('⚠️ Nenhuma imagem encontrada');
                 }
                 
                 const queueContainer = document.getElementById('queueItems');
@@ -1231,8 +1221,32 @@
                     if (base64.startsWith('data:image')) return base64;
                     return `data:image/jpeg;base64,${base64}`;
                 };
+                
+                // Helper para extrair mensagem de erro do processing_result
+                const getErrorMessage = (processingResult) => {
+                    if (!processingResult) return null;
+                    
+                    // Se for string, tentar parsear como JSON
+                    if (typeof processingResult === 'string') {
+                        try {
+                            const parsed = JSON.parse(processingResult);
+                            return parsed.error || parsed.message || processingResult;
+                        } catch {
+                            return processingResult;
+                        }
+                    }
+                    
+                    // Se for objeto
+                    if (typeof processingResult === 'object') {
+                        return processingResult.error || processingResult.message || JSON.stringify(processingResult);
+                    }
+                    
+                    return null;
+                };
 
-                queueContainer.innerHTML = combinedImages.map((img, index) => `
+                queueContainer.innerHTML = combinedImages.map((img, index) => {
+                    const errorMsg = img.status === 'error' ? getErrorMessage(img.processing_result) : null;
+                    return `
                     <div style="display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-3); background: ${img.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-secondary)'}; border: 1px solid ${img.status === 'error' ? 'var(--danger)' : 'var(--border-color)'}; border-radius: var(--radius-base); margin-bottom: var(--spacing-2);">
                         <div style="font-weight: 600; color: var(--primary);">#${index + 1}</div>
                         <img src="${addImagePrefix(img.display_image || img.image_data)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-base);">
@@ -1245,9 +1259,9 @@
                                 Device: ${img.device_id?.substring(0, 12) || 'N/A'}... • 
                                 Session: ${img.session_id?.substring(0, 8) || 'N/A'}
                             </div>
-                            ${img.status === 'error' && img.processing_result?.error ? `
+                            ${errorMsg ? `
                                 <div style="font-size: var(--font-size-xs); color: var(--danger); margin-top: var(--spacing-1); padding: var(--spacing-1); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-base); max-width: 500px; word-wrap: break-word;">
-                                    ❌ ${img.processing_result.error || 'Erro desconhecido'}
+                                    ❌ ${errorMsg}
                                 </div>
                             ` : ''}
                         </div>
@@ -1267,7 +1281,8 @@
                             </button>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
                 
             } catch (error) {
                 console.error('Erro ao carregar fila:', error);
