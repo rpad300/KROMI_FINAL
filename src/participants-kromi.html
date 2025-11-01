@@ -1753,17 +1753,100 @@
                     console.log(`📊 Preparando para importar ${importData.length} participantes...`);
                     console.log('📋 Dados de exemplo:', importData.slice(0, 3));
                     
-                    // Import to Supabase
-                    const { error } = await window.supabaseClient.supabase
+                    // Verificar dorsais existentes no evento para evitar duplicados
+                    const existingDorsals = new Set();
+                    const { data: existingParticipants } = await window.supabaseClient.supabase
                         .from('participants')
-                        .insert(importData);
+                        .select('dorsal_number')
+                        .eq('event_id', currentEvent.id);
                     
-                    if (error) {
-                        console.error('❌ Erro ao importar:', error);
-                        throw error;
+                    if (existingParticipants) {
+                        existingParticipants.forEach(p => {
+                            existingDorsals.add(p.dorsal_number);
+                        });
                     }
                     
-                    showSuccess(`${importData.length} participante(s) importado(s) com sucesso!`);
+                    // Separar dados em novos e atualizações
+                    const newParticipants = [];
+                    const updateParticipants = [];
+                    const skippedDuplicates = [];
+                    
+                    importData.forEach(data => {
+                        if (existingDorsals.has(data.dorsal_number)) {
+                            // Se existe, vai ser atualizado
+                            updateParticipants.push(data);
+                        } else {
+                            // Se não existe, vai ser inserido
+                            newParticipants.push(data);
+                        }
+                    });
+                    
+                    let insertedCount = 0;
+                    let updatedCount = 0;
+                    let errorCount = 0;
+                    const errors_details = [];
+                    
+                    // Inserir novos participantes
+                    if (newParticipants.length > 0) {
+                        const { data: inserted, error: insertError } = await window.supabaseClient.supabase
+                            .from('participants')
+                            .insert(newParticipants)
+                            .select();
+                        
+                        if (insertError) {
+                            console.error('❌ Erro ao inserir novos participantes:', insertError);
+                            errorCount += newParticipants.length;
+                            errors_details.push(`Erro ao inserir: ${insertError.message}`);
+                        } else {
+                            insertedCount = inserted ? inserted.length : newParticipants.length;
+                            console.log(`✅ ${insertedCount} novo(s) participante(s) inserido(s)`);
+                        }
+                    }
+                    
+                    // Atualizar participantes existentes usando UPSERT
+                    if (updateParticipants.length > 0) {
+                        // Usar upsert para atualizar ou inserir
+                        const { data: updated, error: upsertError } = await window.supabaseClient.supabase
+                            .from('participants')
+                            .upsert(updateParticipants, {
+                                onConflict: 'event_id,dorsal_number',
+                                ignoreDuplicates: false
+                            })
+                            .select();
+                        
+                        if (upsertError) {
+                            console.error('❌ Erro ao atualizar participantes existentes:', upsertError);
+                            errorCount += updateParticipants.length;
+                            errors_details.push(`Erro ao atualizar: ${upsertError.message}`);
+                        } else {
+                            updatedCount = updated ? updated.length : updateParticipants.length;
+                            console.log(`✅ ${updatedCount} participante(s) atualizado(s)`);
+                        }
+                    }
+                    
+                    // Preparar mensagem de sucesso
+                    const successMessages = [];
+                    if (insertedCount > 0) {
+                        successMessages.push(`${insertedCount} novo(s) inserido(s)`);
+                    }
+                    if (updatedCount > 0) {
+                        successMessages.push(`${updatedCount} atualizado(s)`);
+                    }
+                    if (errorCount > 0) {
+                        successMessages.push(`${errorCount} erro(s)`);
+                    }
+                    
+                    if (successMessages.length > 0) {
+                        showSuccess(`Importação concluída: ${successMessages.join(', ')}`);
+                    } else {
+                        showError('Nenhum participante foi importado');
+                    }
+                    
+                    // Mostrar detalhes de erros se houver
+                    if (errors_details.length > 0) {
+                        console.warn('⚠️ Detalhes dos erros:', errors_details);
+                    }
+                    
                     await loadParticipants();
                     
                 } catch (error) {

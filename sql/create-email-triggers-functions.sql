@@ -19,7 +19,7 @@ BEGIN
             'participant_data', json_build_object(
                 'name', NEW.full_name,
                 'email', NEW.email,
-                'bib_number', NEW.bib_number,
+                'bib_number', NEW.dorsal_number,
                 'category', NEW.category
             )
         )::text
@@ -60,7 +60,7 @@ BEGIN
             'participant_data', json_build_object(
                 'name', participant_record.full_name,
                 'email', participant_record.email,
-                'bib_number', participant_record.bib_number,
+                'bib_number', participant_record.dorsal_number,
                 'category', participant_record.category,
                 'checkpoint_name', NEW.checkpoint,
                 'detection_time', NEW.timestamp,
@@ -102,7 +102,7 @@ BEGIN
             'participant_data', json_build_object(
                 'name', participant_record.full_name,
                 'email', participant_record.email,
-                'bib_number', participant_record.bib_number,
+                'bib_number', participant_record.dorsal_number,
                 'category', participant_record.category,
                 'total_time', participant_record.final_time,
                 'overall_position', participant_record.overall_position,
