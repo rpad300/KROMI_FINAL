@@ -5,10 +5,16 @@
  * 1. Buscar registros pending
  * 2. Buscar info do event_devices
  * 3. Inserir em detections OU image_buffer
- * 4. Atualizar status
+ * 4. Quando tem dorsal_number: fazer fluxo completo (igual ao Gemini)
+ *    - Verificar participante
+ *    - Verificar duplicados
+ *    - Calcular tempos
+ *    - Criar classificação
+ * 5. Atualizar status
  */
 
 const { createClient } = require('@supabase/supabase-js');
+const ClassificationLogic = require('./classification-logic');
 require('dotenv').config();
 
 class DeviceDetectionProcessorSimple {
@@ -27,6 +33,8 @@ class DeviceDetectionProcessorSimple {
             return false;
         }
         this.supabase = createClient(this.supabaseUrl, this.supabaseServiceKey);
+        // Inicializar ClassificationLogic para cálculo de tempos
+        this.classificationLogic = new ClassificationLogic(this.supabaseUrl, this.supabaseServiceKey);
         return true;
     }
 
@@ -141,7 +149,73 @@ class DeviceDetectionProcessorSimple {
             const hasDorsal = record.dorsal_number !== null && record.dorsal_number !== undefined;
 
             if (hasDorsal) {
-                // Inserir em detections
+                // ✅ FLUXO COMPLETO (igual ao Gemini quando processa image_buffer):
+                // 1. Verificar se dorsal é participante
+                // 2. Se não for: salvar apenas detecção
+                // 3. Se for: salvar detecção, calcular tempos, verificar duplicado, criar classificação
+                
+                console.log(`🔍 Processando dorsal ${record.dorsal_number} do app nativo...`);
+                
+                // ✅ PASSO 1: Verificar se dorsal existe nos participantes
+                const participantExists = await this.checkParticipantExists(
+                    eventDevices.event_id,
+                    record.dorsal_number
+                );
+                
+                if (!participantExists) {
+                    console.log(`⚠️ Dorsal ${record.dorsal_number} NÃO está registado nos participantes - salvando apenas detecção`);
+                    
+                    // Salvar APENAS a detecção (sem criar classificação)
+                    const { data: detection, error: detError } = await this.supabase
+                        .from('detections')
+                        .insert({
+                            event_id: eventDevices.event_id,
+                            number: record.dorsal_number,
+                            timestamp: record.captured_at,
+                            latitude: record.latitude,
+                            longitude: record.longitude,
+                            accuracy: record.accuracy,
+                            device_type: 'android',
+                            session_id: record.session_id,
+                            device_id: eventDevices.device_id,
+                            device_order: eventDevices.checkpoint_order,
+                            checkpoint_time: record.captured_at,
+                            proof_image: record.display_image,
+                            detection_method: 'native_app'
+                        })
+                        .select()
+                        .single();
+
+                    if (detError) {
+                        await this.markAsFailed(record.id, `Erro ao inserir detection: ${detError.message}`);
+                        return false;
+                    }
+
+                    // Marcar como processed
+                    await this.supabase
+                        .from('device_detections')
+                        .update({
+                            status: 'processed',
+                            detection_id: detection.id,
+                            processed_at: new Date().toISOString(),
+                            processing_result: {
+                                action: 'direct_detection_no_participant',
+                                detection_id: detection.id,
+                                checkpoint_order: eventDevices.checkpoint_order,
+                                checkpoint_name: eventDevices.checkpoint_name,
+                                reason: 'Dorsal não é participante'
+                            }
+                        })
+                        .eq('id', record.id);
+
+                    console.log(`✅ Detecção salva (dorsal ${record.dorsal_number}) mas classificação IGNORADA (não é participante)`);
+                    return true;
+                }
+                
+                // ✅ PASSO 2: Participante existe - continuar com fluxo completo
+                console.log(`✅ Dorsal ${record.dorsal_number} é participante válido - criando classificação`);
+                
+                // Salvar detecção primeiro
                 const { data: detection, error: detError } = await this.supabase
                     .from('detections')
                     .insert({
@@ -167,6 +241,81 @@ class DeviceDetectionProcessorSimple {
                     return false;
                 }
 
+                if (!detection || !eventDevices.event_id) {
+                    console.log('⚠️ Sem detecção salva ou evento, pulando classificação');
+                    await this.markAsFailed(record.id, 'Detecção não foi salva corretamente');
+                    return false;
+                }
+
+                // ✅ PASSO 3: Buscar informações do dispositivo
+                const deviceInfo = await this.getDeviceInfo(
+                    eventDevices.device_id,
+                    eventDevices.event_id
+                );
+                const deviceOrder = deviceInfo?.checkpoint_order || eventDevices.checkpoint_order;
+
+                // ✅ PASSO 4: Calcular tempos com módulo centralizado
+                const times = await this.classificationLogic.calculateClassificationTimes({
+                    eventId: eventDevices.event_id,
+                    dorsalNumber: record.dorsal_number,
+                    deviceOrder: deviceOrder,
+                    checkpointTime: record.captured_at,
+                    deviceInfo: deviceInfo || {
+                        checkpoint_order: eventDevices.checkpoint_order,
+                        checkpoint_name: eventDevices.checkpoint_name,
+                        checkpoint_type: eventDevices.checkpoint_type
+                    }
+                });
+
+                if (times.total_time) {
+                    console.log(`⏱️ META FINAL: total_time calculado`);
+                } else if (times.split_time) {
+                    console.log(`ℹ️ Checkpoint intermediário: split_time calculado`);
+                }
+
+                // ✅ PASSO 5: Verificar se já existe classificação (evitar duplicados)
+                const classificationExists = await this.checkClassificationExists(
+                    eventDevices.event_id,
+                    record.dorsal_number,
+                    deviceOrder
+                );
+
+                if (classificationExists) {
+                    console.log(`⚠️ Classificação JÁ EXISTE para dorsal ${record.dorsal_number} no checkpoint ${deviceOrder} - IGNORANDO duplicado`);
+                    
+                    // Marcar como processed mesmo assim (detecção foi salva)
+                    await this.supabase
+                        .from('device_detections')
+                        .update({
+                            status: 'processed',
+                            detection_id: detection.id,
+                            processed_at: new Date().toISOString(),
+                            processing_result: {
+                                action: 'direct_detection_duplicate',
+                                detection_id: detection.id,
+                                checkpoint_order: deviceOrder,
+                                checkpoint_name: eventDevices.checkpoint_name,
+                                reason: 'Classificação duplicada ignorada'
+                            }
+                        })
+                        .eq('id', record.id);
+                    
+                    return true; // NÃO criar duplicado
+                }
+
+                // ✅ PASSO 6: Criar classificação
+                await this.saveClassification({
+                    event_id: eventDevices.event_id,
+                    dorsal_number: record.dorsal_number,
+                    device_order: deviceOrder,
+                    checkpoint_time: record.captured_at,
+                    detection_id: detection.id,
+                    total_time: times.total_time,
+                    split_time: times.split_time
+                });
+
+                console.log(`✅ Classificação criada: dorsal ${record.dorsal_number} no checkpoint ${deviceOrder}`);
+
                 // Marcar como processed
                 await this.supabase
                     .from('device_detections')
@@ -175,9 +324,9 @@ class DeviceDetectionProcessorSimple {
                         detection_id: detection.id,
                         processed_at: new Date().toISOString(),
                         processing_result: {
-                            action: 'direct_detection',
+                            action: 'direct_detection_with_classification',
                             detection_id: detection.id,
-                            checkpoint_order: eventDevices.checkpoint_order,
+                            checkpoint_order: deviceOrder,
                             checkpoint_name: eventDevices.checkpoint_name
                         }
                     })
@@ -246,6 +395,82 @@ class DeviceDetectionProcessorSimple {
                 processed_at: new Date().toISOString()
             })
             .eq('id', recordId);
+    }
+
+    /**
+     * Verificar se um dorsal existe nos participantes do evento
+     */
+    async checkParticipantExists(eventId, dorsalNumber) {
+        const { data, error } = await this.supabase
+            .from('participants')
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('dorsal_number', dorsalNumber)
+            .limit(1);
+        
+        if (error) {
+            console.error(`Erro ao verificar participante ${dorsalNumber}:`, error.message);
+            return false;
+        }
+        return data && data.length > 0;
+    }
+
+    /**
+     * Verificar se já existe classificação para evitar duplicados
+     */
+    async checkClassificationExists(eventId, dorsalNumber, deviceOrder) {
+        const { data, error } = await this.supabase
+            .from('classifications')
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('dorsal_number', dorsalNumber)
+            .eq('device_order', deviceOrder)
+            .limit(1);
+        
+        if (error) {
+            console.error(`Erro ao verificar classificação duplicada ${dorsalNumber}:`, error.message);
+            return false;
+        }
+        return data && data.length > 0;
+    }
+
+    /**
+     * Buscar informações do dispositivo
+     */
+    async getDeviceInfo(deviceId, eventId) {
+        const { data, error } = await this.supabase
+            .from('event_devices')
+            .select('checkpoint_order, checkpoint_name, checkpoint_type')
+            .eq('device_id', deviceId)
+            .eq('event_id', eventId)
+            .limit(1)
+            .single();
+        
+        if (error) {
+            console.error(`Erro ao buscar device info:`, error.message);
+            return null;
+        }
+        return data;
+    }
+
+    /**
+     * Salvar classificação
+     */
+    async saveClassification(classification) {
+        const { data, error } = await this.supabase
+            .from('classifications')
+            .insert(classification)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error(`❌ Erro ao salvar classificação:`, error.message);
+            console.error(`   Dados:`, JSON.stringify(classification));
+            throw new Error(`Erro ao salvar classificação: ${error.message}`);
+        }
+        
+        console.log(`✅ Classificação salva: dorsal ${classification.dorsal_number} (trigger calculará tempos)`);
+        return data;
     }
 }
 
