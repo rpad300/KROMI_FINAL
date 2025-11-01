@@ -627,7 +627,17 @@
                 events.forEach(event => {
                     const option = document.createElement('option');
                     option.value = event.id;
-                    option.textContent = `${event.name} (${event.is_active ? 'Ativo' : 'Inativo'})`;
+                    // Determinar status para dropdown
+                    let statusText = 'Inativo';
+                    if (event.is_active) {
+                        statusText = 'Ativo';
+                    } else {
+                        const isAwaiting = !event.event_started_at && event.scheduled_start_time && (event.auto_start_enabled !== false) && new Date(event.scheduled_start_time) > new Date();
+                        if (isAwaiting) {
+                            statusText = 'Inativo (a aguardar)';
+                        }
+                    }
+                    option.textContent = `${event.name} (${statusText})`;
                     selector.appendChild(option);
                 });
                 
@@ -680,8 +690,25 @@
                             const eventNameEl = document.getElementById('eventName');
                             if (eventNameEl) eventNameEl.textContent = event.name;
                             
+                            // Determinar texto do status com informação sobre início automático
                             const eventStatusEl = document.getElementById('eventStatus');
-                            if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
+                            if (eventStatusEl) {
+                                if (event.is_active) {
+                                    eventStatusEl.textContent = 'Ativo';
+                                } else {
+                                    // Verificar se está aguardando início automático
+                                    const isAwaitingAutoStart = !event.event_started_at && 
+                                                                event.scheduled_start_time && 
+                                                                (event.auto_start_enabled !== false) && // true ou undefined (padrão é true)
+                                                                new Date(event.scheduled_start_time) > new Date();
+                                    
+                                    if (isAwaitingAutoStart) {
+                                        eventStatusEl.textContent = 'Inativo (a aguardar hora de início)';
+                                    } else {
+                                        eventStatusEl.textContent = 'Inativo';
+                                    }
+                                }
+                            }
                             
                             // Mostrar data/hora de início (usar scheduled_start_time que é a hora programada na configuração)
                             const eventStartTimeEl = document.getElementById('eventStartTime');
@@ -815,8 +842,25 @@
                 const eventNameEl = document.getElementById('eventName');
                 if (eventNameEl) eventNameEl.textContent = event.name;
                 
+                // Determinar texto do status com informação sobre início automático
                 const eventStatusEl = document.getElementById('eventStatus');
-                if (eventStatusEl) eventStatusEl.textContent = event.is_active ? 'Ativo' : 'Inativo';
+                if (eventStatusEl) {
+                    if (event.is_active) {
+                        eventStatusEl.textContent = 'Ativo';
+                    } else {
+                        // Verificar se está aguardando início automático
+                        const isAwaitingAutoStart = !event.event_started_at && 
+                                                    event.scheduled_start_time && 
+                                                    (event.auto_start_enabled !== false) && // true ou undefined (padrão é true)
+                                                    new Date(event.scheduled_start_time) > new Date();
+                        
+                        if (isAwaitingAutoStart) {
+                            eventStatusEl.textContent = 'Inativo (a aguardar hora de início)';
+                        } else {
+                            eventStatusEl.textContent = 'Inativo';
+                        }
+                    }
+                }
                 
                 // Mostrar data/hora de início (usar scheduled_start_time que é a hora programada na configuração)
                 const eventStartTimeEl = document.getElementById('eventStartTime');
@@ -880,9 +924,23 @@
                 
                 const currentEventInfo = document.getElementById('currentEventInfo');
                 if (currentEventInfo) {
+                    // Determinar status para sidebar
+                    let statusText = 'Inativo';
+                    if (event.is_active) {
+                        statusText = 'Ativo';
+                    } else {
+                        const isAwaitingAutoStart = !event.event_started_at && 
+                                                    event.scheduled_start_time && 
+                                                    (event.auto_start_enabled !== false) &&
+                                                    new Date(event.scheduled_start_time) > new Date();
+                        if (isAwaitingAutoStart) {
+                            statusText = 'Inativo (a aguardar hora de início)';
+                        }
+                    }
+                    
                     currentEventInfo.innerHTML = `
                         <strong>${event.name}</strong><br>
-                        Status: ${event.is_active ? 'Ativo' : 'Inativo'}<br>
+                        Status: ${statusText}<br>
                         Atletas: ${totalAthletes}
                     `;
                 }

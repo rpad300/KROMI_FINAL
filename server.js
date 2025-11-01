@@ -17,6 +17,7 @@ delete require.cache[require.resolve('./src/background-processor')];
 const BackgroundImageProcessor = require('./src/background-processor');
 const DeviceDetectionProcessorSimple = require('./src/device-detection-processor-simple');
 const EmailAutomation = require('./src/email-automation');
+const EventAutoStarter = require('./src/event-auto-starter');
 const SessionManager = require('./src/session-manager');
 const { createSessionMiddleware, requireAuth, requireRole } = require('./src/session-middleware');
 const setupAuthRoutes = require('./src/auth-routes');
@@ -5220,6 +5221,15 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('📧 Iniciando sistema de automação de emails...');
     global.emailAutomation = new EmailAutomation(supabaseAdmin);
     global.emailAutomation.start();
+    
+    // Iniciar sistema de início automático de eventos
+    console.log('⏰ Iniciando sistema de início automático de eventos...');
+    if (supabaseAdmin) {
+        global.eventAutoStarter = new EventAutoStarter(supabaseAdmin);
+        global.eventAutoStarter.start();
+    } else {
+        console.warn('⚠️ Supabase Admin não disponível - início automático de eventos desabilitado');
+    }
 });
 
 // Tratamento de erros
@@ -5236,6 +5246,10 @@ server.on('error', (err) => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('\n🛑 Parando servidor...');
+    if (global.eventAutoStarter) {
+        console.log('🛑 Parando monitoramento de início automático de eventos...');
+        global.eventAutoStarter.stop();
+    }
     console.log('🛑 Parando processador de imagens...');
     imageProcessor.stop();
     
