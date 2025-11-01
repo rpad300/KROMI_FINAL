@@ -735,16 +735,41 @@
                 }
                 
                 // Se existir função RPC para limpar sessões (opcional)
+                // Nota: Esta função pode não existir no Supabase, então não é crítico
+                // Verificamos se existe antes de chamar para evitar erro 404 no console
                 try {
-                    await window.supabaseClient.supabase
+                    const { data, error } = await window.supabaseClient.supabase
                         .rpc('end_all_device_sessions', {
                             p_device_id: currentDevice,
                             p_event_id: currentEvent.id
                         });
-                    console.log('✅ RPC end_all_device_sessions executada');
+                    
+                    if (error) {
+                        // Se erro 404 ou função não encontrada, ignorar silenciosamente
+                        const isNotFound = error.code === 'P0004' || 
+                                         error.code === '42883' || 
+                                         error.message?.toLowerCase().includes('function') || 
+                                         error.message?.toLowerCase().includes('not found') ||
+                                         error.message?.toLowerCase().includes('does not exist');
+                        
+                        if (isNotFound) {
+                            // Função não existe - comportamento esperado, não logar
+                            return;
+                        } else {
+                            // Outro tipo de erro - pode ser relevante
+                            console.warn('⚠️ Erro ao executar RPC end_all_device_sessions:', error.message);
+                        }
+                    } else if (data) {
+                        console.log('✅ RPC end_all_device_sessions executada');
+                    }
                 } catch (rpcError) {
-                    // Ignorar silenciosamente - função não existe
-                    console.log('ℹ️ RPC end_all_device_sessions não disponível (opcional, pode ignorar)');
+                    // Ignorar silenciosamente se função não existe
+                    // Erros de rede ou outros erros críticos já serão tratados acima
+                    const errorMsg = rpcError?.message?.toLowerCase() || '';
+                    if (!errorMsg.includes('not found') && !errorMsg.includes('function')) {
+                        // Só logar se não for erro de função não encontrada
+                        console.warn('⚠️ Erro ao chamar RPC:', rpcError.message);
+                    }
                 }
                 
             } catch (error) {
