@@ -457,39 +457,62 @@
                     willReadFrequently: true 
                 });
                 
-                // Throttle: processar no máximo a cada 200ms
+                // Throttle: processar no máximo a cada 200ms (otimizado para performance)
                 const SCAN_INTERVAL = 200;
                 lastScanTime = 0;
+                let consecutiveEmptyScans = 0; // Contador de scans sem QR detectado
                 
                 // Usar requestAnimationFrame em vez de setInterval para melhor sincronização
                 function scanQRCode() {
                     const now = Date.now();
                     
+                    // Só processar se passou o intervalo e vídeo está pronto
                     if (video.readyState === video.HAVE_ENOUGH_DATA && (now - lastScanTime >= SCAN_INTERVAL)) {
                         lastScanTime = now;
                         
                         try {
-                            // Desenhar frame do vídeo no canvas
+                            // Desenhar frame do vídeo no canvas (otimizado: apenas quando necessário)
                             ctx.drawImage(video, 0, 0, scanWidth, scanHeight);
                             
                             // Ler dados da imagem (otimizado com willReadFrequently)
-                            const imageData = ctx.getImageData(0, 0, scanWidth, scanHeight);
+                            // Usar uma região menor do canvas se não detectar nada há várias tentativas
+                            let regionWidth = scanWidth;
+                            let regionHeight = scanHeight;
+                            let offsetX = 0;
+                            let offsetY = 0;
+                            
+                            // Após 10 scans sem QR, processar apenas a região central (mais rápida)
+                            if (consecutiveEmptyScans > 10) {
+                                const centerRatio = 0.7; // Processar 70% central
+                                regionWidth = Math.floor(scanWidth * centerRatio);
+                                regionHeight = Math.floor(scanHeight * centerRatio);
+                                offsetX = Math.floor((scanWidth - regionWidth) / 2);
+                                offsetY = Math.floor((scanHeight - regionHeight) / 2);
+                            }
+                            
+                            const imageData = ctx.getImageData(offsetX, offsetY, regionWidth, regionHeight);
                             
                             // Processar QR Code
                             const code = jsQR(imageData.data, imageData.width, imageData.height);
                             
-                            if (code) {
+                            // Validar que código foi detectado e tem conteúdo válido
+                            if (code && code.data && code.data.trim().length > 0) {
                                 console.log('✅ QR Code detectado:', code.data);
+                                consecutiveEmptyScans = 0; // Reset contador
                                 handleQRCodeScanned(code.data);
                                 return; // Parar escaneamento após detectar
+                            } else {
+                                // QR Code inválido ou vazio - ignorar e continuar
+                                consecutiveEmptyScans++;
                             }
                         } catch (error) {
                             // Ignorar erros silenciosamente durante escaneamento
                             // (podem ocorrer quando video ainda não está pronto)
+                            consecutiveEmptyScans++;
                         }
                     }
                     
-                    // Continuar escaneamento
+                    // Continuar escaneamento (sempre, mesmo se não processar neste frame)
                     if (scanningAnimationFrame !== null) {
                         scanningAnimationFrame = requestAnimationFrame(scanQRCode);
                     }
@@ -544,6 +567,16 @@
         // Processar QR Code escaneado
         async function handleQRCodeScanned(qrData) {
             try {
+                // Validar que o QR Code tem conteúdo válido
+                if (!qrData || typeof qrData !== 'string' || qrData.trim().length === 0) {
+                    console.warn('⚠️ QR Code vazio ou inválido, ignorando...');
+                    // Reiniciar scanner após ignorar QR vazio
+                    setTimeout(() => {
+                        startQRScanner();
+                    }, 1000);
+                    return;
+                }
+                
                 // Parar scanner
                 stopQRScanner();
                 
@@ -585,20 +618,26 @@
                         document.getElementById('codeInput').value = qrObject.access_code;
                     }
                     
-                    // Buscar nome do evento da base de dados se não veio no QR Code
-                    if (!currentEvent.name) {
+                    // Buscar nome do evento via API REST se não veio no QR Code
+                    if (!currentEvent.name && qrObject.event_id) {
                         try {
-                            const { data: eventData } = await window.supabaseClient.supabase
-                                .from('events')
-                                .select('name')
-                                .eq('id', qrObject.event_id)
-                                .maybeSingle();
+                            const eventResponse = await fetch(`/api/event/${encodeURIComponent(qrObject.event_id)}`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
                             
-                            if (eventData && eventData.name) {
-                                currentEvent.name = eventData.name;
-                                console.log('✅ Nome do evento carregado:', currentEvent.name);
+                            if (eventResponse.ok) {
+                                const eventResult = await eventResponse.json();
+                                if (eventResult && eventResult.name) {
+                                    currentEvent.name = eventResult.name;
+                                    console.log('✅ Nome do evento carregado via API:', currentEvent.name);
+                                } else {
+                                    console.log('⚠️ Evento não encontrado na base de dados');
+                                }
                             } else {
-                                console.log('⚠️ Evento não encontrado na base de dados');
+                                console.log('⚠️ Erro ao buscar nome do evento via API:', eventResponse.status);
                             }
                         } catch (err) {
                             console.log('⚠️ Erro ao buscar nome do evento:', err);
@@ -625,21 +664,37 @@
             }
         }
         
-        // Buscar dispositivo por código
+        // Buscar dispositivo por código via API REST (página pública)
         async function findDeviceByCode(accessCode) {
             try {
-                const { data, error } = await window.supabaseClient.supabase
-                    .from('event_devices')
-                    .select('device_id, event_id, device_pin, checkpoint_name, max_sessions, active_sessions')
-                    .eq('access_code', accessCode.toUpperCase())
-                    .maybeSingle();
+                console.log(`🔍 [findDeviceByCode] Buscando dispositivo com código: ${accessCode}`);
                 
-                if (error) {
-                    console.error('❌ Erro ao buscar dispositivo:', error);
+                const response = await fetch(`/api/devices/by-access-code/${encodeURIComponent(accessCode.toUpperCase())}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                    console.error('❌ Erro ao buscar dispositivo:', errorData);
+                    
+                    if (response.status === 404) {
+                        return null; // Código não encontrado
+                    }
+                    
                     return null;
                 }
                 
-                return data;
+                const result = await response.json();
+                
+                if (result.success && result.device) {
+                    console.log('✅ [findDeviceByCode] Dispositivo encontrado:', result.device);
+                    return result.device;
+                }
+                
+                return null;
             } catch (error) {
                 console.error('❌ Erro ao buscar dispositivo:', error);
                 return null;
@@ -672,24 +727,33 @@
                 currentDevice = deviceData.device_id;
                 currentEvent = { id: deviceData.event_id, name: null };
                 
-                // Buscar nome do evento da base de dados (usar nome genérico se não encontrar)
-                currentEvent.name = 'teste1'; // Nome fixo para teste
-                
-                try {
-                    const { data: eventData } = await window.supabaseClient.supabase
-                        .from('events')
-                        .select('name')
-                        .eq('id', deviceData.event_id)
-                        .maybeSingle();
+                // Usar nome do evento que já vem na resposta da API (se disponível)
+                if (deviceData.event_name) {
+                    currentEvent.name = deviceData.event_name;
+                    console.log('✅ Nome do evento carregado da API:', currentEvent.name);
+                } else {
+                    // Fallback: buscar nome do evento via API
+                    currentEvent.name = 'Evento'; // Nome genérico
                     
-                    if (eventData && eventData.name) {
-                        currentEvent.name = eventData.name;
-                        console.log('✅ Nome do evento carregado da DB:', currentEvent.name);
-                    } else {
-                        console.log('⚠️ Evento não encontrado na base de dados, usando nome padrão');
+                    try {
+                        const eventResponse = await fetch(`/api/events/${deviceData.event_id}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include'
+                        });
+                        
+                        if (eventResponse.ok) {
+                            const eventResult = await eventResponse.json();
+                            if (eventResult.success && eventResult.event && eventResult.event.name) {
+                                currentEvent.name = eventResult.event.name;
+                                console.log('✅ Nome do evento carregado via API:', currentEvent.name);
+                            }
+                        }
+                    } catch (err) {
+                        console.log('⚠️ Erro ao buscar nome do evento:', err);
                     }
-                } catch (err) {
-                    console.log('⚠️ Erro ao buscar nome do evento:', err);
                 }
                 
                 // Redirecionar direto para página de detecção (SEM pedir PIN)

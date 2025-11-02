@@ -224,6 +224,809 @@ app.get('/api/device-detections', async (req, res) => {
     }
 });
 
+// Rota pública: Listar dispositivos de um evento
+app.get('/api/devices/by-event', async (req, res) => {
+    try {
+        const { event_id } = req.query;
+        
+        if (!event_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_id é obrigatório'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS (página pública)
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔍 [GET /api/devices/by-event] Buscando dispositivos: event=${event_id}`);
+        
+        const { data, error } = await client
+            .from('event_devices')
+            .select('device_id, checkpoint_name, checkpoint_type, checkpoint_order')
+            .eq('event_id', event_id)
+            .order('checkpoint_order', { ascending: true });
+        
+        if (error) {
+            console.error('❌ Erro ao buscar dispositivos:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao buscar dispositivos'
+            });
+        }
+        
+        console.log(`✅ [GET /api/devices/by-event] ${data?.length || 0} dispositivos encontrados`);
+        
+        res.json({
+            success: true,
+            devices: data || []
+        });
+        
+    } catch (error) {
+        console.error('❌ [GET /api/devices/by-event] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Buscar dispositivo por event_id e device_id
+app.get('/api/devices/by-event-device', async (req, res) => {
+    try {
+        const { event_id, device_id } = req.query;
+        
+        if (!event_id || !device_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_id e device_id são obrigatórios'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS (página pública)
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔍 [GET /api/devices/by-event-device] Buscando dispositivo: event=${event_id}, device=${device_id}`);
+        
+        const { data, error } = await client
+            .from('event_devices')
+            .select(`
+                device_id,
+                event_id,
+                device_pin,
+                checkpoint_name,
+                checkpoint_type,
+                checkpoint_order,
+                max_sessions,
+                active_sessions,
+                events:event_id (
+                    name,
+                    status
+                )
+            `)
+            .eq('event_id', event_id)
+            .eq('device_id', device_id)
+            .maybeSingle();
+        
+        if (error) {
+            console.error('❌ Erro ao buscar dispositivo:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao buscar dispositivo'
+            });
+        }
+        
+        if (!data) {
+            return res.status(404).json({
+                success: false,
+                error: 'Dispositivo não encontrado para este evento'
+            });
+        }
+        
+        console.log(`✅ [GET /api/devices/by-event-device] Dispositivo encontrado`);
+        
+        res.json({
+            success: true,
+            device: {
+                device_id: data.device_id,
+                event_id: data.event_id,
+                device_pin: data.device_pin,
+                checkpoint_name: data.checkpoint_name,
+                checkpoint_type: data.checkpoint_type,
+                checkpoint_order: data.checkpoint_order,
+                max_sessions: data.max_sessions,
+                active_sessions: data.active_sessions,
+                event_name: data.events?.name || null,
+                event_status: data.events?.status || null
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ [GET /api/devices/by-event-device] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Encerrar todas as sessões de um dispositivo
+app.post('/api/devices/end-all-sessions', express.json(), async (req, res) => {
+    try {
+        const { event_id, device_id } = req.body;
+        
+        if (!event_id || !device_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_id e device_id são obrigatórios'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔓 [POST /api/devices/end-all-sessions] Encerrando todas as sessões: event=${event_id}, device=${device_id}`);
+        
+        // 1. Limpar todas as sessões ativas em device_sessions PRIMEIRO
+        // Isso é importante para que depois possamos recalcular o contador corretamente
+        const { error: deleteError } = await client
+            .from('device_sessions')
+            .delete()
+            .eq('device_id', device_id)
+            .eq('event_id', event_id);
+        
+        if (deleteError) {
+            console.error('❌ Erro ao limpar device_sessions:', deleteError);
+            // Continuar mesmo com erro
+        } else {
+            console.log('✅ Sessões removidas de device_sessions');
+        }
+        
+        // 2. Zerar contador de sessões ativas em event_devices
+        const { error: updateError } = await client
+            .from('event_devices')
+            .update({ active_sessions: 0 })
+            .eq('event_id', event_id)
+            .eq('device_id', device_id);
+        
+        if (updateError) {
+            console.error('❌ Erro ao zerar contador:', updateError);
+            // Continuar mesmo com erro
+        } else {
+            console.log('✅ Contador de sessões resetado');
+        }
+        
+        // 3. Tentar usar RPC se disponível (opcional)
+        try {
+            await client.rpc('end_all_device_sessions', {
+                p_device_id: device_id,
+                p_event_id: event_id
+            });
+            console.log('✅ RPC end_all_device_sessions executada');
+        } catch (rpcErr) {
+            // Ignorar se função não existe
+            const errorMsg = rpcErr?.message?.toLowerCase() || '';
+            if (!errorMsg.includes('not found') && !errorMsg.includes('function')) {
+                console.warn('⚠️ Erro ao chamar RPC end_all_device_sessions:', rpcErr.message);
+            }
+        }
+        
+        console.log(`✅ [POST /api/devices/end-all-sessions] Todas as sessões encerradas`);
+        
+        res.json({
+            success: true,
+            message: 'Todas as sessões foram encerradas'
+        });
+        
+    } catch (error) {
+        console.error('❌ [POST /api/devices/end-all-sessions] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Encerrar uma sessão específica
+app.post('/api/devices/end-session', express.json(), async (req, res) => {
+    try {
+        const { session_id, event_id, device_id } = req.body;
+        
+        if (!session_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'session_id é obrigatório'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔓 [POST /api/devices/end-session] Encerrando sessão: ${session_id}`);
+        
+        // 1. Tentar usar RPC primeiro
+        let rpcSuccess = false;
+        try {
+            const { data: rpcData, error: rpcError } = await client.rpc('end_device_session', {
+                p_session_id: session_id
+            });
+            
+            if (!rpcError && rpcData) {
+                rpcSuccess = true;
+                console.log('✅ Sessão encerrada via RPC');
+            }
+        } catch (rpcErr) {
+            console.warn('⚠️ RPC end_device_session não disponível:', rpcErr.message);
+        }
+        
+        // 2. Se RPC não funcionou, atualizar manualmente
+        if (!rpcSuccess) {
+            // Marcar sessão como inativa
+            const { error: updateError } = await client
+                .from('device_sessions')
+                .update({ is_active: false, ended_at: new Date().toISOString() })
+                .eq('session_id', session_id);
+            
+            if (updateError) {
+                console.error('❌ Erro ao atualizar sessão:', updateError);
+            } else {
+                console.log('✅ Sessão marcada como inativa');
+            }
+            
+            // Decrementar contador se event_id e device_id foram fornecidos
+            if (event_id && device_id) {
+                const { data: currentData } = await client
+                    .from('event_devices')
+                    .select('active_sessions')
+                    .eq('event_id', event_id)
+                    .eq('device_id', device_id)
+                    .maybeSingle();
+                
+                if (currentData) {
+                    const newCount = Math.max(0, (currentData.active_sessions || 1) - 1);
+                    await client
+                        .from('event_devices')
+                        .update({ active_sessions: newCount })
+                        .eq('event_id', event_id)
+                        .eq('device_id', device_id);
+                    
+                    console.log(`✅ Contador decrementado: ${currentData.active_sessions} → ${newCount}`);
+                }
+            }
+        }
+        
+        // 3. Limpar sessões inativas (opcional, em background)
+        try {
+            await client.rpc('cleanup_inactive_sessions').catch(() => {});
+        } catch (e) {
+            // Ignorar se função não existe
+        }
+        
+        res.json({
+            success: true,
+            message: 'Sessão encerrada com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ [POST /api/devices/end-session] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Atualizar heartbeat de sessão
+app.post('/api/devices/update-heartbeat', express.json(), async (req, res) => {
+    try {
+        const { session_id } = req.body;
+        
+        if (!session_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'session_id é obrigatório'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        // Tentar usar RPC primeiro
+        try {
+            await client.rpc('update_session_heartbeat', {
+                p_session_id: session_id
+            });
+            res.json({ success: true });
+        } catch (rpcErr) {
+            // Se RPC não existe, atualizar diretamente
+            const { error: updateError } = await client
+                .from('device_sessions')
+                .update({ last_heartbeat: new Date().toISOString() })
+                .eq('session_id', session_id);
+            
+            if (updateError) {
+                throw updateError;
+            }
+            
+            res.json({ success: true });
+        }
+        
+    } catch (error) {
+        console.error('❌ [POST /api/devices/update-heartbeat] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Limpar sessões inativas
+app.post('/api/devices/cleanup-inactive-sessions', express.json(), async (req, res) => {
+    try {
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log('🧹 [POST /api/devices/cleanup-inactive-sessions] Limpando sessões inativas...');
+        
+        // Tentar usar RPC primeiro
+        try {
+            const { data: rpcData, error: rpcError } = await client.rpc('cleanup_inactive_sessions');
+            
+            if (!rpcError) {
+                console.log(`✅ ${rpcData || 0} sessões inativas removidas`);
+                return res.json({
+                    success: true,
+                    cleaned: rpcData || 0,
+                    message: `${rpcData || 0} sessões inativas foram removidas`
+                });
+            }
+        } catch (rpcErr) {
+            console.warn('⚠️ RPC cleanup_inactive_sessions não disponível:', rpcErr.message);
+        }
+        
+        // Se RPC não existe, limpar manualmente
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: deletedData, error: deleteError } = await client
+            .from('device_sessions')
+            .delete()
+            .eq('is_active', true)
+            .lt('last_heartbeat', fiveMinutesAgo);
+        
+        if (deleteError) {
+            throw deleteError;
+        }
+        
+        console.log(`✅ Sessões inativas removidas manualmente`);
+        res.json({
+            success: true,
+            cleaned: deletedData?.length || 0,
+            message: `${deletedData?.length || 0} sessões inativas foram removidas`
+        });
+        
+    } catch (error) {
+        console.error('❌ [POST /api/devices/cleanup-inactive-sessions] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Salvar detecção no image_buffer
+app.post('/api/detections', express.json(), async (req, res) => {
+    try {
+        const { event_id, device_id, session_id, image_data, detection_area, latitude, longitude, accuracy } = req.body;
+        
+        if (!event_id || !device_id || !image_data) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_id, device_id e image_data são obrigatórios'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`📸 [POST /api/detections] Salvando detecção: event=${event_id}, device=${device_id}`);
+        
+        const bufferEntry = {
+            event_id: event_id,
+            device_id: device_id,
+            session_id: session_id || null,
+            image_data: image_data,
+            detection_area: detection_area || null,
+            latitude: latitude || null,
+            longitude: longitude || null,
+            accuracy: accuracy || null,
+            status: 'pending',
+            created_at: new Date().toISOString()
+        };
+        
+        const { data, error } = await client
+            .from('image_buffer')
+            .insert([bufferEntry])
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('❌ Erro ao salvar detecção:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message || 'Erro ao salvar detecção'
+            });
+        }
+        
+        console.log(`✅ [POST /api/detections] Detecção salva com ID: ${data.id}`);
+        
+        res.json({
+            success: true,
+            detection: data
+        });
+        
+    } catch (error) {
+        console.error('❌ [POST /api/detections] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Atualizar last_seen do dispositivo
+app.put('/api/devices/:deviceId/last-seen', express.json(), async (req, res) => {
+    try {
+        const deviceId = req.params.deviceId;
+        const { user_agent } = req.body;
+        
+        if (!deviceId) {
+            return res.status(400).json({
+                success: false,
+                error: 'deviceId é obrigatório'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🕐 [PUT /api/devices/:deviceId/last-seen] Atualizando last_seen: ${deviceId}`);
+        
+        const { error: updateError } = await client
+            .from('devices')
+            .update({ 
+                last_seen: new Date().toISOString(),
+                user_agent: user_agent || null
+            })
+            .eq('id', deviceId);
+        
+        if (updateError) {
+            console.error('❌ Erro ao atualizar last_seen:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: updateError.message || 'Erro ao atualizar dispositivo'
+            });
+        }
+        
+        console.log(`✅ [PUT /api/devices/:deviceId/last-seen] Dispositivo atualizado`);
+        
+        res.json({
+            success: true,
+            message: 'Dispositivo atualizado com sucesso'
+        });
+        
+    } catch (error) {
+        console.error('❌ [PUT /api/devices/:deviceId/last-seen] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Iniciar sessão de dispositivo
+app.post('/api/devices/start-session', express.json(), async (req, res) => {
+    try {
+        const { event_id, device_id, session_id, user_agent } = req.body;
+        
+        if (!event_id || !device_id || !session_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_id, device_id e session_id são obrigatórios'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔐 [POST /api/devices/start-session] Iniciando sessão: event=${event_id}, device=${device_id}, session=${session_id}`);
+        
+        // Verificar limite de sessões antes de criar
+        const { data: deviceData, error: deviceError } = await client
+            .from('event_devices')
+            .select('max_sessions, active_sessions')
+            .eq('event_id', event_id)
+            .eq('device_id', device_id)
+            .maybeSingle();
+        
+        if (deviceError) {
+            console.error('❌ Erro ao verificar dispositivo:', deviceError);
+            return res.status(500).json({
+                success: false,
+                error: 'Erro ao verificar dispositivo'
+            });
+        }
+        
+        if (!deviceData) {
+            return res.status(404).json({
+                success: false,
+                error: 'Dispositivo não encontrado para este evento'
+            });
+        }
+        
+        const { max_sessions, active_sessions } = deviceData;
+        
+        // Verificar se atingiu o limite
+        if (active_sessions >= max_sessions) {
+            console.log(`⚠️ Limite de sessões atingido: ${active_sessions}/${max_sessions}`);
+            return res.status(400).json({
+                success: false,
+                error: 'Max sessions exceeded',
+                max_allowed: max_sessions,
+                current_active: active_sessions
+            });
+        }
+        
+        // Tentar usar RPC primeiro
+        let result = null;
+        try {
+            const { data: rpcData, error: rpcError } = await client.rpc('start_device_session', {
+                p_event_id: event_id,
+                p_device_id: device_id,
+                p_session_id: session_id,
+                p_user_agent: user_agent || 'web'
+            });
+            
+            if (!rpcError && rpcData) {
+                result = rpcData;
+            } else if (rpcError) {
+                // Se RPC retornou erro de limite, propagar
+                if (rpcError.message?.includes('max') || rpcError.message?.includes('limit')) {
+                    return res.status(400).json({
+                        success: false,
+                        error: rpcError.message || 'Max sessions exceeded',
+                        max_allowed: max_sessions,
+                        current_active: active_sessions
+                    });
+                }
+                throw rpcError;
+            }
+        } catch (rpcErr) {
+            console.warn('⚠️ RPC start_device_session não disponível, usando inserção direta:', rpcErr.message);
+        }
+        
+        // Se RPC não funcionou, inserir diretamente
+        if (!result) {
+            const { data: sessionData, error: sessionError } = await client
+                .from('device_sessions')
+                .insert({
+                    event_id: event_id,
+                    device_id: device_id,
+                    session_id: session_id,
+                    user_agent: user_agent || 'web',
+                    is_active: true,
+                    started_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+            
+            if (sessionError) {
+                console.error('❌ Erro ao criar sessão:', sessionError);
+                return res.status(500).json({
+                    success: false,
+                    error: sessionError.message || 'Erro ao criar sessão'
+                });
+            }
+            
+            // Atualizar contador de sessões ativas
+            await client.rpc('increment_device_sessions', {
+                p_event_id: event_id,
+                p_device_id: device_id
+            }).catch(() => {}); // Ignorar erro se função não existir
+            
+            result = {
+                success: true,
+                session: sessionData
+            };
+        }
+        
+        console.log(`✅ [POST /api/devices/start-session] Sessão criada com sucesso`);
+        
+        res.json(result);
+        
+    } catch (error) {
+        console.error('❌ [POST /api/devices/start-session] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+// Rota pública: Buscar dispositivo por código de acesso (para página pública de scanner)
+app.get('/api/devices/by-access-code/:code', async (req, res) => {
+    try {
+        const accessCode = req.params.code?.trim().toUpperCase();
+        
+        if (!accessCode || accessCode.length !== 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código de acesso inválido (deve ter 6 caracteres)'
+            });
+        }
+        
+        // Usar supabaseAdmin para bypass de RLS (página pública)
+        const client = supabaseAdmin || supabase;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Serviço temporariamente indisponível'
+            });
+        }
+        
+        console.log(`🔍 [GET /api/devices/by-access-code/:code] Buscando dispositivo com código: ${accessCode}`);
+        
+        // Tentar usar a função RPC primeiro (mais completa)
+        let deviceData = null;
+        try {
+            const { data: rpcData, error: rpcError } = await client.rpc('get_device_info_by_qr', {
+                p_access_code: accessCode
+            });
+            
+            if (!rpcError && rpcData && rpcData.length > 0) {
+                const info = rpcData[0];
+                deviceData = {
+                    device_id: info.device_id,
+                    event_id: info.event_id,
+                    device_pin: info.device_pin,
+                    checkpoint_name: info.checkpoint_name,
+                    max_sessions: info.max_sessions,
+                    active_sessions: info.active_sessions,
+                    event_name: info.event_name,
+                    can_create_session: info.can_create_session,
+                    status_message: info.status_message
+                };
+            }
+        } catch (rpcErr) {
+            console.warn('⚠️ RPC get_device_info_by_qr não disponível, usando query direta:', rpcErr.message);
+        }
+        
+        // Fallback: query direta se RPC não funcionar
+        if (!deviceData) {
+            const { data, error } = await client
+                .from('event_devices')
+                .select(`
+                    device_id,
+                    event_id,
+                    device_pin,
+                    checkpoint_name,
+                    max_sessions,
+                    active_sessions,
+                    events:event_id (
+                        name,
+                        status
+                    )
+                `)
+                .eq('access_code', accessCode)
+                .maybeSingle();
+            
+            if (error) {
+                console.error('❌ Erro ao buscar dispositivo:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Erro ao buscar dispositivo'
+                });
+            }
+            
+            if (!data) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Código de acesso não encontrado'
+                });
+            }
+            
+            deviceData = {
+                device_id: data.device_id,
+                event_id: data.event_id,
+                device_pin: data.device_pin,
+                checkpoint_name: data.checkpoint_name,
+                max_sessions: data.max_sessions,
+                active_sessions: data.active_sessions,
+                event_name: data.events?.name || null,
+                can_create_session: data.active_sessions < data.max_sessions,
+                status_message: data.active_sessions >= data.max_sessions ? 'device_busy' : 
+                               (data.events?.status !== 'active' ? 'event_inactive' : 'ready')
+            };
+        }
+        
+        console.log(`✅ [GET /api/devices/by-access-code/:code] Dispositivo encontrado: ${deviceData.device_id}`);
+        
+        res.json({
+            success: true,
+            device: deviceData
+        });
+        
+    } catch (error) {
+        console.error('❌ [GET /api/devices/by-access-code/:code] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
 // Rota para fornecer configurações do ambiente
 // REMOVIDA - Agora está em events-routes.js com autenticação
 // Mantendo comentado para referência:
