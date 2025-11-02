@@ -49,3 +49,6 @@ Deve retornar: `data_type = 'timestamp with time zone'`
 - Após a conversão, você poderá salvar e recuperar hora corretamente
 - A conversão é segura e não perde dados (apenas adiciona hora padrão)
 
+
+
+

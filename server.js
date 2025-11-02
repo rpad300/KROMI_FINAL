@@ -100,8 +100,8 @@ const deviceDetectionProcessor = new DeviceDetectionProcessorSimple();
 
 // Middlewares globais
 app.use(cookieParser()); // Parser de cookies
-app.use(express.json()); // Parser de JSON
-app.use(express.urlencoded({ extended: true })); // Parser de form data
+app.use(express.json({ limit: '10mb' })); // Parser de JSON com limite aumentado para imagens
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parser de form data com limite aumentado
 
 // Helper para obter IP real do cliente (suporta proxies)
 function getClientIP(req) {
@@ -263,8 +263,8 @@ app.get('/api/devices/by-event', async (req, res) => {
         }
         
         console.log(`✅ [GET /api/devices/by-event] ${data?.length || 0} dispositivos encontrados`);
-        
-        res.json({
+    
+    res.json({
             success: true,
             devices: data || []
         });
@@ -657,7 +657,7 @@ app.post('/api/devices/cleanup-inactive-sessions', express.json(), async (req, r
 // Rota pública: Salvar detecção no image_buffer
 app.post('/api/detections', express.json(), async (req, res) => {
     try {
-        const { event_id, device_id, session_id, image_data, detection_area, latitude, longitude, accuracy } = req.body;
+        const { event_id, device_id, session_id, image_data, latitude, longitude, accuracy } = req.body;
         
         if (!event_id || !device_id || !image_data) {
             return res.status(400).json({
@@ -683,7 +683,7 @@ app.post('/api/detections', express.json(), async (req, res) => {
             device_id: device_id,
             session_id: session_id || null,
             image_data: image_data,
-            detection_area: detection_area || null,
+            // detection_area removido - coluna não existe na tabela image_buffer
             latitude: latitude || null,
             longitude: longitude || null,
             accuracy: accuracy || null,

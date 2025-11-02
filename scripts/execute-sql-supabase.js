@@ -42,3 +42,5 @@ console.log('   6. Clique em: "Run" ou pressione Ctrl+Enter');
 console.log('   7. Aguarde confirmação de sucesso\n');
 console.log('✅ Após executar, as triggers estarão corrigidas!');
 
+
+

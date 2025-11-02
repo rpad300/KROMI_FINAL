@@ -64,3 +64,6 @@ COMMIT;
 -- Execute este SELECT para verificar se a conversão funcionou:
 -- SELECT id, name, event_date, pg_typeof(event_date) FROM events LIMIT 5;
 
+
+
+

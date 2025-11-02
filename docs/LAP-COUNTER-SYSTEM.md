@@ -173,3 +173,6 @@ Quando uma detecção é feita em um dispositivo com checkpoint "Contador de Vol
 
 
 
+
+
+

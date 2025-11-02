@@ -7,7 +7,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <title>Kromi.online - Detecção de Dorsais</title>
+    <!-- Force no-cache para garantir código atualizado -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Kromi.online - Detecção Inteligente v3.0</title>
+    <!-- VERSION: 2025-01-03-SMART-DETECTION -->
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -129,7 +135,7 @@
         <div class="permission-content">
             <h3>🔐 PIN de Segurança</h3>
             <p>Digite o PIN do dispositivo para acessar a detecção.</p>
-            <form id="pinForm" onsubmit="event.preventDefault(); document.getElementById('validatePin').click();">
+            <form id="pinForm" onsubmit="event.preventDefault(); validatePin(); return false;">
                 <!-- Campo username oculto para acessibilidade (recomendação do Chrome) -->
                 <input type="text" name="username" autocomplete="username" value="device-pin" style="position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
                 
@@ -188,10 +194,21 @@
         let facingMode = 'environment'; // 'environment' (traseira) ou 'user' (frontal)
         let lastFrame = null; // Para detecção de movimento
         let motionDetected = false; // Flag para indicar se há movimento
-        let motionThreshold = 50; // Sensibilidade do movimento (0-255)
+        
+        // Sistema de threshold DUPLO: ambiente vs pessoa
+        let motionThresholdAmbient = 3; // Movimento ambiente (folhas, sombras) - NÃO captura
+        let motionThresholdPerson = 15; // Movimento significativo (pessoa a passar) - CAPTURA
         let consecutiveMotionFrames = 0; // Contador de frames com movimento
-        let minMotionFrames = 5; // Número mínimo de frames com movimento para considerar detecção
+        let minMotionFrames = 2; // Número mínimo de frames com movimento para considerar detecção
+        
+        // SEM cooldown - captura contínua quando há pessoa para pegar todos os dorsais do grupo
         let wakeLock = null; // Para prevenir suspensão do dispositivo
+        
+        // Canvas reutilizáveis para detecção de movimento (evitar criar em cada ciclo)
+        let _motionCanvas, _motionCtx, _analysisCanvas, _analysisCtx;
+        
+        // Flag para controlar inicialização de áudio (apenas após gesto do utilizador)
+        let audioReady = false;
         
         // Carregar logo
         async function loadDetectionLogo() {
@@ -236,6 +253,16 @@
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', async () => {
+            // LOG DE VERSÃO - CONFIRMAR QUE CÓDIGO NOVO ESTÁ A CARREGAR
+            console.log('🚀🚀🚀 ========================================');
+            console.log('🚀🚀🚀 DETECTION-KROMI.HTML v3.0 LOADED');
+            console.log('🚀🚀🚀 VERSION: 2025-01-03-SMART-DETECTION');
+            console.log('🚀🚀🚀 🎯 DETECÇÃO INTELIGENTE DE PESSOAS');
+            console.log('🚀🚀🚀 🟢 Pessoa (>15): CAPTURA CONTÍNUA');
+            console.log('🚀🚀🚀 🟡 Ambiente (3-15): IGNORA');
+            console.log('🚀🚀🚀 🚴 Captura TODOS dorsais do grupo');
+            console.log('🚀🚀🚀 ========================================');
+            
             // Carregar logo
             loadDetectionLogo();
             
@@ -332,13 +359,61 @@
             }
             
             console.log('✅ Inicialização completa');
+            
+            // Expor validatePin globalmente (garantir que está disponível para HTML inline)
+            window.validatePin = validatePin;
+            console.log('🔧 window.validatePin exposta:', typeof window.validatePin);
+            
+            // Expor função de debug globalmente
+            window.debugDetection = function() {
+                console.log('🐛 ========== DEBUG DETECTION ==========');
+                console.log('  isDetecting:', isDetecting);
+                console.log('  cameraStream:', !!cameraStream);
+                console.log('  motionCheckInterval:', !!motionCheckInterval);
+                console.log('  captureInterval:', !!captureInterval);
+                console.log('  🟢 motionThresholdPerson:', motionThresholdPerson);
+                console.log('  🟡 motionThresholdAmbient:', motionThresholdAmbient);
+                console.log('  minMotionFrames:', minMotionFrames);
+                console.log('  detectMotion exists:', typeof detectMotion);
+                console.log('  _detectMotionCallCount:', window._detectMotionCallCount || 0);
+                console.log('🐛 =====================================');
+                
+                // Testar detectMotion manualmente
+                if (typeof detectMotion === 'function') {
+                    console.log('🧪 Testando detectMotion() agora...');
+                    detectMotion();
+                } else {
+                    console.error('❌ detectMotion não está definida!');
+                }
+            };
+            
+            // Função para ajustar thresholds em tempo real
+            window.adjustThreshold = function(personThreshold, ambientThreshold) {
+                if (personThreshold !== undefined) {
+                    motionThresholdPerson = personThreshold;
+                    console.log(`✅ Threshold PESSOA ajustado para: ${motionThresholdPerson}`);
+                }
+                if (ambientThreshold !== undefined) {
+                    motionThresholdAmbient = ambientThreshold;
+                    console.log(`✅ Threshold AMBIENTE ajustado para: ${motionThresholdAmbient}`);
+                }
+                console.log('📊 Configuração atual:');
+                console.log(`   🟢 Pessoa: >${motionThresholdPerson} → CAPTURA`);
+                console.log(`   🟡 Ambiente: ${motionThresholdAmbient}-${motionThresholdPerson} → IGNORA`);
+                console.log(`   ⚪ Parado: <${motionThresholdAmbient}`);
+            };
+            
+            console.log('💡 Funções disponíveis na consola:');
+            console.log('   window.debugDetection() - mostrar estado');
+            console.log('   window.adjustThreshold(pessoa, ambiente) - ex: adjustThreshold(20, 5)');
         });
         
         function setupEventListeners() {
-            // PIN validation
-            document.getElementById('validatePin')?.addEventListener('click', validatePin);
+            // PIN validation - remover listener direto no botão, usar apenas form submit
+            // document.getElementById('validatePin')?.addEventListener('click', validatePin); // Removido - form já chama
             document.getElementById('pinInput')?.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     validatePin();
                 }
             });
@@ -371,7 +446,15 @@
                 }
                 
                 if (stopDetectionBtn) {
-                    stopDetectionBtn.addEventListener('click', stopDetection);
+                    // Remover listeners anteriores para evitar duplicatas
+                    stopDetectionBtn.removeEventListener('click', stopDetection);
+                    // Adicionar novo listener
+                    stopDetectionBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🖱️ Botão stopDetection clicado pelo usuário');
+                        stopDetection();
+                    });
                     console.log('✅ Event listener adicionado: stopDetection');
                 } else {
                     console.error('❌ Botão stopDetection não encontrado');
@@ -408,8 +491,8 @@
                 }
             }, 100);
             
-            // Criar som de detecção
-            initDetectionSound();
+            // NÃO inicializar som aqui - será inicializado no primeiro gesto do utilizador
+            // (iOS/Chrome bloqueiam AudioContext sem gesto do utilizador)
             
             // Inicializar estado do botão de som
             const soundBtn = document.getElementById('toggleSoundBtn');
@@ -436,6 +519,12 @@
         }
         
         async function requestDevicePin() {
+            // Se PIN já foi validado, não pedir novamente
+            if (pinValidated) {
+                console.log('✅ PIN já validado anteriormente, ignorando requestDevicePin');
+                return;
+            }
+            
             try {
                 console.log('🔐 requestDevicePin: Iniciando...');
                 console.log('  Event ID:', currentEvent.id);
@@ -686,21 +775,42 @@
                     // Marcar PIN como validado
                     pinValidated = true;
                     
+                    // Resetar flag antes de criar sessão após liberar sessões
+                    isCreatingSession = false;
+                    
                     // Criar sessão
                     const sessionCreated = await createDeviceSession();
+                    
+                    // Log do sessionId após criar sessão
+                    console.log('🔍 SessionId após criar sessão no modal:', sessionId);
                     
                     if (sessionCreated) {
                         console.log('✅ Sessão criada após liberação no modal');
                         
+                        // Marcar PIN como validado para prevenir pedido novamente
+                        pinValidated = true;
+                        
                         // Esconder tela de PIN (se estiver visível)
-                        document.getElementById('pinPanel').style.display = 'none';
+                        const pinPanel = document.getElementById('pinPanel');
+                        if (pinPanel) {
+                            pinPanel.style.display = 'none';
+                            // Desabilitar o form também
+                            const pinForm = document.getElementById('pinForm');
+                            if (pinForm) {
+                                pinForm.style.display = 'none';
+                            }
+                        }
                         
                         // Mostrar botão de terminar sessão
                         const endBtn = document.getElementById('endSessionBtn');
                         if (endBtn) endBtn.style.display = 'inline-flex';
                         
-                        // Mostrar tela de permissão de câmera
-                        requestCameraPermission();
+                        // Mostrar botão "Iniciar Detecção" (não iniciar automaticamente)
+                        const startBtn = document.getElementById('startDetection');
+                        if (startBtn) {
+                            startBtn.style.display = 'inline-flex';
+                            console.log('✅ Botão "Iniciar Detecção" disponível');
+                        }
                         
                         // Iniciar heartbeat
                         startSessionHeartbeat();
@@ -759,64 +869,128 @@
             }
         }
         
+        let isValidatingPin = false; // Flag para prevenir chamadas duplicadas
+        let pinValidationPromise = null; // Promise para garantir apenas uma validação
+        
         async function validatePin() {
-            const inputPin = document.getElementById('pinInput').value;
-            const errorDiv = document.getElementById('pinError');
-            
-            if (!inputPin) {
-                errorDiv.textContent = 'Digite o PIN';
-                errorDiv.style.display = 'block';
-                return;
+            // Prevenir chamadas duplicadas - retornar a mesma promise se já está validando
+            if (isValidatingPin) {
+                console.log('⚠️ Validação de PIN já em andamento, aguardando resultado existente...');
+                return pinValidationPromise;
             }
             
-            if (inputPin === devicePin) {
-                // PIN correto! Tentar iniciar sessão
-                console.log('✅ PIN validado com sucesso');
-                pinValidated = true;
-                
-                // Obter localização GPS após gesto do usuário (validar PIN)
-                if (!currentPosition) {
-                    await getCurrentLocation();
+            isValidatingPin = true;
+            
+            // Criar uma promise que será retornada para chamadas subsequentes
+            pinValidationPromise = (async () => {
+                try {
+                    return await validatePinInternal();
+                } finally {
+                    isValidatingPin = false;
+                    pinValidationPromise = null;
                 }
+            })();
+            
+            return pinValidationPromise;
+        }
+        
+        // Expor globalmente para o HTML inline poder chamar
+        window.validatePin = validatePin;
+        
+        async function validatePinInternal() {
+            try {
+                const inputPin = document.getElementById('pinInput').value;
+                const errorDiv = document.getElementById('pinError');
                 
-                // Criar sessão no Supabase
-                const sessionCreated = await createDeviceSession();
-                
-                if (!sessionCreated) {
-                    errorDiv.textContent = '❌ Limite de sessões atingido. Aguarde.';
+                if (!inputPin) {
+                    errorDiv.textContent = 'Digite o PIN';
                     errorDiv.style.display = 'block';
                     return;
                 }
                 
-                // Esconder tela de PIN
-                document.getElementById('pinPanel').style.display = 'none';
+                if (inputPin === devicePin) {
+                    // PIN correto! Tentar iniciar sessão
+                    console.log('✅ PIN validado com sucesso');
+                    pinValidated = true;
+                    
+                    // Obter localização GPS após gesto do usuário (validar PIN)
+                    if (!currentPosition) {
+                        await getCurrentLocation();
+                    }
+                    
+                    // Criar sessão no Supabase
+                    const sessionCreated = await createDeviceSession();
                 
-                // Mostrar botão terminar sessão
-                const endBtn = document.getElementById('endSessionBtn');
-                if (endBtn) endBtn.style.display = 'inline-flex';
+                    if (!sessionCreated) {
+                        // Se a sessão não foi criada, verificar se foi criada pelo modal
+                        // Se sim, continuar normalmente
+                        if (sessionId) {
+                            console.log('✅ Sessão foi criada pelo modal, continuando...');
+                            // Continuar o fluxo normalmente
+                        } else {
+                            errorDiv.textContent = '❌ Limite de sessões atingido. Aguarde.';
+                            errorDiv.style.display = 'block';
+                            return;
+                        }
+                    }
                 
-                // Mostrar tela de permissão de câmera
-                requestCameraPermission();
-                
-                // Iniciar heartbeat
-                startSessionHeartbeat();
-                
-            } else {
-                // PIN errado
-                console.error('❌ PIN incorreto');
-                errorDiv.textContent = '❌ PIN incorreto. Tente novamente.';
-                errorDiv.style.display = 'block';
-                
-                // Limpar input
-                document.getElementById('pinInput').value = '';
-                document.getElementById('pinInput').focus();
-                
-                // Shake animation
-                const panel = document.querySelector('#pinPanel .permission-content');
-                panel.style.animation = 'shake 0.5s';
-                setTimeout(() => {
-                    panel.style.animation = '';
-                }, 500);
+                    // Esconder tela de PIN permanentemente (marcar como já validado)
+                    const pinPanel = document.getElementById('pinPanel');
+                    if (pinPanel) {
+                        pinPanel.style.display = 'none';
+                        console.log('✅ Painel de PIN escondido permanentemente');
+                    }
+                    
+                    // Limpar input de PIN
+                    const pinInput = document.getElementById('pinInput');
+                    if (pinInput) {
+                        pinInput.value = '';
+                    }
+                    
+                    // Desabilitar o form para prevenir novos submits
+                    const pinForm = document.getElementById('pinForm');
+                    if (pinForm) {
+                        pinForm.style.display = 'none';
+                    }
+                    
+                    // Mostrar botão terminar sessão
+                    const endBtn = document.getElementById('endSessionBtn');
+                    if (endBtn) endBtn.style.display = 'inline-flex';
+                    
+                    // Mostrar botão "Iniciar Detecção" (não iniciar automaticamente)
+                    const startBtn = document.getElementById('startDetection');
+                    if (startBtn) {
+                        startBtn.style.display = 'inline-flex';
+                        console.log('✅ Botão "Iniciar Detecção" disponível');
+                    }
+                    
+                    // Iniciar heartbeat
+                    startSessionHeartbeat();
+                    
+                } else {
+                    // PIN errado
+                    console.error('❌ PIN incorreto');
+                    errorDiv.textContent = '❌ PIN incorreto. Tente novamente.';
+                    errorDiv.style.display = 'block';
+                    
+                    // Limpar input
+                    document.getElementById('pinInput').value = '';
+                    document.getElementById('pinInput').focus();
+                    
+                    // Shake animation
+                    const panel = document.querySelector('#pinPanel .permission-content');
+                    panel.style.animation = 'shake 0.5s';
+                    setTimeout(() => {
+                        panel.style.animation = '';
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('❌ Erro na validação de PIN:', error);
+                const errorDiv = document.getElementById('pinError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Erro ao validar PIN. Tente novamente.';
+                    errorDiv.style.display = 'block';
+                }
             }
         }
         
@@ -857,7 +1031,29 @@
             }
         }
         
+        let isCreatingSession = false; // Flag para prevenir chamadas duplicadas
+        
         async function createDeviceSession() {
+            // Gerar um novo sessionId único para cada tentativa de criar sessão
+            // Gerar um session_id único usando timestamp + random + counter para garantir unicidade
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substr(2, 9);
+            const counter = (window._sessionCounter = (window._sessionCounter || 0) + 1);
+            const newSessionId = `session-${timestamp}-${random}-${counter}`;
+            
+            // Prevenir chamadas duplicadas - mas permitir retry após liberar sessões
+            if (isCreatingSession) {
+                console.log('⚠️ Criação de sessão já em andamento, aguardando...');
+                // Aguardar um pouco e tentar novamente
+                await new Promise(resolve => setTimeout(resolve, 500));
+                // Se ainda estiver criando, retornar false para permitir que o modal seja mostrado
+                if (isCreatingSession) {
+                    return false;
+                }
+            }
+            
+            isCreatingSession = true;
+            
             try {
                 console.log('🔄 Criando sessão via API REST...');
                 
@@ -869,7 +1065,7 @@
                     body: JSON.stringify({
                         event_id: currentEvent.id,
                         device_id: currentDevice,
-                        session_id: sessionId,
+                        session_id: newSessionId,
                         user_agent: navigator.userAgent
                     })
                 });
@@ -880,6 +1076,16 @@
                 if (sessionResponse.ok) {
                     const sessionResult = await sessionResponse.json();
                     data = sessionResult;
+                    
+                    // Se a sessão foi criada com sucesso, atualizar o sessionId global com o ID retornado ou o novo gerado
+                    if (data.success && data.session_id) {
+                        sessionId = data.session_id;
+                        console.log('✅ SessionId atualizado globalmente:', sessionId);
+                    } else if (data.success) {
+                        sessionId = newSessionId;
+                        console.log('✅ SessionId atualizado globalmente (usando novo gerado):', sessionId);
+                    }
+                    
                     console.log('📊 Resultado criar sessão:');
                     console.log('  Data:', data);
                 } else {
@@ -925,8 +1131,46 @@
                             const confirmed = await showSessionConflictModal(deviceData);
                             
                             if (confirmed) {
-                                // Usuário confirmou com PIN, tentar criar sessão novamente via API REST
-                                console.log('🔄 Tentando criar sessão após liberação no modal...');
+                                // O modal já criou a sessão, apenas verificar se foi criada
+                                // Guardar o sessionId antes do modal para comparar
+                                const sessionIdBeforeModal = sessionId;
+                                
+                                // Aguardar um pouco para garantir que o modal completou
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                
+                                // Verificar se sessionId mudou (foi atualizado pelo modal)
+                                console.log('🔍 Verificando sessionId após modal:');
+                                console.log('  Antes do modal:', sessionIdBeforeModal);
+                                console.log('  Depois do modal:', sessionId);
+                                
+                                // Se o sessionId foi atualizado e contém um UUID válido, significa que foi criado pelo modal
+                                if (sessionId && sessionId !== sessionIdBeforeModal && sessionId.includes('-') && sessionId.length > 20) {
+                                    console.log('✅ Sessão já foi criada pelo modal! SessionId:', sessionId);
+                                    // Resetar flag antes de retornar
+                                    isCreatingSession = false;
+                                    return true;
+                                }
+                                
+                                // Verificar diretamente na API se existe uma sessão ativa para este dispositivo
+                                try {
+                                    const checkResponse = await fetch(`/api/devices/by-event-device?event_id=${encodeURIComponent(currentEvent.id)}&device_id=${encodeURIComponent(currentDevice)}`);
+                                    if (checkResponse.ok) {
+                                        const checkResult = await checkResponse.json();
+                                        if (checkResult.success && checkResult.device && checkResult.device.active_sessions > 0) {
+                                            console.log('✅ Sessão ativa encontrada na API, modal já criou!');
+                                            // Resetar flag antes de retornar
+                                            isCreatingSession = false;
+                                            return true;
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.warn('⚠️ Erro ao verificar sessões ativas:', err);
+                                }
+                                
+                                // Se não foi criada pelo modal, tentar criar agora
+                                // Gerar um novo sessionId para a retry
+                                const retrySessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                                console.log('🔄 Tentando criar sessão após liberação no modal (modal não criou)...');
                                 const retryResponse = await fetch('/api/devices/start-session', {
                                     method: 'POST',
                                     headers: {
@@ -935,7 +1179,7 @@
                                     body: JSON.stringify({
                                         event_id: currentEvent.id,
                                         device_id: currentDevice,
-                                        session_id: sessionId,
+                                        session_id: retrySessionId,
                                         user_agent: navigator.userAgent
                                     })
                                 });
@@ -943,22 +1187,36 @@
                                 if (retryResponse.ok) {
                                     const retryResult = await retryResponse.json();
                                     if (retryResult.success) {
-                                        console.log('✅ Sessão criada após liberação!');
+                                        // Atualizar sessionId global com o ID retornado ou o novo gerado
+                                        if (retryResult.session_id) {
+                                            sessionId = retryResult.session_id;
+                                        } else {
+                                            sessionId = retrySessionId;
+                                        }
+                                        console.log('✅ Sessão criada após liberação! SessionId:', sessionId);
+                                        // Resetar flag antes de retornar
+                                        isCreatingSession = false;
                                         return true;
                                     }
                                 }
                                 
                                 console.error('❌ Ainda falhou ao criar sessão');
                                 showError(`Limite de ${deviceData.max_sessions} sessões atingido!`);
+                                // Resetar flag antes de retornar
+                                isCreatingSession = false;
                                 return false;
                             }
                         } else {
                             // Usuário cancelou
                             console.log('❌ Liberação cancelada pelo usuário');
+                            // Resetar flag antes de retornar
+                            isCreatingSession = false;
                             return false;
                         }
                     } else {
-                        showError(`Limite de ${deviceData?.max_sessions || 'desconhecido'} sessões atingido!`);
+                        showError('Limite de sessões atingido!');
+                        // Resetar flag antes de retornar
+                        isCreatingSession = false;
                         return false;
                     }
                 }
@@ -970,10 +1228,15 @@
                 } else if (data.session) {
                     console.log(`  Sessão criada: ${data.session.id || data.session.session_id}`);
                 }
+                
+                // Resetar flag antes de retornar
+                isCreatingSession = false;
                 return true;
                 
             } catch (error) {
                 console.error('❌ Erro geral:', error);
+                // Resetar flag antes de retornar
+                isCreatingSession = false;
                 // Permitir acesso em caso de erro (para não bloquear)
                 return true;
             }
@@ -1200,31 +1463,98 @@
         async function startCamera() {
             try {
                 // Hide permission panel
-                document.getElementById('permissionPanel').style.display = 'none';
+                const permissionPanel = document.getElementById('permissionPanel');
+                if (permissionPanel) {
+                    permissionPanel.style.display = 'none';
+                }
                 
-                console.log('📷 Iniciando câmera com facingMode:', facingMode);
+                console.log('📷 [startCamera] Iniciando câmera com facingMode:', facingMode);
+                console.log('📷 [startCamera] cameraStream atual:', !!cameraStream);
                 
-                // Request camera access
-                cameraStream = await navigator.mediaDevices.getUserMedia({
+                // Parar câmera anterior se existir
+                if (cameraStream) {
+                    console.log('📷 [startCamera] Parando câmera anterior...');
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                
+                // Request camera access with ideal facingMode and fallback
+                console.log('📷 [startCamera] Pedindo permissão getUserMedia...');
+                const constraints = {
                     video: {
-                        facingMode: facingMode, // Usar variável global
+                        facingMode: { ideal: facingMode }, // Usar ideal para permitir fallback
                         width: { ideal: 1920 },
                         height: { ideal: 1080 }
                     }
-                });
+                };
+                
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (err) {
+                    console.warn('⚠️ Erro com constraints específicos:', err);
+                    console.log('🔄 Tentando fallback genérico...');
+                    // Fallback genérico se facingMode falhar
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+                
+                console.log('📷 [startCamera] getUserMedia retornou:', !!cameraStream);
+                if (!cameraStream) {
+                    throw new Error('getUserMedia retornou null');
+                }
                 
                 // Set video source
                 const video = document.getElementById('cameraVideo');
+                if (!video) {
+                    throw new Error('Elemento cameraVideo não encontrado');
+                }
+                
                 video.srcObject = cameraStream;
+                console.log('📷 [startCamera] srcObject atribuído ao video');
+                
+                // Garantir que o vídeo está tocando (crítico para iOS e alguns Chrome)
+                try {
+                    await video.play();
+                    console.log('📷 [startCamera] video.play() chamado com sucesso');
+                } catch (e) {
+                    console.warn('⚠️ video.play() falhou:', e);
+                }
+                
+                // Aguardar o video estar pronto - polling simples ao invés de evento
+                console.log('📷 [startCamera] Aguardando vídeo ficar pronto...');
+                let attempts = 0;
+                const maxAttempts = 50; // 5 segundos (50 x 100ms)
+                
+                while (attempts < maxAttempts) {
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        console.log('📷 [startCamera] Video metadata carregada:', video.videoWidth, 'x', video.videoHeight);
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                    
+                    if (attempts % 10 === 0) {
+                        console.log(`📷 [startCamera] Aguardando... tentativa ${attempts}/${maxAttempts}`);
+                    }
+                }
+                
+                // Se ainda não tiver dimensões, avisar mas continuar mesmo assim
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    console.warn('⚠️ [startCamera] Vídeo ainda sem dimensões após timeout, mas continuando...');
+                    console.warn('⚠️ [startCamera] Pode levar mais alguns segundos para estabilizar');
+                }
                 
                 console.log('✅ Câmera iniciada:', facingMode === 'environment' ? 'Traseira' : 'Frontal');
+                console.log('✅ Video dimensões:', video.videoWidth, 'x', video.videoHeight);
                 
                 // Show detection area
                 setupDetectionArea();
                 
             } catch (error) {
                 console.error('❌ Erro ao acessar câmera:', error);
+                console.error('❌ Stack:', error.stack);
+                cameraStream = null;
                 showError('Não foi possível acessar a câmera. Verifique as permissões.');
+                throw error; // Re-throw para que o chamador saiba que falhou
             }
         }
         
@@ -1234,55 +1564,306 @@
             detectionArea.className = 'detection-area';
             detectionArea.id = 'detectionArea';
             
-            // Não precisa definir posição - CSS já centraliza automaticamente
-            // usando left: 50%, top: 50%, transform: translate(-50%, -50%)
+            // Garantir estilos mínimos inline (caso CSS externo não carregue)
+            detectionArea.style.position = 'absolute';
+            detectionArea.style.left = '50%';
+            detectionArea.style.top = '50%';
+            detectionArea.style.transform = 'translate(-50%, -50%)';
+            detectionArea.style.width = '80%';
+            detectionArea.style.height = '60%';
+            detectionArea.style.border = '2px dashed rgba(255,255,255,0.3)';
+            detectionArea.style.pointerEvents = 'none'; // Não interferir com cliques
             
             overlay.appendChild(detectionArea);
         }
         
+        let isStartingDetection = false; // Prevenir chamadas duplicadas
+        
         async function startDetection() {
-            console.log('🎯 startDetection() chamada');
+            // Inicializar áudio no primeiro gesto do utilizador
+            initDetectionSound();
             
-            if (!cameraStream) {
-                console.error('❌ Câmera não iniciada');
-                showError('Câmera não iniciada');
+            // Prevenir chamadas duplicadas
+            if (isStartingDetection) {
+                console.log('⚠️ startDetection já em andamento, ignorando chamada duplicada...');
                 return;
             }
             
-            // Obter localização GPS após gesto do usuário (iniciar detecção)
-            if (!currentPosition) {
-                await getCurrentLocation();
+            if (isDetecting) {
+                console.log('⚠️ Detecção já está em andamento');
+                return;
             }
             
-            isDetecting = true;
-            detectionCount = 0;
-            motionDetected = false;
-            lastFrame = null;
+            isStartingDetection = true;
+            console.log('🎯 [startDetection] Função chamada');
             
-            // Update UI
-            document.getElementById('startDetection').style.display = 'none';
-            document.getElementById('stopDetection').style.display = 'inline-flex';
-            
-            // Iniciar verificação de movimento (a cada 500ms)
-            motionCheckInterval = setInterval(() => {
-                detectMotion();
-            }, 500);
-            
-            // Start continuous capture to buffer (every 1 second) - mas só se houver movimento
-            captureInterval = setInterval(() => {
-                if (motionDetected) {
-                    captureToBuffer();
+            try {
+                console.log('🔍 [startDetection] Verificando estado inicial...');
+                console.log('🔍 [startDetection] cameraStream:', !!cameraStream);
+                console.log('🔍 [startDetection] isDetecting:', isDetecting);
+                console.log('🔍 [startDetection] isStartingDetection:', isStartingDetection);
+                
+                // Se a câmera não está iniciada, pedir permissão e iniciar primeiro
+                if (!cameraStream) {
+                    console.log('📷 [startDetection] Câmera não iniciada, pedindo permissão primeiro...');
+                    try {
+                        await startCamera();
+                        console.log('📷 [startDetection] startCamera() completou, cameraStream:', !!cameraStream);
+                    } catch (cameraError) {
+                        console.error('❌ [startDetection] Erro ao iniciar câmera:', cameraError);
+                        showError('Não foi possível acessar a câmera. Verifique as permissões.');
+                        isStartingDetection = false;
+                        return;
+                    }
+                    
+                    // Se ainda não conseguiu iniciar a câmera, abortar
+                    if (!cameraStream) {
+                        console.error('❌ [startDetection] Câmera ainda não iniciada após startCamera()');
+                        showError('Não foi possível acessar a câmera. Verifique as permissões.');
+                        isStartingDetection = false;
+                        return;
+                    }
+                    console.log('✅ [startDetection] Câmera confirmada como ativa');
+                } else {
+                    console.log('✅ [startDetection] Câmera já está iniciada');
                 }
-            }, 1000);
             
-            console.log('🎯 Detecção iniciada - Monitorando movimento');
-            console.log('📊 Apenas capturará quando detectar movimento significativo');
-            console.log('⏱️ Intervalo de captura: 1 segundo (quando movimento detectado)');
-            console.log('🔒 Wake Lock ativo - dispositivo não entrará em suspensão');
+                // Obter localização GPS após gesto do usuário (iniciar detecção)
+                if (!currentPosition) {
+                    await getCurrentLocation();
+                }
+                
+                // CRÍTICO: Definir isDetecting como true ANTES de qualquer outra coisa
+                // e usar flag de proteção para prevenir alterações acidentais durante a inicialização
+                window._isDetectingLocked = true;
+                
+                isDetecting = true;
+                detectionCount = 0;
+                motionDetected = false;
+                lastFrame = null;
+                consecutiveMotionFrames = 0; // Reset contador ao iniciar
+                
+                // Reset contadores de debug
+                window._motionCheckCount = 0;
+                window._captureCheckCount = 0;
+                window._videoReadyCount = 0;
+                
+                console.log('✅ [startDetection] isDetecting definido como true e protegido temporariamente');
+                
+                // Update UI - usar setTimeout para evitar cliques acidentais
+                document.getElementById('startDetection').style.display = 'none';
+                // Pequeno delay antes de mostrar botão stop para evitar cliques acidentais
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const stopBtn = document.getElementById('stopDetection');
+                if (stopBtn) {
+                    stopBtn.style.display = 'inline-flex';
+                    // Adicionar pequeno delay adicional antes de permitir cliques
+                    stopBtn.style.pointerEvents = 'none';
+                    setTimeout(() => {
+                        stopBtn.style.pointerEvents = 'auto';
+                    }, 200);
+                }
+                
+                // Aguardar um pouco para garantir que o video esteja pronto
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Verificar se video está pronto antes de iniciar detecção
+                const video = document.getElementById('cameraVideo');
+                if (!video || !video.videoWidth || !video.videoHeight) {
+                    console.warn('⚠️ Video ainda não está pronto, aguardando...');
+                    // Aguardar mais um pouco
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                console.log('✅ Iniciando detecção de movimento...');
+                console.log(`   Video: ${video?.videoWidth}x${video?.videoHeight}`);
+                console.log(`   Threshold PESSOA: ${motionThresholdPerson}, AMBIENTE: ${motionThresholdAmbient}`);
+                console.log(`   MinFrames: ${minMotionFrames}`);
+                console.log(`   isDetecting ANTES de criar intervalos:`, isDetecting);
+                console.log(`   cameraStream ANTES de criar intervalos:`, !!cameraStream);
+                
+                // Verificar se está tudo ok antes de criar intervalos
+                if (!isDetecting) {
+                    console.error('❌ ERRO: isDetecting é false antes de criar intervalos!');
+                    throw new Error('isDetecting não está true');
+                }
+                if (!cameraStream) {
+                    console.error('❌ ERRO: cameraStream é null antes de criar intervalos!');
+                    throw new Error('câmera não está disponível');
+                }
+                
+                // Limpar intervalos anteriores se existirem (segurança)
+                if (motionCheckInterval) {
+                    console.warn('⚠️ Limpando intervalo anterior de movimento...');
+                    clearInterval(motionCheckInterval);
+                    motionCheckInterval = null;
+                }
+                if (captureInterval) {
+                    console.warn('⚠️ Limpando intervalo anterior de captura...');
+                    clearInterval(captureInterval);
+                    captureInterval = null;
+                }
+                
+                // Iniciar verificação de movimento (a cada 500ms)
+                console.log('🔄 Criando intervalo de verificação de movimento...');
+                try {
+                    motionCheckInterval = setInterval(() => {
+                        console.log('🔄 [INTERVALO] Chamado - isDetecting:', isDetecting);
+                        if (!isDetecting) {
+                            console.log('⚠️ Intervalo chamado mas isDetecting=false, limpando...');
+                            clearInterval(motionCheckInterval);
+                            motionCheckInterval = null;
+                            return;
+                        }
+                        if (!cameraStream) {
+                            console.log('⚠️ Intervalo chamado mas cameraStream=null, limpando...');
+                            clearInterval(motionCheckInterval);
+                            motionCheckInterval = null;
+                            return;
+                        }
+                        console.log('🔄 [INTERVALO] Chamando detectMotion()...');
+                        detectMotion();
+                    }, 500);
+                    console.log('✅ Intervalo criado:', motionCheckInterval);
+                    if (!motionCheckInterval) {
+                        throw new Error('setInterval retornou null/undefined');
+                    }
+                } catch (intervalError) {
+                    console.error('❌ ERRO ao criar motionCheckInterval:', intervalError);
+                    throw intervalError;
+                }
+                
+                // Start continuous capture to buffer (every 1 second) - SEM cooldown para pegar todos os dorsais do grupo
+                captureInterval = setInterval(() => {
+                    if (motionDetected && isDetecting) {
+                        // CAPTURA CONTÍNUA quando há pessoa - importante para grupos/pelotões
+                        console.log('📸 Capturando (pessoa/grupo no quadro)...');
+                        captureToBuffer();
+                    } else if (isDetecting) {
+                        // Log periódico se não há movimento de pessoa
+                        if (!window._captureCheckCount) window._captureCheckCount = 0;
+                        window._captureCheckCount++;
+                        if (window._captureCheckCount % 10 === 0) {
+                            console.log(`⏸️ Aguardando pessoa/grupo passar... (check #${window._captureCheckCount})`);
+                        }
+                    }
+                }, 1000);
+                
+                // Verificar se os intervalos foram criados corretamente
+                if (!motionCheckInterval) {
+                    console.error('❌ ERRO CRÍTICO: motionCheckInterval não foi criado!');
+                    throw new Error('Falha ao criar intervalo de detecção de movimento');
+                }
+                if (!captureInterval) {
+                    console.error('❌ ERRO CRÍTICO: captureInterval não foi criado!');
+                    throw new Error('Falha ao criar intervalo de captura');
+                }
+                
+                // Verificar novamente antes de finalizar
+                if (!isDetecting) {
+                    console.error('❌ ERRO CRÍTICO: isDetecting foi alterado para false após criar intervalos!');
+                    throw new Error('isDetecting foi alterado durante a inicialização');
+                }
+                if (!cameraStream) {
+                    console.error('❌ ERRO CRÍTICO: cameraStream foi alterado para null após criar intervalos!');
+                    throw new Error('cameraStream foi alterado durante a inicialização');
+                }
+                
+                // Log final confirmando que tudo foi iniciado
+                console.log('🎯 ========== DETECÇÃO INTELIGENTE INICIADA ==========');
+                console.log('📊 Sistema de Detecção de PESSOAS/GRUPOS:');
+                console.log(`   🟢 Threshold PESSOA: ${motionThresholdPerson} (ciclista/corredor) → CAPTURA`);
+                console.log(`   🟡 Threshold AMBIENTE: ${motionThresholdAmbient} (folhas/vento) → IGNORA`);
+                console.log(`   ⚪ Abaixo de ${motionThresholdAmbient}: sem movimento`);
+                console.log(`   📏 minMotionFrames: ${minMotionFrames} frames consecutivos`);
+                console.log(`   🔍 step: 4 (analisa 1 em cada 4 pixels)`);
+                console.log(`   📐 Resolução análise: 640x480`);
+                console.log(`   📸 Captura: CONTÍNUA a cada 1s quando há pessoa/grupo`);
+                console.log('📊 Captura TODOS os dorsais do grupo (SEM cooldown)');
+                console.log('🍃 IGNORA movimento ambiente (3-15): vento, folhas, sombras');
+                console.log('🚴 Ideal para pelotões e grupos de corredores');
+                console.log('🔒 Wake Lock ativo - dispositivo não entrará em suspensão');
+                console.log('✅ Intervalos criados - motionCheckInterval:', motionCheckInterval, 'captureInterval:', captureInterval);
+                console.log('✅ Estado FINAL: isDetecting=', isDetecting, 'cameraStream=', !!cameraStream, 'videoReady=', !!(video?.videoWidth && video?.videoHeight));
+                console.log('✅ Variáveis globais: motionCheckInterval=', !!motionCheckInterval, 'captureInterval=', !!captureInterval);
+                console.log('🎯 =========================================');
+                
+                // Testar imediatamente se detectMotion funciona - testar várias vezes
+                console.log('🧪 Testando detectMotion() imediatamente...');
+                setTimeout(() => {
+                    console.log('🧪 [TESTE] Verificando estado antes de testar...');
+                    console.log('   isDetecting:', isDetecting);
+                    console.log('   cameraStream:', !!cameraStream);
+                    console.log('   motionCheckInterval:', !!motionCheckInterval);
+                    
+                    if (isDetecting && cameraStream) {
+                        console.log('🧪 [TESTE 1] Executando detectMotion() manualmente para teste...');
+                        detectMotion();
+                        
+                        // Testar novamente após 1 segundo
+                        setTimeout(() => {
+                            if (isDetecting && cameraStream) {
+                                console.log('🧪 [TESTE 2] Executando detectMotion() manualmente novamente...');
+                                detectMotion();
+                            } else {
+                                console.warn('🧪 [TESTE 2] ⚠️ Estado alterado - isDetecting:', isDetecting, 'cameraStream:', !!cameraStream);
+                            }
+                        }, 1000);
+                    } else {
+                        console.warn('🧪 ⚠️ Não é possível testar - isDetecting:', isDetecting, 'cameraStream:', !!cameraStream);
+                        if (!isDetecting) {
+                            console.error('🧪 ❌ ERRO: isDetecting foi alterado para false! Alguém chamou stopDetection()?');
+                        }
+                        if (!cameraStream) {
+                            console.error('🧪 ❌ ERRO: cameraStream foi alterado para null! A câmera foi parada?');
+                        }
+                    }
+                }, 1000);
+                
+                // Log de confirmação periódico
+                setTimeout(() => {
+                    console.log('📊 [STATUS APÓS 3s] isDetecting:', isDetecting, 'motionCheckInterval:', !!motionCheckInterval, 'captureInterval:', !!captureInterval);
+                    if (!isDetecting) {
+                        console.error('📊 ❌ PROBLEMA: isDetecting é false após 3 segundos! Algo parou a detecção.');
+                    }
+                    if (!motionCheckInterval) {
+                        console.error('📊 ❌ PROBLEMA: motionCheckInterval foi limpo! Algo parou o intervalo.');
+                    }
+                }, 3000);
+                
+                // Desbloquear proteção após inicialização completa
+                setTimeout(() => {
+                    if (window._isDetectingLocked) {
+                        delete window._isDetectingLocked;
+                        console.log('🔓 Proteção de isDetecting removida após inicialização completa');
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('❌ Erro ao iniciar detecção:', error);
+                console.error('❌ Stack trace:', error.stack);
+                showError('Erro ao iniciar detecção: ' + error.message);
+                isDetecting = false;
+                delete window._isDetectingLocked;
+                document.getElementById('startDetection').style.display = 'inline-flex';
+                document.getElementById('stopDetection').style.display = 'none';
+            } finally {
+                isStartingDetection = false;
+                delete window._isDetectingLocked;
+            }
         }
         
         function stopDetection() {
+            // Log stack trace para descobrir quem está chamando
             console.log('⏹️ stopDetection() chamada');
+            console.trace('Stack trace de stopDetection:');
+            
+            // Verificar se está protegido durante inicialização
+            if (window._isDetectingLocked) {
+                console.warn('⚠️ stopDetection() chamada durante inicialização protegida! Ignorando...');
+                console.warn('⚠️ Se esta chamada for legítima, aguarde a conclusão da inicialização.');
+                return; // Prevenir parada durante inicialização
+            }
             
             isDetecting = false;
             motionDetected = false;
@@ -1309,25 +1890,107 @@
             console.log('⏹️ Detecção parada');
         }
         
+        // Função para garantir que as canvas estão criadas e com tamanho correto
+        function ensureCanvases(video) {
+            if (!_motionCanvas) {
+                _motionCanvas = document.createElement('canvas');
+                _motionCtx = _motionCanvas.getContext('2d', { willReadFrequently: true });
+                console.log('🖼️ Canvas de movimento criada');
+            }
+            if (!_analysisCanvas) {
+                _analysisCanvas = document.createElement('canvas');
+                _analysisCtx = _analysisCanvas.getContext('2d', { willReadFrequently: true });
+                console.log('🖼️ Canvas de análise criada');
+            }
+            _motionCanvas.width = video.videoWidth;
+            _motionCanvas.height = video.videoHeight;
+            
+            // Usar resolução maior para análise (640x480 ou metade do vídeo, o que for menor)
+            // Isso permite detectar movimento em mais detalhes mantendo performance
+            const aw = Math.min(video.videoWidth, 640);
+            const ah = Math.min(video.videoHeight, 480);
+            _analysisCanvas.width = aw;
+            _analysisCanvas.height = ah;
+            
+            console.log(`🖼️ Canvas configuradas: Motion=${_motionCanvas.width}x${_motionCanvas.height}, Analysis=${aw}x${ah}`);
+        }
+        
         function detectMotion() {
-            if (!isDetecting || !cameraStream) return;
+            // Log SEMPRE na primeira chamada para debug
+            if (!window._detectMotionCallCount) {
+                window._detectMotionCallCount = 0;
+                console.log('🔴 detectMotion() PRIMEIRA CHAMADA - iniciando contagem');
+            }
+            window._detectMotionCallCount++;
+            
+            // Log a cada 3 chamadas para debug
+            if (window._detectMotionCallCount % 3 === 0) {
+                console.log(`🔵 detectMotion() #${window._detectMotionCallCount} - isDetecting=${isDetecting}, cameraStream=${!!cameraStream}`);
+            }
+            
+            if (!isDetecting || !cameraStream) {
+                if (!isDetecting) {
+                    if (!window._skipIsDetectingLog) {
+                        console.log('⚠️ detectMotion: isDetecting=false - parando verificação');
+                        window._skipIsDetectingLog = true;
+                        setTimeout(() => { window._skipIsDetectingLog = false; }, 5000);
+                    }
+                }
+                if (!cameraStream) {
+                    if (!window._skipCameraStreamLog) {
+                        console.log('⚠️ detectMotion: cameraStream=null - câmera não disponível');
+                        window._skipCameraStreamLog = true;
+                        setTimeout(() => { window._skipCameraStreamLog = false; }, 5000);
+                    }
+                }
+                return;
+            }
             
             try {
                 const video = document.getElementById('cameraVideo');
-                if (!video.videoWidth || !video.videoHeight) return;
+                if (!video) {
+                    console.error('❌ detectMotion: elemento video não encontrado');
+                    return;
+                }
                 
-                // Capturar frame atual
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                if (!video.videoWidth || !video.videoHeight) {
+                    // Log periódico se video ainda não está pronto
+                    if (!window._videoReadyCount) window._videoReadyCount = 0;
+                    window._videoReadyCount++;
+                    if (window._videoReadyCount % 10 === 0) {
+                        console.log(`⏳ detectMotion: video ainda não pronto (width=${video.videoWidth}, height=${video.videoHeight}, check #${window._videoReadyCount})`);
+                    }
+                    return;
+                }
+                
+                // Garantir que as canvas estão criadas e com tamanho correto
+                ensureCanvases(video);
+                
+                // Capturar frame atual usando canvas reutilizável
+                _motionCtx.drawImage(video, 0, 0, _motionCanvas.width, _motionCanvas.height);
+                
+                // Reduzir resolução para análise de movimento usando canvas reutilizável
+                _analysisCtx.drawImage(_motionCanvas, 0, 0, _analysisCanvas.width, _analysisCanvas.height);
+                
+                const currentFrameData = _analysisCtx.getImageData(0, 0, _analysisCanvas.width, _analysisCanvas.height);
+                
+                // Log periódico para confirmar que está a processar frames
+                if (window._detectMotionCallCount % 5 === 0) {
+                    console.log(`🎬 Frame capturado #${window._detectMotionCallCount} (${_analysisCanvas.width}x${_analysisCanvas.height})`);
+                }
                 
                 if (!lastFrame) {
                     // Primeiro frame, guardar e sair
                     lastFrame = currentFrameData;
+                    console.log('📸 Primeiro frame capturado para referência:', _analysisCanvas.width, 'x', _analysisCanvas.height);
+                    console.log('   Aguardando segundo frame para iniciar comparação...');
+                    console.log(`   Total de pixels a analisar: ${currentFrameData.data.length / 4}`);
                     return;
+                }
+                
+                // Log periódico após o primeiro frame
+                if (window._detectMotionCallCount && window._detectMotionCallCount % 10 === 0) {
+                    console.log(`✅ Comparando frames... (chamada #${window._detectMotionCallCount})`);
                 }
                 
                 // Comparar frames - calcular diferença total
@@ -1335,38 +1998,76 @@
                 let pixels = currentFrameData.data;
                 let lastPixels = lastFrame.data;
                 
-                // Comparar apenas 1 em cada 4 pixels para performance (1/4 da resolução)
-                for (let i = 0; i < pixels.length; i += 16) {
+                // Comparar 1 em cada 4 pixels para melhor detecção (ajustado para maior sensibilidade)
+                const step = 4;
+                let pixelCount = 0;
+                for (let i = 0; i < pixels.length; i += step * 4) {
                     // Calcular diferença de brilho
                     const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
                     const lastBrightness = (lastPixels[i] + lastPixels[i + 1] + lastPixels[i + 2]) / 3;
                     totalDifference += Math.abs(brightness - lastBrightness);
+                    pixelCount++;
                 }
                 
-                const averageDifference = totalDifference / (pixels.length / 16);
+                const averageDifference = pixelCount > 0 ? totalDifference / pixelCount : 0;
                 
-                // Verificar se há movimento significativo
-                if (averageDifference > motionThreshold) {
+                // Log SEMPRE as primeiras 5 comparações e depois a cada 10 para debug
+                if (!window._motionCheckCount) window._motionCheckCount = 0;
+                window._motionCheckCount++;
+                if (window._motionCheckCount <= 5 || window._motionCheckCount % 10 === 0) {
+                    const status = averageDifference > motionThresholdPerson ? '🟢 PESSOA' : 
+                                   averageDifference > motionThresholdAmbient ? '🟡 Ambiente' : '⚪ Parado';
+                    console.log(`🔍 #${window._motionCheckCount}: diff=${averageDifference.toFixed(2)} ${status} | pessoa>${motionThresholdPerson}, ambiente>${motionThresholdAmbient} | consecutive=${consecutiveMotionFrames}/${minMotionFrames}, detected=${motionDetected}`);
+                }
+                
+                // SISTEMA INTELIGENTE: Só deteta PESSOAS, ignora movimento ambiente
+                if (averageDifference > motionThresholdPerson) {
+                    // MOVIMENTO SIGNIFICATIVO (pessoa a passar)
                     consecutiveMotionFrames++;
+                    
+                    // Log quando movimento é detectado mas ainda não atingiu o mínimo
+                    if (consecutiveMotionFrames > 0 && consecutiveMotionFrames < minMotionFrames) {
+                        console.log(`🚶 Movimento de PESSOA detectado: ${consecutiveMotionFrames}/${minMotionFrames} frames (diff=${averageDifference.toFixed(2)})`);
+                    }
                     
                     if (consecutiveMotionFrames >= minMotionFrames && !motionDetected) {
                         motionDetected = true;
-                        console.log('📸 Movimento detectado! Iniciando captura contínua...');
+                        console.log('📸 ✅✅✅ PESSOA/GRUPO DETECTADO! Captura contínua iniciada...');
+                        console.log(`   Diferença: ${averageDifference.toFixed(2)}, Threshold Pessoa: ${motionThresholdPerson}`);
+                        console.log(`   Frames consecutivos: ${consecutiveMotionFrames}`);
+                        console.log(`   🎯 Ciclista(s)/Corredor(es) a passar!`);
+                        console.log(`   📸 Capturando a cada 1s para pegar TODOS os dorsais`);
                         
-                        // Visual feedback
+                        // Visual feedback VERDE (pessoa/grupo)
                         const overlay = document.getElementById('cameraOverlay');
-                        overlay.style.border = '3px solid #10b981';
-                        setTimeout(() => {
-                            overlay.style.border = 'none';
-                        }, 1000);
+                        if (overlay) {
+                            overlay.style.border = '4px solid #10b981';
+                            overlay.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
+                            setTimeout(() => {
+                                overlay.style.border = 'none';
+                                overlay.style.boxShadow = 'none';
+                            }, 1500);
+                        }
+                    }
+                } else if (averageDifference > motionThresholdAmbient) {
+                    // MOVIMENTO AMBIENTE (folhas, sombras, vento) - IGNORA
+                    // Log periódico para debug
+                    if (window._motionCheckCount % 20 === 0) {
+                        console.log(`🍃 Movimento ambiente ignorado (diff=${averageDifference.toFixed(2)}, threshold pessoa=${motionThresholdPerson})`);
+                    }
+                    // Reduzir contador gradualmente
+                    if (consecutiveMotionFrames > 0) {
+                        consecutiveMotionFrames = Math.max(0, consecutiveMotionFrames - 1);
                     }
                 } else {
-                    // Reset contador se não houver movimento
-                    consecutiveMotionFrames = Math.max(0, consecutiveMotionFrames - 1);
+                    // SEM MOVIMENTO - Reset completo
+                    if (consecutiveMotionFrames > 0) {
+                        consecutiveMotionFrames = Math.max(0, consecutiveMotionFrames - 1);
+                    }
                     
                     if (consecutiveMotionFrames === 0 && motionDetected) {
                         motionDetected = false;
-                        console.log('💤 Movimento parou. Aguardando novo movimento...');
+                        console.log('💤 Pessoa/Grupo saiu do quadro. Aguardando próxima passagem...');
                     }
                 }
                 
@@ -1388,16 +2089,31 @@
                 const video = document.getElementById('cameraVideo');
                 if (!video.videoWidth || !video.videoHeight) return;
                 
-                // Capture image from video
+                // Capture image from video com resolução reduzida (para evitar 413 Payload Too Large)
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Convert to base64 (optimized for AI)
-                const aiVersion = canvas.toDataURL('image/jpeg', 0.7); // 70% quality for AI
-                const displayVersion = canvas.toDataURL('image/jpeg', 0.9); // 90% quality for display
+                // Reduzir resolução para máximo 1280x720 (HD ready) para reduzir payload
+                const maxWidth = 1280;
+                const maxHeight = 720;
+                let width = video.videoWidth;
+                let height = video.videoHeight;
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, width, height);
+                
+                // Convert to base64 com qualidade reduzida para AI (evitar payload grande)
+                const aiVersion = canvas.toDataURL('image/jpeg', 0.5); // 50% quality - suficiente para AI
+                const displayVersion = canvas.toDataURL('image/jpeg', 0.7); // 70% quality para display
+                
+                console.log(`📸 Imagem capturada: ${width}x${height}, qualidade AI: 50%, display: 70%`);
                 
                 const now = new Date();
                 
@@ -1636,8 +2352,10 @@
             }
         }
         
-        // Função para inicializar som de detecção
+        // Função para inicializar som de detecção (apenas no primeiro gesto)
         function initDetectionSound() {
+            if (audioReady) return; // Já foi inicializado
+            
             // Criar som usando Web Audio API (beeep simples)
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1656,6 +2374,7 @@
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.5);
                 
+                audioReady = true; // Marcar como inicializado
                 console.log('🔊 Som de detecção inicializado');
             } catch (error) {
                 console.warn('⚠️ Não foi possível inicializar som:', error);
@@ -1691,6 +2410,9 @@
         
         // Função para alternar som
         function toggleSound() {
+            // Inicializar áudio no primeiro gesto do utilizador
+            initDetectionSound();
+            
             soundEnabled = !soundEnabled;
             
             const soundBtn = document.getElementById('toggleSoundBtn');

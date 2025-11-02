@@ -2056,12 +2056,12 @@
                 // Get all checked categories
                 const checkedCategories = document.querySelectorAll('#categoriesConfig input[type="checkbox"]:checked');
                 
-                const configs = Array.from(checkedCategories).map(checkbox => ({
-                    event_id: eventId,
-                    age_category_id: checkbox.value,
-                    is_enabled: true
-                }));
-                
+                    const configs = Array.from(checkedCategories).map(checkbox => ({
+                        event_id: eventId,
+                        age_category_id: checkbox.value,
+                        is_enabled: true
+                    }));
+                    
                 // Usar API REST para salvar configurações de categorias
                 const response = await fetch(`/api/events/${eventId}/category-configs`, {
                     method: 'PUT',
@@ -2093,12 +2093,12 @@
                 // Get all checked modalities
                 const checkedModalities = document.querySelectorAll('#modalitiesConfig input[type="checkbox"]:checked');
                 
-                const configs = Array.from(checkedModalities).map(checkbox => ({
-                    event_id: eventId,
-                    modality_id: checkbox.value,
-                    is_enabled: true
-                }));
-                
+                    const configs = Array.from(checkedModalities).map(checkbox => ({
+                        event_id: eventId,
+                        modality_id: checkbox.value,
+                        is_enabled: true
+                    }));
+                    
                 // Usar API REST para salvar configurações de modalidades
                 const response = await fetch(`/api/events/${eventId}/modality-configs`, {
                     method: 'PUT',
@@ -2573,28 +2573,28 @@
                 
                 // Save category configurations
                 try {
-                    await saveCategoryConfigurations(currentEvent.id);
+                await saveCategoryConfigurations(currentEvent.id);
                 } catch (err) {
                     console.warn('⚠️ Erro ao salvar categorias:', err);
                 }
                 
                 // Save modality configurations
                 try {
-                    await saveModalityConfigurations(currentEvent.id);
+                await saveModalityConfigurations(currentEvent.id);
                 } catch (err) {
                     console.warn('⚠️ Erro ao salvar modalidades:', err);
                 }
                 
                 // Save lap counter configuration
                 try {
-                    await saveLapCounterConfig(currentEvent.id);
+                await saveLapCounterConfig(currentEvent.id);
                 } catch (err) {
                     console.warn('⚠️ Erro ao salvar configuração de voltas:', err);
                 }
                 
                 // Save dorsal nomenclature configuration (includes assignment mode)
                 try {
-                    await saveDorsalNomenclatureConfig(currentEvent.id);
+                await saveDorsalNomenclatureConfig(currentEvent.id);
                 } catch (err) {
                     console.warn('⚠️ Erro ao salvar configuração de dorsais:', err);
                 }
@@ -3321,7 +3321,7 @@
                 if (!response.ok) {
                     if (response.status === 404) {
                         // Config não existe ainda - retornar null
-                        return null;
+                    return null;
                     }
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -3959,10 +3959,10 @@
                 // Salvar configuração detalhada via API REST apenas se o lap counter estiver ativado
                 // ou se já existir uma configuração para evitar erro de "campos vazios"
                 if (isEnabled || distance !== null || totalLapsValue !== null) {
-                    const configData = {
-                        has_lap_counter: isEnabled,
-                        lap_distance_km: distance,
-                        total_laps: totalLapsValue,
+                const configData = {
+                    has_lap_counter: isEnabled,
+                    lap_distance_km: distance,
+                    total_laps: totalLapsValue,
                         min_laps_for_classification: minLaps
                     };
                     
